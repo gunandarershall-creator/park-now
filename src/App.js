@@ -1,11 +1,11 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 11 (Checkout & Booking Flow)
- * DESCRIPTION: Adds a checkout screen to simulate the atomic booking transaction.
+ * COMMIT: 12 (Proximity Matching Algorithm)
+ * DESCRIPTION: Implements a geospatial sorting algorithm to find the closest spot to the driver.
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard } from 'lucide-react'; // Added ArrowLeft and CreditCard
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation } from 'lucide-react'; // Added Navigation icon
 
 const styles = `
   /* --- LOGIN STYLES --- */
@@ -50,7 +50,7 @@ const styles = `
   .sheet-price { font-size: 28px; font-weight: 800; color: #000; margin: 0; }
   .spots-left { color: #FF3B30; font-weight: 600; font-size: 14px; margin: 0; background: #FFEBEA; padding: 4px 10px; border-radius: 8px; }
 
-  /* --- NEW STYLES: CHECKOUT SCREEN --- */
+  /* --- CHECKOUT SCREEN STYLES --- */
   .checkout-header { display: flex; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #E5E5EA; margin-bottom: 20px; margin-top: 30px;}
   .checkout-title { flex: 1; text-align: center; font-size: 20px; font-weight: 700; margin: 0; padding-right: 24px;}
   .receipt-box { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -58,20 +58,46 @@ const styles = `
   .receipt-row.total { font-weight: 800; font-size: 18px; border-top: 1px solid #E5E5EA; padding-top: 12px; margin-top: 4px; margin-bottom: 0; color: #000;}
   .apple-pay-btn { background: #000; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: auto; margin-bottom: 10px; }
   .payment-method-row { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; border: 1px solid #E5E5EA;}
+
+  /* --- NEW STYLES: ALGORITHM VISUALS --- */
+  .locate-btn {
+    position: absolute; right: 20px; bottom: 30px; z-index: 1000;
+    background: white; border-radius: 50%; width: 50px; height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
+  }
+  .locate-btn:hover { background: #F2F2F7; }
+  
+  /* The Blue Dot representing the Driver's GPS Location */
+  .driver-dot {
+    position: absolute; width: 20px; height: 20px; background: #007AFF;
+    border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 15; transform: translate(-50%, -50%);
+  }
+  /* The animated pulsing radar effect */
+  .driver-dot::after {
+    content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
+    background: rgba(0, 122, 255, 0.2); border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 `;
 
 function App() {
   const [email, setEmail] = useState('');
-  // NEW: State can now be 'login', 'map', or 'checkout'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   const [spots, setSpots] = useState([]);
   const [selectedSpot, setSelectedSpot] = useState(null);
+  
+  // NEW: State to store the Driver's simulated GPS location
+  const [driverLocation, setDriverLocation] = useState(null);
 
   useEffect(() => {
+    // We assign mathematical 'x' and 'y' coordinates to make the distance algorithm possible!
     setSpots([
-      { id: '1', top: '35%', left: '30%', price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3 },
-      { id: '2', top: '55%', left: '60%', price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1 },
-      { id: '3', top: '65%', left: '20%', price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8 }
+      { id: '1', top: '35%', left: '30%', x: 30, y: 35, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3 },
+      { id: '2', top: '55%', left: '60%', x: 60, y: 55, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1 },
+      { id: '3', top: '65%', left: '20%', x: 20, y: 65, price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8 }
     ]);
   }, []);
 
@@ -81,11 +107,43 @@ function App() {
     else alert('Please enter an email address');
   };
 
-  // NEW: Function to simulate the atomic transaction from your report
   const handlePayment = () => {
     alert(`Success! Simulating atomic transaction...\n\nYour spot at ${selectedSpot.address} is secured. Database locked & updated.`);
-    setSelectedSpot(null); // Clear the selected spot
-    setCurrentScreen('map'); // Send user back to map
+    setSelectedSpot(null); 
+    setDriverLocation(null); // Clear driver location on reset
+    setCurrentScreen('map'); 
+  };
+
+  /**
+   * CORE ALGORITHM: Geospatial Proximity Finder
+   * This simulates Section 4.2.1 of your report. It uses the Pythagorean theorem
+   * to calculate the shortest straight-line distance to all available spots.
+   */
+  const findClosestSpot = () => {
+    // 1. Simulate finding the driver's GPS (e.g., somewhere in the middle of the map)
+    const currentGPS = { x: 45, y: 45 };
+    setDriverLocation(currentGPS);
+
+    // 2. Algorithm to find the shortest distance
+    let closestSpot = null;
+    let shortestDistance = Infinity; // Start with infinitely far away
+
+    spots.forEach(spot => {
+      // Pythagorean Theorem: d = √( (x2 - x1)² + (y2 - y1)² )
+      const distance = Math.sqrt(
+        Math.pow(spot.x - currentGPS.x, 2) + Math.pow(spot.y - currentGPS.y, 2)
+      );
+      
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        closestSpot = spot;
+      }
+    });
+
+    // 3. Automatically select the closest spot found after a tiny delay
+    if (closestSpot) {
+      setTimeout(() => setSelectedSpot(closestSpot), 600); // Small delay so the user sees the dot first
+    }
   };
 
   return (
@@ -138,6 +196,14 @@ function App() {
               <div className="fake-road-1"></div>
               <div className="fake-road-2"></div>
 
+              {/* NEW: Render the Driver's GPS Dot if we have their location */}
+              {driverLocation && (
+                <div 
+                  className="driver-dot" 
+                  style={{ top: `${driverLocation.y}%`, left: `${driverLocation.x}%` }}
+                ></div>
+              )}
+
               {spots.map(spot => (
                 <div 
                   key={spot.id} 
@@ -149,6 +215,13 @@ function App() {
                 </div>
               ))}
             </div>
+
+            {/* NEW: Locate Me Button */}
+            {!selectedSpot && (
+              <div className="locate-btn" onClick={findClosestSpot}>
+                <Navigation size={22} color="#0056D2" fill="#0056D2" />
+              </div>
+            )}
 
             {/* Bottom Sheet */}
             {selectedSpot && (
@@ -175,7 +248,6 @@ function App() {
                   </p>
                 </div>
 
-                {/* NEW: This button now switches the screen to 'checkout' */}
                 <button className="primary-btn" onClick={() => setCurrentScreen('checkout')}>
                   Book Spot
                 </button>
@@ -184,18 +256,16 @@ function App() {
           </div>
         )}
 
-        {/* --- NEW: CHECKOUT SCREEN --- */}
+        {/* --- CHECKOUT SCREEN --- */}
         {currentScreen === 'checkout' && selectedSpot && (
           <div className="screen">
             <div className="checkout-header">
-              {/* Back Button */}
               <button className="close-btn" onClick={() => setCurrentScreen('map')}>
                 <ArrowLeft size={20} color="#000" />
               </button>
               <h2 className="checkout-title">Confirm Booking</h2>
             </div>
 
-            {/* Receipt details simulating a 2-hour booking */}
             <div className="receipt-box">
               <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
               <div className="receipt-row">
@@ -212,7 +282,6 @@ function App() {
               </div>
               <div className="receipt-row total">
                 <span>Total Due</span>
-                {/* Math logic: multiplies hourly rate by 2 */}
                 <span>£{(selectedSpot.price * 2).toFixed(2)}</span>
               </div>
             </div>
@@ -226,7 +295,6 @@ function App() {
               </div>
             </div>
 
-            {/* Simulates the final transaction */}
             <button className="apple-pay-btn" onClick={handlePayment}>
               Pay & Confirm
             </button>

@@ -1,11 +1,11 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 10 (Interactive Bottom Sheet / Details Card)
- * DESCRIPTION: Replaces alerts with an iOS-style slide-up details card when a pin is clicked.
+ * COMMIT: 11 (Checkout & Booking Flow)
+ * DESCRIPTION: Adds a checkout screen to simulate the atomic booking transaction.
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X } from 'lucide-react'; // Added Star and X icons
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard } from 'lucide-react'; // Added ArrowLeft and CreditCard
 
 const styles = `
   /* --- LOGIN STYLES --- */
@@ -37,50 +37,36 @@ const styles = `
   .price-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
   .price-marker:hover::after, .price-marker.active::after { border-color: #0056D2 transparent transparent transparent; }
 
-  /* --- NEW STYLES: BOTTOM SHEET DETAILS CARD --- */
-  .bottom-sheet {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    background: white;
-    border-radius: 24px 24px 0 0;
-    padding: 24px;
-    box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-
+  /* --- BOTTOM SHEET STYLES --- */
+  .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.15); z-index: 2000; display: flex; flex-direction: column; gap: 16px; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   .sheet-header { display: flex; justify-content: space-between; align-items: flex-start; }
   .sheet-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; }
   .sheet-subtitle { color: #8E8E93; font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }
   .close-btn { background: #F2F2F7; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
-  .close-btn:hover { background: #E5E5EA; }
-  
   .sheet-image { width: 100%; height: 140px; border-radius: 12px; background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; color: #0056D2; font-weight: 600; }
-  
   .price-row { display: flex; justify-content: space-between; align-items: flex-end; }
   .price-label { margin: 0; color: #8E8E93; font-size: 14px; margin-bottom: 4px; }
   .sheet-price { font-size: 28px; font-weight: 800; color: #000; margin: 0; }
   .spots-left { color: #FF3B30; font-weight: 600; font-size: 14px; margin: 0; background: #FFEBEA; padding: 4px 10px; border-radius: 8px; }
+
+  /* --- NEW STYLES: CHECKOUT SCREEN --- */
+  .checkout-header { display: flex; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #E5E5EA; margin-bottom: 20px; margin-top: 30px;}
+  .checkout-title { flex: 1; text-align: center; font-size: 20px; font-weight: 700; margin: 0; padding-right: 24px;}
+  .receipt-box { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+  .receipt-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; color: #333; }
+  .receipt-row.total { font-weight: 800; font-size: 18px; border-top: 1px solid #E5E5EA; padding-top: 12px; margin-top: 4px; margin-bottom: 0; color: #000;}
+  .apple-pay-btn { background: #000; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: auto; margin-bottom: 10px; }
+  .payment-method-row { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; border: 1px solid #E5E5EA;}
 `;
 
 function App() {
   const [email, setEmail] = useState('');
+  // NEW: State can now be 'login', 'map', or 'checkout'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   const [spots, setSpots] = useState([]);
-  
-  // NEW STATE: Tracks which parking spot the user clicked on.
-  // If null, the bottom sheet is hidden.
   const [selectedSpot, setSelectedSpot] = useState(null);
 
-  // Added more details to our mock database (ratings, distance, spots left)
   useEffect(() => {
     setSpots([
       { id: '1', top: '35%', left: '30%', price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3 },
@@ -91,11 +77,15 @@ function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (email) {
-      setCurrentScreen('map'); 
-    } else {
-      alert('Please enter an email address');
-    }
+    if (email) setCurrentScreen('map'); 
+    else alert('Please enter an email address');
+  };
+
+  // NEW: Function to simulate the atomic transaction from your report
+  const handlePayment = () => {
+    alert(`Success! Simulating atomic transaction...\n\nYour spot at ${selectedSpot.address} is secured. Database locked & updated.`);
+    setSelectedSpot(null); // Clear the selected spot
+    setCurrentScreen('map'); // Send user back to map
   };
 
   return (
@@ -103,7 +93,8 @@ function App() {
       <style>{styles}</style>
       <div className="app-frame">
         
-        {currentScreen === 'login' ? (
+        {/* --- LOGIN SCREEN --- */}
+        {currentScreen === 'login' && (
           <div className="screen">
             <div className="login-header">
               <div className="app-logo"><MapPin size={40} color="white" /></div>
@@ -115,12 +106,7 @@ function App() {
               <div className="ios-input-group">
                 <div className="ios-input-row">
                   <Mail size={20} color="#8E8E93" />
-                  <input 
-                    className="ios-input" 
-                    placeholder="Email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                  <input className="ios-input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="ios-input-row">
                   <Lock size={20} color="#8E8E93" />
@@ -129,32 +115,25 @@ function App() {
               </div>
               
               <button className="primary-btn" type="submit">Sign In</button>
-              <button type="button" className="secondary-btn" onClick={() => alert('Coming soon')}>
-                Forgot Password?
-              </button>
+              <button type="button" className="secondary-btn" onClick={() => alert('Coming soon')}>Forgot Password?</button>
             </form>
 
             <div className="signup-area">
               New to Park Now? 
-              <button type="button" className="signup-link" onClick={() => alert('Coming soon')}>
-                Create Account
-              </button>
+              <button type="button" className="signup-link" onClick={() => alert('Coming soon')}>Create Account</button>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* --- MAP SCREEN --- */}
+        {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0}}>
-            
-            {/* The Floating Search Bar */}
             <div className="search-header">
               <div className="icon-btn" onClick={() => setCurrentScreen('login')}><Menu size={24} color="#000" /></div>
-              <div className="search-input">
-                <MapPin size={16} color="#0056D2" />
-                <span>Kingston, UK</span>
-              </div>
+              <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
               <div className="icon-btn"><User size={24} color="#000" /></div>
             </div>
             
-            {/* Simulated Prototype Map */}
             <div className="map-simulation" onClick={() => setSelectedSpot(null)}>
               <div className="fake-road-1"></div>
               <div className="fake-road-2"></div>
@@ -162,64 +141,98 @@ function App() {
               {spots.map(spot => (
                 <div 
                   key={spot.id} 
-                  // If this spot is selected, add the 'active' class to keep it blue
                   className={`price-marker ${selectedSpot?.id === spot.id ? 'active' : ''}`}
                   style={{ top: spot.top, left: spot.left }}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Stops the map from registering the click and hiding the card
-                    setSelectedSpot(spot); // NEW: Sets the active spot instead of showing an alert
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedSpot(spot); }}
                 >
                   £{spot.price.toFixed(2)}
                 </div>
               ))}
             </div>
 
-            {/* --- NEW: THE SLIDE-UP BOTTOM SHEET --- */}
+            {/* Bottom Sheet */}
             {selectedSpot && (
               <div className="bottom-sheet">
-                
                 <div className="sheet-header">
                   <div>
                     <h3 className="sheet-title">{selectedSpot.address}</h3>
                     <p className="sheet-subtitle">
-                      <Star size={16} fill="#FFCC00" color="#FFCC00" /> {selectedSpot.rating} • 
-                      <span style={{marginLeft: 8}}>{selectedSpot.distance}</span>
+                      <Star size={16} fill="#FFCC00" color="#FFCC00" /> {selectedSpot.rating} • <span style={{marginLeft: 8}}>{selectedSpot.distance}</span>
                     </p>
                   </div>
-                  
-                  {/* Close Button */}
-                  <button className="close-btn" onClick={() => setSelectedSpot(null)}>
-                    <X size={18} color="#000" />
-                  </button>
+                  <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
-                {/* Fake Image Placeholder */}
-                <div className="sheet-image">
-                  Street View Image
-                </div>
+                <div className="sheet-image">Street View Image</div>
 
-                {/* Pricing and Availability Row */}
                 <div className="price-row">
                   <div>
                     <p className="price-label">Total per hour</p>
                     <p className="sheet-price">£{selectedSpot.price.toFixed(2)}</p>
                   </div>
-                  {/* Turn red if spots are low */}
                   <p className="spots-left" style={selectedSpot.spotsLeft > 3 ? {color: '#34C759', background: '#E8F8EE'} : {}}>
                     {selectedSpot.spotsLeft} spots left
                   </p>
                 </div>
 
-                <button className="primary-btn" onClick={() => alert('Starting secure payment transaction...')}>
+                {/* NEW: This button now switches the screen to 'checkout' */}
+                <button className="primary-btn" onClick={() => setCurrentScreen('checkout')}>
                   Book Spot
                 </button>
-
               </div>
             )}
-
           </div>
         )}
+
+        {/* --- NEW: CHECKOUT SCREEN --- */}
+        {currentScreen === 'checkout' && selectedSpot && (
+          <div className="screen">
+            <div className="checkout-header">
+              {/* Back Button */}
+              <button className="close-btn" onClick={() => setCurrentScreen('map')}>
+                <ArrowLeft size={20} color="#000" />
+              </button>
+              <h2 className="checkout-title">Confirm Booking</h2>
+            </div>
+
+            {/* Receipt details simulating a 2-hour booking */}
+            <div className="receipt-box">
+              <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
+              <div className="receipt-row">
+                <span style={{color: '#8E8E93'}}>Date</span>
+                <span>Today</span>
+              </div>
+              <div className="receipt-row">
+                <span style={{color: '#8E8E93'}}>Duration</span>
+                <span>2 Hours (14:00 - 16:00)</span>
+              </div>
+              <div className="receipt-row">
+                <span style={{color: '#8E8E93'}}>Rate</span>
+                <span>£{selectedSpot.price.toFixed(2)} / hr</span>
+              </div>
+              <div className="receipt-row total">
+                <span>Total Due</span>
+                {/* Math logic: multiplies hourly rate by 2 */}
+                <span>£{(selectedSpot.price * 2).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <h4 style={{marginBottom: 10, color: '#666'}}>Payment Method</h4>
+            <div className="payment-method-row">
+              <CreditCard size={24} color="#0056D2" />
+              <div style={{flex: 1}}>
+                <div style={{fontWeight: 600}}>Personal Card</div>
+                <div style={{fontSize: 13, color: '#8E8E93'}}>Visa ending in 4242</div>
+              </div>
+            </div>
+
+            {/* Simulates the final transaction */}
+            <button className="apple-pay-btn" onClick={handlePayment}>
+              Pay & Confirm
+            </button>
+          </div>
+        )}
+
       </div>
     </>
   );

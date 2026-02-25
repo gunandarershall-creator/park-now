@@ -1,26 +1,54 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 12 (Proximity Matching Algorithm)
- * DESCRIPTION: Implements a geospatial sorting algorithm to find the closest spot to the driver.
+ * COMMIT: 13 (Active Booking Session)
+ * DESCRIPTION: Completes the driver journey with a digital ticket and active session dashboard.
+ * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit 13".
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation } from 'lucide-react'; // Added Navigation icon
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons.
 
+/**
+ * CSS STYLES (Internal Stylesheet)
+ * We define styles here to keep the component self-contained.
+ * Design Standard: iOS Human Interface Guidelines (clean, white, rounded corners).
+ */
 const styles = `
-  /* --- LOGIN STYLES --- */
+  /* Reset default browser margins and set background to black */
   body { margin: 0; padding: 0; background: #000; }
+  
+  /* The Main App Container - Simulates an iPhone 14 Pro dimensions */
   .app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+  
+  /* The Content Screen inside the phone */
   .screen { height: 100%; display: flex; flex-direction: column; background: #F2F2F7; padding: 20px; box-sizing: border-box; position: relative; flex: 1; overflow: hidden; }
+  
+  /* Header Section Styling */
   .login-header { margin-top: 60px; text-align: center; margin-bottom: 40px; }
+  
+  /* Logo Styling - The Blue Box */
   .app-logo { width: 80px; height: 80px; background: #0056D2; border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,86,210,0.3); }
+  
+  /* Input Group Container - Grouped style like iOS Settings */
   .ios-input-group { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 25px; }
+  
+  /* Individual Input Row */
   .ios-input-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #E5E5EA; }
   .ios-input-row:last-child { border-bottom: none; }
+  
+  /* The actual typing field */
   .ios-input { border: none; outline: none; font-size: 17px; flex: 1; margin-left: 10px; }
+  
+  /* Main Action Button */
   .primary-btn { background: #0056D2; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; }
+  
+  /* 1. Forgot Password Button (Transparent "Ghost" Button) */
   .secondary-btn { background: transparent; color: #0056D2; border: none; width: 100%; padding: 10px; margin-top: 10px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  
+  /* 2. Sign Up Area (Pushed to the bottom of the screen) */
   .signup-area { margin-top: auto; margin-bottom: 20px; text-align: center; font-size: 15px; color: #8E8E93; }
+  
+  /* 3. The "Create Account" Link */
   .signup-link { color: #0056D2; font-weight: 600; border: none; background: none; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px; }
 
   /* --- MAP STYLES --- */
@@ -28,10 +56,12 @@ const styles = `
   .search-input { flex: 1; background: white; padding: 12px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: 500; }
   .icon-btn { background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; }
   
+  /* Prototype Map Area */
   .map-simulation { width: 100%; height: 100%; position: relative; background-color: #E2E2E0; overflow: hidden; }
   .fake-road-1 { position: absolute; top: 40%; left: -10%; right: -10%; height: 20px; background: #FFFFFF; transform: rotate(-10deg); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
   .fake-road-2 { position: absolute; top: -10%; bottom: -10%; left: 55%; width: 25px; background: #FFFFFF; transform: rotate(15deg); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
   
+  /* Airbnb-style Price Marker */
   .price-marker { position: absolute; background: white; border-radius: 20px; padding: 6px 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; transition: all 0.2s; z-index: 10; cursor: pointer; }
   .price-marker:hover, .price-marker.active { transform: scale(1.1); background: #0056D2; color: white; border-color: #0056D2; z-index: 20; }
   .price-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
@@ -59,39 +89,48 @@ const styles = `
   .apple-pay-btn { background: #000; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: auto; margin-bottom: 10px; }
   .payment-method-row { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; border: 1px solid #E5E5EA;}
 
-  /* --- NEW STYLES: ALGORITHM VISUALS --- */
-  .locate-btn {
-    position: absolute; right: 20px; bottom: 30px; z-index: 1000;
-    background: white; border-radius: 50%; width: 50px; height: 50px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
-  }
+  /* --- ALGORITHM VISUALS STYLES --- */
+  .locate-btn { position: absolute; right: 20px; bottom: 30px; z-index: 1000; background: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer; }
   .locate-btn:hover { background: #F2F2F7; }
-  
   /* The Blue Dot representing the Driver's GPS Location */
-  .driver-dot {
-    position: absolute; width: 20px; height: 20px; background: #007AFF;
-    border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    z-index: 15; transform: translate(-50%, -50%);
-  }
+  .driver-dot { position: absolute; width: 20px; height: 20px; background: #007AFF; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 15; transform: translate(-50%, -50%); }
   /* The animated pulsing radar effect */
-  .driver-dot::after {
-    content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
-    background: rgba(0, 122, 255, 0.2); border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
+  .driver-dot::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: rgba(0, 122, 255, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+  /* --- NEW STYLES (Commit 13): ACTIVE BOOKING TICKET --- */
+  .ticket-card { background: #0056D2; color: white; border-radius: 20px; padding: 30px 20px; text-align: center; margin-top: 20px; box-shadow: 0 15px 30px rgba(0,86,210,0.3); }
+  .timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
+  .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
+  .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
 `;
 
+/**
+ * COMPONENT: App
+ * This is the main function that builds the UI.
+ */
 function App() {
+  // STATE VARIABLE: 'email'
+  // 1. email: variable that holds the text the user types.
+  // 2. setEmail: function we call to update that variable.
+  // 3. useState(''): initializes it as an empty string.
   const [email, setEmail] = useState('');
+  
+  // NAVIGATION STATE
+  // 'currentScreen' determines which view is shown (login, map, checkout). 
+  // NEW (Commit 13): can now also be 'activeBooking'
   const [currentScreen, setCurrentScreen] = useState('login'); 
+  
+  // State to hold our mock database of parking spots
   const [spots, setSpots] = useState([]);
+  
+  // State: Tracks which parking spot the user clicked on.
   const [selectedSpot, setSelectedSpot] = useState(null);
   
-  // NEW: State to store the Driver's simulated GPS location
+  // State to store the Driver's simulated GPS location
   const [driverLocation, setDriverLocation] = useState(null);
 
+  // Load fake data when the app starts
   useEffect(() => {
     // We assign mathematical 'x' and 'y' coordinates to make the distance algorithm possible!
     setSpots([
@@ -101,17 +140,41 @@ function App() {
     ]);
   }, []);
 
+  /**
+   * FUNCTION: handleLogin
+   * This runs when the user clicks the "Sign In" button.
+   */
   const handleLogin = (e) => {
-    e.preventDefault();
-    if (email) setCurrentScreen('map'); 
-    else alert('Please enter an email address');
+    e.preventDefault(); // Stop the page from reloading (default HTML behavior)
+    
+    // Check if the user typed anything
+    if (email) {
+      // Success: Switch state to 'map' to trigger re-render
+      setCurrentScreen('map'); 
+    } else {
+      // Error: User left the field empty
+      alert('Please enter an email address');
+    }
   };
 
+  /**
+   * FUNCTION: handlePayment
+   * Simulates the atomic transaction from your report
+   */
   const handlePayment = () => {
-    alert(`Success! Simulating atomic transaction...\n\nYour spot at ${selectedSpot.address} is secured. Database locked & updated.`);
-    setSelectedSpot(null); 
-    setDriverLocation(null); // Clear driver location on reset
-    setCurrentScreen('map'); 
+    // We are no longer using the alert to reset.
+    // NEW (Commit 13): Transition directly to the active digital ticket.
+    setCurrentScreen('activeBooking');
+  };
+
+  /**
+   * NEW FUNCTION (Commit 13): handleEndSession
+   * Allows the driver to stop their session and returns them to the map.
+   */
+  const handleEndSession = () => {
+    setSelectedSpot(null);
+    setDriverLocation(null);
+    setCurrentScreen('map');
   };
 
   /**
@@ -146,36 +209,46 @@ function App() {
     }
   };
 
+  // RENDER: This is the HTML that appears on screen
   return (
     <>
-      <style>{styles}</style>
+      <style>{styles}</style> {/* Loads the CSS */}
       <div className="app-frame">
         
+        {/* CONDITIONAL RENDERING: Check which screen to show */}
         {/* --- LOGIN SCREEN --- */}
         {currentScreen === 'login' && (
           <div className="screen">
+            {/* 1. Header with Logo */}
             <div className="login-header">
               <div className="app-logo"><MapPin size={40} color="white" /></div>
               <h1 style={{fontSize: 32, fontWeight: 800, margin: '5px 0'}}>Park Now</h1>
               <p style={{color: '#8E8E93', margin: 0}}>Find a spot in 30 seconds.</p>
             </div>
             
+            {/* 2. Login Form */}
             <form onSubmit={handleLogin}>
               <div className="ios-input-group">
+                {/* Email Field */}
                 <div className="ios-input-row">
                   <Mail size={20} color="#8E8E93" />
-                  <input className="ios-input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <input className="ios-input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} /> {/* Connects input to our State */}
                 </div>
+                {/* Password Field (Static for now) */}
                 <div className="ios-input-row">
                   <Lock size={20} color="#8E8E93" />
                   <input className="ios-input" placeholder="Password" type="password" />
                 </div>
               </div>
               
+              {/* 3. Submit Button */}
               <button className="primary-btn" type="submit">Sign In</button>
+              
+              {/* 4. Forgot Password */}
               <button type="button" className="secondary-btn" onClick={() => alert('Coming soon')}>Forgot Password?</button>
             </form>
 
+            {/* 5. Sign Up Option */}
             <div className="signup-area">
               New to Park Now? 
               <button type="button" className="signup-link" onClick={() => alert('Coming soon')}>Create Account</button>
@@ -186,22 +259,21 @@ function App() {
         {/* --- MAP SCREEN --- */}
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0}}>
+            {/* The Floating Search Bar */}
             <div className="search-header">
               <div className="icon-btn" onClick={() => setCurrentScreen('login')}><Menu size={24} color="#000" /></div>
               <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
               <div className="icon-btn"><User size={24} color="#000" /></div>
             </div>
             
+            {/* Simulated Prototype Map */}
             <div className="map-simulation" onClick={() => setSelectedSpot(null)}>
               <div className="fake-road-1"></div>
               <div className="fake-road-2"></div>
 
-              {/* NEW: Render the Driver's GPS Dot if we have their location */}
+              {/* Render the Driver's GPS Dot if we have their location */}
               {driverLocation && (
-                <div 
-                  className="driver-dot" 
-                  style={{ top: `${driverLocation.y}%`, left: `${driverLocation.x}%` }}
-                ></div>
+                <div className="driver-dot" style={{ top: `${driverLocation.y}%`, left: `${driverLocation.x}%` }}></div>
               )}
 
               {spots.map(spot => (
@@ -216,7 +288,7 @@ function App() {
               ))}
             </div>
 
-            {/* NEW: Locate Me Button */}
+            {/* Locate Me Button */}
             {!selectedSpot && (
               <div className="locate-btn" onClick={findClosestSpot}>
                 <Navigation size={22} color="#0056D2" fill="#0056D2" />
@@ -236,8 +308,10 @@ function App() {
                   <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
+                {/* Fake Image Placeholder */}
                 <div className="sheet-image">Street View Image</div>
 
+                {/* Pricing and Availability Row */}
                 <div className="price-row">
                   <div>
                     <p className="price-label">Total per hour</p>
@@ -248,6 +322,7 @@ function App() {
                   </p>
                 </div>
 
+                {/* Switches screen to 'checkout' */}
                 <button className="primary-btn" onClick={() => setCurrentScreen('checkout')}>
                   Book Spot
                 </button>
@@ -260,12 +335,14 @@ function App() {
         {currentScreen === 'checkout' && selectedSpot && (
           <div className="screen">
             <div className="checkout-header">
+              {/* Back Button */}
               <button className="close-btn" onClick={() => setCurrentScreen('map')}>
                 <ArrowLeft size={20} color="#000" />
               </button>
               <h2 className="checkout-title">Confirm Booking</h2>
             </div>
 
+            {/* Receipt details simulating a 2-hour booking */}
             <div className="receipt-box">
               <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
               <div className="receipt-row">
@@ -282,6 +359,7 @@ function App() {
               </div>
               <div className="receipt-row total">
                 <span>Total Due</span>
+                {/* Math logic: multiplies hourly rate by 2 */}
                 <span>£{(selectedSpot.price * 2).toFixed(2)}</span>
               </div>
             </div>
@@ -295,8 +373,43 @@ function App() {
               </div>
             </div>
 
+            {/* Simulates the final transaction */}
             <button className="apple-pay-btn" onClick={handlePayment}>
               Pay & Confirm
+            </button>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 13): ACTIVE BOOKING SCREEN --- */}
+        {currentScreen === 'activeBooking' && selectedSpot && (
+          <div className="screen">
+            <div className="checkout-header" style={{borderBottom: 'none'}}>
+              <h2 className="checkout-title" style={{paddingRight: 0}}>Active Session</h2>
+            </div>
+
+            <div className="ticket-card">
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.9}}>
+                <Timer size={20} />
+                <span>Time Remaining</span>
+              </div>
+              {/* Simulated 2 hour countdown timer visually */}
+              <div className="timer-display">01:59:59</div>
+              
+              <div className="qr-box">
+                <QrCode size={100} color="#0056D2" />
+              </div>
+              <p style={{fontSize: 14, opacity: 0.9, margin: 0}}>
+                Scan this QR code at the barrier to enter and exit <b>{selectedSpot.address}</b>.
+              </p>
+            </div>
+
+            <div style={{marginTop: 20, textAlign: 'center'}}>
+              <p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p>
+            </div>
+
+            {/* Button to end the lifecycle and return to map */}
+            <button className="danger-btn" onClick={handleEndSession}>
+              End Session Early
             </button>
           </div>
         )}

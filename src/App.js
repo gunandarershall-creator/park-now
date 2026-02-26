@@ -1,12 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 13 (Active Booking Session)
- * DESCRIPTION: Completes the driver journey with a digital ticket and active session dashboard.
- * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit 13".
+ * COMMIT: 14 (Peer-to-Peer Host Dashboard)
+ * DESCRIPTION: Introduces the Host interface, allowing users to switch modes and manage their driveway listings.
+ * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons.
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav.
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -98,11 +98,28 @@ const styles = `
   .driver-dot::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: rgba(0, 122, 255, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 
-  /* --- NEW STYLES (Commit 13): ACTIVE BOOKING TICKET --- */
+  /* --- ACTIVE BOOKING TICKET (Commit 13) --- */
   .ticket-card { background: #0056D2; color: white; border-radius: 20px; padding: 30px 20px; text-align: center; margin-top: 20px; box-shadow: 0 15px 30px rgba(0,86,210,0.3); }
   .timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
   .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
   .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
+
+  /* --- NEW STYLES (Commit 14): HOST DASHBOARD --- */
+  .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+  .earnings-card { background: linear-gradient(135deg, #0056D2 0%, #003b8e 100%); color: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,86,210,0.3); margin-bottom: 20px; }
+  .earnings-title { font-size: 14px; opacity: 0.9; margin: 0 0 5px 0; }
+  .earnings-amount { font-size: 36px; font-weight: 800; margin: 0; }
+  .listing-item { background: white; padding: 15px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  
+  /* Custom iOS Toggle Switch for Host Listings */
+  .toggle-switch { width: 50px; height: 30px; background: #34C759; border-radius: 30px; position: relative; cursor: pointer; transition: 0.3s; }
+  .toggle-knob { width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; }
+  
+  /* Bottom Nav Bar for Host View */
+  .nav-bar-bottom { display: flex; justify-content: space-around; align-items: center; background: white; padding: 15px 20px 25px; border-top: 1px solid #E5E5EA; position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0 0 28px 28px; z-index: 100; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; color: #8E8E93; font-size: 11px; gap: 4px; cursor: pointer; }
+  .nav-item.active { color: #0056D2; }
+  .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 `;
 
 /**
@@ -119,6 +136,7 @@ function App() {
   // NAVIGATION STATE
   // 'currentScreen' determines which view is shown (login, map, checkout). 
   // NEW (Commit 13): can now also be 'activeBooking'
+  // NEW (Commit 14): can now also be 'hostDashboard'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   
   // State to hold our mock database of parking spots
@@ -163,12 +181,12 @@ function App() {
    */
   const handlePayment = () => {
     // We are no longer using the alert to reset.
-    // NEW (Commit 13): Transition directly to the active digital ticket.
+    // Transition directly to the active digital ticket.
     setCurrentScreen('activeBooking');
   };
 
   /**
-   * NEW FUNCTION (Commit 13): handleEndSession
+   * FUNCTION: handleEndSession
    * Allows the driver to stop their session and returns them to the map.
    */
   const handleEndSession = () => {
@@ -263,7 +281,8 @@ function App() {
             <div className="search-header">
               <div className="icon-btn" onClick={() => setCurrentScreen('login')}><Menu size={24} color="#000" /></div>
               <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
-              <div className="icon-btn"><User size={24} color="#000" /></div>
+              {/* NEW (Commit 14): Re-wired the User icon to switch to the Host Dashboard */}
+              <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
             
             {/* Simulated Prototype Map */}
@@ -380,7 +399,7 @@ function App() {
           </div>
         )}
 
-        {/* --- NEW SECTION (Commit 13): ACTIVE BOOKING SCREEN --- */}
+        {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
           <div className="screen">
             <div className="checkout-header" style={{borderBottom: 'none'}}>
@@ -411,6 +430,68 @@ function App() {
             <button className="danger-btn" onClick={handleEndSession}>
               End Session Early
             </button>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 14): HOST DASHBOARD SCREEN --- */}
+        {currentScreen === 'hostDashboard' && (
+          <div className="screen" style={{paddingBottom: 80, overflowY: 'auto'}}>
+            <div className="host-header">
+              <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Host Dashboard</h2>
+              <button className="close-btn" onClick={() => setCurrentScreen('map')}>
+                <X size={20} color="#000" />
+              </button>
+            </div>
+
+            <div className="earnings-card">
+              <p className="earnings-title">Total Earnings (This Month)</p>
+              <p className="earnings-amount">£342.50</p>
+              <p style={{margin: '10px 0 0 0', fontSize: 14, opacity: 0.9}}>+12% from last month</p>
+            </div>
+
+            <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Your Driveways</h3>
+
+            {/* Simulated Active Listing 1 */}
+            <div className="listing-item">
+              <div>
+                <div style={{fontWeight: 700, fontSize: 16}}>142 Penrhyn Road</div>
+                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>£6.00 / hr • 2 spots</div>
+              </div>
+              {/* iOS Style Toggle Switch (ON) */}
+              <div className="toggle-switch" onClick={() => alert('Toggle availability coming soon.')}>
+                <div className="toggle-knob"></div>
+              </div>
+            </div>
+
+            {/* Simulated Inactive Listing 2 */}
+            <div className="listing-item">
+              <div>
+                <div style={{fontWeight: 700, fontSize: 16}}>Kingston Uni Garage</div>
+                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>£4.50 / hr • 1 spot</div>
+              </div>
+              {/* iOS Style Toggle Switch (OFF) */}
+              <div className="toggle-switch" style={{background: '#E5E5EA'}} onClick={() => alert('Toggle availability coming soon.')}>
+                <div className="toggle-knob" style={{right: 'auto', left: 2}}></div>
+              </div>
+            </div>
+
+            {/* Bottom Navigation Menu for Host */}
+            <div className="nav-bar-bottom">
+              <div className="nav-item active">
+                <Home size={24} />
+                <span>Home</span>
+              </div>
+              
+              {/* The "Add a Spot" Button breaking out of the nav bar */}
+              <div className="add-btn" onClick={() => alert('Add new parking spot flow coming in Commit 15!')}>
+                <Plus size={28} />
+              </div>
+              
+              <div className="nav-item">
+                <Settings size={24} />
+                <span>Settings</span>
+              </div>
+            </div>
           </div>
         )}
 

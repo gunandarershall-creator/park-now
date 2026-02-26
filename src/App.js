@@ -1,12 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 14 (Peer-to-Peer Host Dashboard)
- * DESCRIPTION: Introduces the Host interface, allowing users to switch modes and manage their driveway listings.
+ * COMMIT: 15 (Host: Add New Listing Flow)
+ * DESCRIPTION: Allows hosts to add a new parking spot, which dynamically updates the map database.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav.
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon.
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -104,7 +104,7 @@ const styles = `
   .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
   .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
 
-  /* --- NEW STYLES (Commit 14): HOST DASHBOARD --- */
+  /* --- HOST DASHBOARD (Commit 14) --- */
   .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
   .earnings-card { background: linear-gradient(135deg, #0056D2 0%, #003b8e 100%); color: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,86,210,0.3); margin-bottom: 20px; }
   .earnings-title { font-size: 14px; opacity: 0.9; margin: 0 0 5px 0; }
@@ -120,6 +120,11 @@ const styles = `
   .nav-item { display: flex; flex-direction: column; align-items: center; color: #8E8E93; font-size: 11px; gap: 4px; cursor: pointer; }
   .nav-item.active { color: #0056D2; }
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
+
+  /* --- NEW STYLES (Commit 15): ADD SPOT SCREEN --- */
+  .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; }
+  .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .form-section { margin-bottom: 20px; }
 `;
 
 /**
@@ -137,6 +142,7 @@ function App() {
   // 'currentScreen' determines which view is shown (login, map, checkout). 
   // NEW (Commit 13): can now also be 'activeBooking'
   // NEW (Commit 14): can now also be 'hostDashboard'
+  // NEW (Commit 15): can now also be 'addSpot'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   
   // State to hold our mock database of parking spots
@@ -147,6 +153,10 @@ function App() {
   
   // State to store the Driver's simulated GPS location
   const [driverLocation, setDriverLocation] = useState(null);
+
+  // NEW STATE (Commit 15): Variables to hold the new host listing data
+  const [newAddress, setNewAddress] = useState('');
+  const [newPrice, setNewPrice] = useState('');
 
   // Load fake data when the app starts
   useEffect(() => {
@@ -227,6 +237,41 @@ function App() {
     }
   };
 
+  /**
+   * NEW FUNCTION (Commit 15): handlePublishSpot
+   * Takes the host's input, adds a new spot to our database, and returns to dashboard.
+   */
+  const handlePublishSpot = (e) => {
+    e.preventDefault();
+    if (!newAddress || !newPrice) {
+      alert("Please enter an address and a price.");
+      return;
+    }
+
+    // Create a new spot object. We hardcode the GPS coordinates to the middle 
+    // of the prototype map for demonstration purposes.
+    const newSpotData = {
+      id: Date.now().toString(), // Generates a unique ID based on timestamp
+      top: '45%', left: '45%', x: 45, y: 45, 
+      price: parseFloat(newPrice), 
+      address: newAddress, 
+      rating: 5.0, // Brand new spot gets a default 5 stars!
+      distance: '0 min walk', 
+      spotsLeft: 1
+    };
+
+    // Update our map database state
+    setSpots([...spots, newSpotData]);
+    
+    // Clear the form fields for next time
+    setNewAddress('');
+    setNewPrice('');
+    
+    // Send host back to the dashboard
+    alert('Listing Published! Simulating database update...');
+    setCurrentScreen('hostDashboard');
+  };
+
   // RENDER: This is the HTML that appears on screen
   return (
     <>
@@ -281,7 +326,7 @@ function App() {
             <div className="search-header">
               <div className="icon-btn" onClick={() => setCurrentScreen('login')}><Menu size={24} color="#000" /></div>
               <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
-              {/* NEW (Commit 14): Re-wired the User icon to switch to the Host Dashboard */}
+              {/* (Commit 14): Re-wired the User icon to switch to the Host Dashboard */}
               <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
             
@@ -433,7 +478,7 @@ function App() {
           </div>
         )}
 
-        {/* --- NEW SECTION (Commit 14): HOST DASHBOARD SCREEN --- */}
+        {/* --- HOST DASHBOARD SCREEN (Commit 14) --- */}
         {currentScreen === 'hostDashboard' && (
           <div className="screen" style={{paddingBottom: 80, overflowY: 'auto'}}>
             <div className="host-header">
@@ -482,8 +527,8 @@ function App() {
                 <span>Home</span>
               </div>
               
-              {/* The "Add a Spot" Button breaking out of the nav bar */}
-              <div className="add-btn" onClick={() => alert('Add new parking spot flow coming in Commit 15!')}>
+              {/* NEW (Commit 15): Wired the Add Spot button to transition to the form */}
+              <div className="add-btn" onClick={() => setCurrentScreen('addSpot')}>
                 <Plus size={28} />
               </div>
               
@@ -492,6 +537,65 @@ function App() {
                 <span>Settings</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 15): ADD PARKING SPOT FORM --- */}
+        {currentScreen === 'addSpot' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              {/* Back Button */}
+              <button className="close-btn" onClick={() => setCurrentScreen('hostDashboard')}>
+                <ArrowLeft size={20} color="#000" />
+              </button>
+              <h2 className="checkout-title">List Driveway</h2>
+            </div>
+
+            <form onSubmit={handlePublishSpot}>
+              <div className="photo-upload-box" onClick={() => alert('Camera roll integration coming soon')}>
+                <Camera size={32} style={{marginBottom: 8}} />
+                <span>Tap to add photos</span>
+              </div>
+
+              <div className="form-section">
+                <div className="input-label">Address</div>
+                <div className="ios-input-group" style={{marginBottom: 0}}>
+                  <div className="ios-input-row">
+                    <MapPin size={20} color="#8E8E93" />
+                    <input 
+                      className="ios-input" 
+                      placeholder="e.g. 10 Downing Street" 
+                      value={newAddress}
+                      onChange={(e) => setNewAddress(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="input-label">Hourly Rate (£)</div>
+                <div className="ios-input-group" style={{marginBottom: 0}}>
+                  <div className="ios-input-row">
+                    <span style={{color: '#8E8E93', fontSize: 17, fontWeight: 500}}>£</span>
+                    <input 
+                      className="ios-input" 
+                      type="number" 
+                      step="0.10"
+                      placeholder="5.00" 
+                      value={newPrice}
+                      onChange={(e) => setNewPrice(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Added mt-auto (margin-top: auto) equivalent in standard CSS to push button to bottom */}
+              <button className="primary-btn" type="submit" style={{marginTop: '40px'}}>
+                Publish Listing
+              </button>
+            </form>
           </div>
         )}
 

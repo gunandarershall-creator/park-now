@@ -1,12 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 15 (Host: Add New Listing Flow)
- * DESCRIPTION: Allows hosts to add a new parking spot, which dynamically updates the map database.
+ * COMMIT: 16 (User Profile & Booking History)
+ * DESCRIPTION: Centralizes navigation, user settings, and displays past booking/insurance data.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon.
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon. NEW (Commit 16): Added ChevronRight, ShieldCheck, LogOut icons.
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -121,10 +121,18 @@ const styles = `
   .nav-item.active { color: #0056D2; }
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 
-  /* --- NEW STYLES (Commit 15): ADD SPOT SCREEN --- */
+  /* --- ADD SPOT SCREEN (Commit 15) --- */
   .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; }
   .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
   .form-section { margin-bottom: 20px; }
+
+  /* --- NEW STYLES (Commit 16): USER PROFILE --- */
+  .profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
+  .avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
+  .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; }
+  .settings-row:last-child { border-bottom: none; }
+  .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; }
 `;
 
 /**
@@ -143,6 +151,7 @@ function App() {
   // NEW (Commit 13): can now also be 'activeBooking'
   // NEW (Commit 14): can now also be 'hostDashboard'
   // NEW (Commit 15): can now also be 'addSpot'
+  // NEW (Commit 16): can now also be 'profile'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   
   // State to hold our mock database of parking spots
@@ -154,7 +163,7 @@ function App() {
   // State to store the Driver's simulated GPS location
   const [driverLocation, setDriverLocation] = useState(null);
 
-  // NEW STATE (Commit 15): Variables to hold the new host listing data
+  // Variables to hold the new host listing data (Commit 15)
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
 
@@ -238,7 +247,7 @@ function App() {
   };
 
   /**
-   * NEW FUNCTION (Commit 15): handlePublishSpot
+   * FUNCTION: handlePublishSpot (Commit 15)
    * Takes the host's input, adds a new spot to our database, and returns to dashboard.
    */
   const handlePublishSpot = (e) => {
@@ -270,6 +279,12 @@ function App() {
     // Send host back to the dashboard
     alert('Listing Published! Simulating database update...');
     setCurrentScreen('hostDashboard');
+  };
+
+  // NEW FUNCTION (Commit 16): handleLogout
+  const handleLogout = () => {
+    setEmail('');
+    setCurrentScreen('login');
   };
 
   // RENDER: This is the HTML that appears on screen
@@ -324,9 +339,10 @@ function App() {
           <div className="screen" style={{padding: 0}}>
             {/* The Floating Search Bar */}
             <div className="search-header">
-              <div className="icon-btn" onClick={() => setCurrentScreen('login')}><Menu size={24} color="#000" /></div>
+              {/* NEW (Commit 16): Wired the Menu button to go to Settings/Profile */}
+              <div className="icon-btn" onClick={() => setCurrentScreen('profile')}><Menu size={24} color="#000" /></div>
               <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
-              {/* (Commit 14): Re-wired the User icon to switch to the Host Dashboard */}
+              {/* (Commit 14): Wired the User icon to switch to the Host Dashboard */}
               <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
             
@@ -527,20 +543,21 @@ function App() {
                 <span>Home</span>
               </div>
               
-              {/* NEW (Commit 15): Wired the Add Spot button to transition to the form */}
+              {/* (Commit 15): Wired the Add Spot button to transition to the form */}
               <div className="add-btn" onClick={() => setCurrentScreen('addSpot')}>
                 <Plus size={28} />
               </div>
               
-              <div className="nav-item">
-                <Settings size={24} />
+              {/* NEW (Commit 16): Wire settings icon to profile view */}
+              <div className="nav-item" onClick={() => setCurrentScreen('profile')}>
+                <Settings size={24} color="#8E8E93" />
                 <span>Settings</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* --- NEW SECTION (Commit 15): ADD PARKING SPOT FORM --- */}
+        {/* --- ADD SPOT SCREEN (Commit 15) --- */}
         {currentScreen === 'addSpot' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -591,11 +608,75 @@ function App() {
                 </div>
               </div>
 
-              {/* Added mt-auto (margin-top: auto) equivalent in standard CSS to push button to bottom */}
               <button className="primary-btn" type="submit" style={{marginTop: '40px'}}>
                 Publish Listing
               </button>
             </form>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 16): USER PROFILE & SETTINGS --- */}
+        {currentScreen === 'profile' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="host-header" style={{paddingBottom: 0}}>
+              <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Profile</h2>
+              <button className="close-btn" onClick={() => setCurrentScreen('map')}>
+                <X size={20} color="#000" />
+              </button>
+            </div>
+
+            <div className="profile-header-card">
+              <div className="avatar-circle">
+                {email ? email.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div>
+                <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>Driver Account</h3>
+                <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
+              </div>
+            </div>
+
+            <div className="settings-section-title">Past Bookings & Policies</div>
+            
+            {/* Displaying the Insurance Policy ID generated by the Backend in Section 4.2.2 */}
+            <div className="booking-card">
+              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}>
+                <span style={{fontWeight: 700}}>High St Garage</span>
+                <span style={{color: '#8E8E93', fontSize: 14}}>Oct 12</span>
+              </div>
+              <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Duration: 3 Hours • £15.75</div>
+              
+              <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#34C759', fontSize: 12, fontWeight: 600, background: '#E8F8EE', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
+                <ShieldCheck size={14} />
+                Insurance Policy: #INS-992A-X
+              </div>
+            </div>
+
+            <div className="settings-section-title" style={{marginTop: 25}}>Account Settings</div>
+            <div className="ios-input-group">
+              <div className="settings-row" onClick={() => alert('Payment settings coming soon.')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <CreditCard size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Payment Methods</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+              
+              <div className="settings-row" onClick={() => setCurrentScreen('hostDashboard')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <Home size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Switch to Host Dashboard</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+
+              <div className="settings-row" onClick={handleLogout}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <LogOut size={20} color="#FF3B30" />
+                  <span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 

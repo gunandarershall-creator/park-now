@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 16 (User Profile & Booking History)
- * DESCRIPTION: Centralizes navigation, user settings, and displays past booking/insurance data.
+ * COMMIT: 17 (Real-Time Database Simulation)
+ * DESCRIPTION: Simulates Firebase real-time listeners by dynamically updating the map state and showing live toast notifications.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
@@ -62,7 +62,7 @@ const styles = `
   .fake-road-2 { position: absolute; top: -10%; bottom: -10%; left: 55%; width: 25px; background: #FFFFFF; transform: rotate(15deg); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
   
   /* Airbnb-style Price Marker */
-  .price-marker { position: absolute; background: white; border-radius: 20px; padding: 6px 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; transition: all 0.2s; z-index: 10; cursor: pointer; }
+  .price-marker { position: absolute; background: white; border-radius: 20px; padding: 6px 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10; cursor: pointer; }
   .price-marker:hover, .price-marker.active { transform: scale(1.1); background: #0056D2; color: white; border-color: #0056D2; z-index: 20; }
   .price-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
   .price-marker:hover::after, .price-marker.active::after { border-color: #0056D2 transparent transparent transparent; }
@@ -126,13 +126,28 @@ const styles = `
   .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
   .form-section { margin-bottom: 20px; }
 
-  /* --- NEW STYLES (Commit 16): USER PROFILE --- */
+  /* --- USER PROFILE (Commit 16) --- */
   .profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
   .avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
   .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
   .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; }
   .settings-row:last-child { border-bottom: none; }
   .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; }
+
+  /* --- NEW STYLES (Commit 17): REAL-TIME TOAST NOTIFICATION --- */
+  .live-toast { 
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%); 
+    background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; 
+    border-radius: 30px; font-size: 14px; font-weight: 500; 
+    z-index: 3000; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    animation: slideDownToast 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOutToast 0.4s ease 3.6s forwards;
+    white-space: nowrap;
+  }
+  @keyframes slideDownToast { from { top: 60px; opacity: 0; } to { top: 80px; opacity: 1; } }
+  @keyframes fadeOutToast { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+  .live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
 `;
 
 /**
@@ -167,6 +182,9 @@ function App() {
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
 
+  // NEW STATE (Commit 17): Holds the text for live Firebase simulation notifications
+  const [liveToastMessage, setLiveToastMessage] = useState(null);
+
   // Load fake data when the app starts
   useEffect(() => {
     // We assign mathematical 'x' and 'y' coordinates to make the distance algorithm possible!
@@ -176,6 +194,33 @@ function App() {
       { id: '3', top: '65%', left: '20%', x: 20, y: 65, price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8 }
     ]);
   }, []);
+
+  /**
+   * NEW EFFECT (Commit 17): Simulate Firebase Real-Time Listener
+   * This proves your Section 4.1 report architecture! It waits 6 seconds on the map
+   * and dynamically removes a spot, simulating another user booking it to prevent "Cruising".
+   */
+  useEffect(() => {
+    let timeoutId;
+    if (currentScreen === 'map' && spots.length >= 3) {
+      timeoutId = setTimeout(() => {
+        // Filter out Penrhyn Road (id: '2') from the state to simulate it being booked
+        setSpots(prevSpots => prevSpots.filter(s => s.id !== '2'));
+        
+        // If the user happens to have that spot selected, close the bottom sheet! (Prevents race conditions)
+        if (selectedSpot && selectedSpot.id === '2') {
+          setSelectedSpot(null);
+        }
+
+        // Show the live notification
+        setLiveToastMessage("Someone just booked Penrhyn Road");
+        
+        // Hide notification after 4 seconds
+        setTimeout(() => setLiveToastMessage(null), 4000);
+      }, 6000); // Triggers 6 seconds after opening the map
+    }
+    return () => clearTimeout(timeoutId);
+  }, [currentScreen, spots.length, selectedSpot]);
 
   /**
    * FUNCTION: handleLogin
@@ -281,7 +326,7 @@ function App() {
     setCurrentScreen('hostDashboard');
   };
 
-  // NEW FUNCTION (Commit 16): handleLogout
+  // FUNCTION (Commit 16): handleLogout
   const handleLogout = () => {
     setEmail('');
     setCurrentScreen('login');
@@ -337,9 +382,18 @@ function App() {
         {/* --- MAP SCREEN --- */}
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0}}>
+            
+            {/* NEW (Commit 17): Render the Live Firebase Toast Notification if it exists */}
+            {liveToastMessage && (
+              <div className="live-toast">
+                <div className="live-indicator"></div>
+                {liveToastMessage}
+              </div>
+            )}
+
             {/* The Floating Search Bar */}
             <div className="search-header">
-              {/* NEW (Commit 16): Wired the Menu button to go to Settings/Profile */}
+              {/* (Commit 16): Wired the Menu button to go to Settings/Profile */}
               <div className="icon-btn" onClick={() => setCurrentScreen('profile')}><Menu size={24} color="#000" /></div>
               <div className="search-input"><MapPin size={16} color="#0056D2" /><span>Kingston, UK</span></div>
               {/* (Commit 14): Wired the User icon to switch to the Host Dashboard */}
@@ -548,7 +602,7 @@ function App() {
                 <Plus size={28} />
               </div>
               
-              {/* NEW (Commit 16): Wire settings icon to profile view */}
+              {/* (Commit 16): Wire settings icon to profile view */}
               <div className="nav-item" onClick={() => setCurrentScreen('profile')}>
                 <Settings size={24} color="#8E8E93" />
                 <span>Settings</span>
@@ -615,7 +669,7 @@ function App() {
           </div>
         )}
 
-        {/* --- NEW SECTION (Commit 16): USER PROFILE & SETTINGS --- */}
+        {/* --- USER PROFILE & SETTINGS (Commit 16) --- */}
         {currentScreen === 'profile' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="host-header" style={{paddingBottom: 0}}>

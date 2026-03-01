@@ -1,12 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 17 (Real-Time Database Simulation)
- * DESCRIPTION: Simulates Firebase real-time listeners by dynamically updating the map state and showing live toast notifications.
+ * COMMIT: 18 (User Registration & Vehicle Setup)
+ * DESCRIPTION: Replaces the 'Coming Soon' alert with a full Sign-Up flow, crucial for future backend Firebase Authentication.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon. NEW (Commit 16): Added ChevronRight, ShieldCheck, LogOut icons.
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon. NEW (Commit 16): Added ChevronRight, ShieldCheck, LogOut icons. NEW (Commit 18): Added Car icon for license plate.
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -134,7 +134,7 @@ const styles = `
   .settings-row:last-child { border-bottom: none; }
   .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; }
 
-  /* --- NEW STYLES (Commit 17): REAL-TIME TOAST NOTIFICATION --- */
+  /* --- REAL-TIME TOAST NOTIFICATION (Commit 17) --- */
   .live-toast { 
     position: absolute; top: 80px; left: 50%; transform: translateX(-50%); 
     background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; 
@@ -167,6 +167,7 @@ function App() {
   // NEW (Commit 14): can now also be 'hostDashboard'
   // NEW (Commit 15): can now also be 'addSpot'
   // NEW (Commit 16): can now also be 'profile'
+  // NEW (Commit 18): can now also be 'register'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   
   // State to hold our mock database of parking spots
@@ -182,8 +183,12 @@ function App() {
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
 
-  // NEW STATE (Commit 17): Holds the text for live Firebase simulation notifications
+  // Holds the text for live Firebase simulation notifications (Commit 17)
   const [liveToastMessage, setLiveToastMessage] = useState(null);
+
+  // NEW STATE (Commit 18): Registration form fields
+  const [regName, setRegName] = useState('');
+  const [regPlate, setRegPlate] = useState('');
 
   // Load fake data when the app starts
   useEffect(() => {
@@ -196,7 +201,7 @@ function App() {
   }, []);
 
   /**
-   * NEW EFFECT (Commit 17): Simulate Firebase Real-Time Listener
+   * EFFECT (Commit 17): Simulate Firebase Real-Time Listener
    * This proves your Section 4.1 report architecture! It waits 6 seconds on the map
    * and dynamically removes a spot, simulating another user booking it to prevent "Cruising".
    */
@@ -236,6 +241,20 @@ function App() {
     } else {
       // Error: User left the field empty
       alert('Please enter an email address');
+    }
+  };
+
+  /**
+   * NEW FUNCTION (Commit 18): handleRegister
+   * Handles the form submission for creating a new user account and vehicle profile.
+   */
+  const handleRegister = (e) => {
+    e.preventDefault();
+    if (email && regName && regPlate) {
+      alert(`Account created for ${regName} with vehicle ${regPlate}!`);
+      setCurrentScreen('map');
+    } else {
+      alert('Please fill out all fields to register.');
     }
   };
 
@@ -374,8 +393,60 @@ function App() {
             {/* 5. Sign Up Option */}
             <div className="signup-area">
               New to Park Now? 
-              <button type="button" className="signup-link" onClick={() => alert('Coming soon')}>Create Account</button>
+              {/* NEW (Commit 18): Changed from alert to navigating to register screen */}
+              <button type="button" className="signup-link" onClick={() => setCurrentScreen('register')}>Create Account</button>
             </div>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 18): REGISTRATION SCREEN --- */}
+        {currentScreen === 'register' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              {/* Back Button */}
+              <button className="close-btn" onClick={() => setCurrentScreen('login')}>
+                <ArrowLeft size={20} color="#000" />
+              </button>
+              <h2 className="checkout-title">Create Account</h2>
+            </div>
+            
+            <p style={{color: '#8E8E93', marginBottom: 25, fontSize: 15, textAlign: 'center'}}>
+              Join Park Now to find and list driveways instantly.
+            </p>
+
+            <form onSubmit={handleRegister}>
+              <div className="form-section">
+                <div className="input-label">Personal Details</div>
+                <div className="ios-input-group">
+                  <div className="ios-input-row">
+                    <User size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Full Name" value={regName} onChange={(e) => setRegName(e.target.value)} required />
+                  </div>
+                  <div className="ios-input-row">
+                    <Mail size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="ios-input-row">
+                    <Lock size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Create Password" type="password" required />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="input-label">Vehicle Details</div>
+                <div className="ios-input-group">
+                  <div className="ios-input-row">
+                    <Car size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="License Plate (e.g. AB12 CDE)" value={regPlate} onChange={(e) => setRegPlate(e.target.value)} required style={{textTransform: 'uppercase'}} />
+                  </div>
+                </div>
+              </div>
+              
+              <button className="primary-btn" type="submit" style={{marginTop: 20}}>
+                Register & Continue
+              </button>
+            </form>
           </div>
         )}
 
@@ -383,7 +454,7 @@ function App() {
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0}}>
             
-            {/* NEW (Commit 17): Render the Live Firebase Toast Notification if it exists */}
+            {/* (Commit 17): Render the Live Firebase Toast Notification if it exists */}
             {liveToastMessage && (
               <div className="live-toast">
                 <div className="live-indicator"></div>
@@ -681,11 +752,16 @@ function App() {
 
             <div className="profile-header-card">
               <div className="avatar-circle">
-                {email ? email.charAt(0).toUpperCase() : 'U'}
+                {/* Check for the registration name first, fallback to email letter */}
+                {regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}
               </div>
               <div>
                 <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>Driver Account</h3>
                 <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
+                {/* NEW (Commit 18): Display the registered license plate */}
+                {regPlate && (
+                  <p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>
+                )}
               </div>
             </div>
 

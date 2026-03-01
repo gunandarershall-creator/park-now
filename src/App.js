@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 18 (User Registration & Vehicle Setup)
- * DESCRIPTION: Replaces the 'Coming Soon' alert with a full Sign-Up flow, crucial for future backend Firebase Authentication.
+ * COMMIT: 19 (Rating & Review Screen)
+ * DESCRIPTION: Completes the P2P lifecycle by allowing drivers to review a driveway after their session ends.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
@@ -148,6 +148,14 @@ const styles = `
   @keyframes fadeOutToast { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
   .live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
+
+  /* --- NEW STYLES (Commit 19): RATING & REVIEW SCREEN --- */
+  .review-header { text-align: center; padding: 40px 20px 20px; }
+  .star-row { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
+  .star-btn { background: none; border: none; padding: 0; cursor: pointer; transition: transform 0.2s; outline: none; }
+  .star-btn:hover { transform: scale(1.15); }
+  .review-textarea { width: 100%; background: white; border: 1px solid #E5E5EA; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 15px; resize: none; box-sizing: border-box; margin-bottom: 20px; outline: none; height: 120px; }
+  .review-textarea:focus { border-color: #0056D2; }
 `;
 
 /**
@@ -168,6 +176,7 @@ function App() {
   // NEW (Commit 15): can now also be 'addSpot'
   // NEW (Commit 16): can now also be 'profile'
   // NEW (Commit 18): can now also be 'register'
+  // NEW (Commit 19): can now also be 'review'
   const [currentScreen, setCurrentScreen] = useState('login'); 
   
   // State to hold our mock database of parking spots
@@ -186,9 +195,12 @@ function App() {
   // Holds the text for live Firebase simulation notifications (Commit 17)
   const [liveToastMessage, setLiveToastMessage] = useState(null);
 
-  // NEW STATE (Commit 18): Registration form fields
+  // Registration form fields (Commit 18)
   const [regName, setRegName] = useState('');
   const [regPlate, setRegPlate] = useState('');
+
+  // NEW STATE (Commit 19): Holds the user's star rating
+  const [rating, setRating] = useState(0);
 
   // Load fake data when the app starts
   useEffect(() => {
@@ -245,7 +257,7 @@ function App() {
   };
 
   /**
-   * NEW FUNCTION (Commit 18): handleRegister
+   * FUNCTION: handleRegister (Commit 18)
    * Handles the form submission for creating a new user account and vehicle profile.
    */
   const handleRegister = (e) => {
@@ -273,6 +285,22 @@ function App() {
    * Allows the driver to stop their session and returns them to the map.
    */
   const handleEndSession = () => {
+    // NEW (Commit 19): Instead of jumping directly to the map, we transition 
+    // to the new Rating & Review screen to complete the P2P loop.
+    setCurrentScreen('review');
+  };
+
+  /**
+   * NEW FUNCTION (Commit 19): handleSubmitReview
+   * Finalizes the driver's journey, saves their rating, and returns them to the map.
+   */
+  const handleSubmitReview = (e) => {
+    e.preventDefault();
+    // In a real app, this would send an update to the Firebase database for the Host
+    alert(`Thank you! Your ${rating}-star review for ${selectedSpot.address} has been saved.`);
+    
+    // Reset state back to defaults
+    setRating(0);
     setSelectedSpot(null);
     setDriverLocation(null);
     setCurrentScreen('map');
@@ -393,13 +421,13 @@ function App() {
             {/* 5. Sign Up Option */}
             <div className="signup-area">
               New to Park Now? 
-              {/* NEW (Commit 18): Changed from alert to navigating to register screen */}
+              {/* (Commit 18): Changed from alert to navigating to register screen */}
               <button type="button" className="signup-link" onClick={() => setCurrentScreen('register')}>Create Account</button>
             </div>
           </div>
         )}
 
-        {/* --- NEW SECTION (Commit 18): REGISTRATION SCREEN --- */}
+        {/* --- REGISTRATION SCREEN (Commit 18) --- */}
         {currentScreen === 'register' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -612,10 +640,55 @@ function App() {
               <p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p>
             </div>
 
-            {/* Button to end the lifecycle and return to map */}
+            {/* Button to end the lifecycle and trigger the review screen */}
             <button className="danger-btn" onClick={handleEndSession}>
               End Session Early
             </button>
+          </div>
+        )}
+
+        {/* --- NEW SECTION (Commit 19): RATING & REVIEW SCREEN --- */}
+        {currentScreen === 'review' && selectedSpot && (
+          <div className="screen" style={{background: '#ffffff'}}>
+            <div className="review-header">
+              <h2 style={{fontSize: 28, fontWeight: 800, margin: '0 0 10px 0'}}>Session Ended</h2>
+              <p style={{color: '#8E8E93', fontSize: 16, margin: 0}}>
+                How was your parking experience at <b>{selectedSpot.address}</b>?
+              </p>
+            </div>
+
+            {/* Interactive 5-Star Rating Component */}
+            <div className="star-row">
+              {[1, 2, 3, 4, 5].map((starValue) => (
+                <button 
+                  key={starValue}
+                  className="star-btn"
+                  onClick={() => setRating(starValue)}
+                >
+                  <Star 
+                    size={40} 
+                    color={rating >= starValue ? "#FFCC00" : "#E5E5EA"} 
+                    fill={rating >= starValue ? "#FFCC00" : "transparent"} 
+                  />
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmitReview} style={{display: 'flex', flexDirection: 'column', flex: 1}}>
+              <textarea 
+                className="review-textarea" 
+                placeholder="Leave a public review for the host (optional)..."
+              ></textarea>
+              
+              <button 
+                className="primary-btn" 
+                type="submit" 
+                style={{marginTop: 'auto', marginBottom: 20, opacity: rating === 0 ? 0.5 : 1}}
+                disabled={rating === 0}
+              >
+                Submit Feedback
+              </button>
+            </form>
           </div>
         )}
 
@@ -758,7 +831,7 @@ function App() {
               <div>
                 <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>Driver Account</h3>
                 <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
-                {/* NEW (Commit 18): Display the registered license plate */}
+                {/* (Commit 18): Display the registered license plate */}
                 {regPlate && (
                   <p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>
                 )}

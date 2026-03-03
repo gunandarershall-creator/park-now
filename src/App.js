@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 24 (Search Autocomplete & Live Geocoding)
- * DESCRIPTION: Adds a functional dropdown for intelligent location suggestions and uses the live OpenStreetMap Nominatim API to fly the map anywhere in the world.
+ * COMMIT: 25 (Live Geocoding for Host Listings)
+ * DESCRIPTION: Upgrades the "Add Spot" functionality to use the live OpenStreetMap Nominatim API, allowing hosts to pin actual real-world locations.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
@@ -61,7 +61,7 @@ const styles = `
   /* (Commit 23): Interactive Search Bar styles */
   .map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 15px; font-family: inherit; }
 
-  /* NEW (Commit 24): Search Autocomplete Dropdown styles */
+  /* (Commit 24): Search Autocomplete Dropdown styles */
   .search-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; z-index: 3001; max-height: 300px; overflow-y: auto; }
   .dropdown-header { font-size: 12px; font-weight: 700; color: #8E8E93; text-transform: uppercase; padding: 12px 15px 4px; letter-spacing: 0.5px; }
   .search-suggestion { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #E5E5EA; cursor: pointer; transition: background 0.2s; text-align: left; }
@@ -486,32 +486,65 @@ function App() {
   };
 
   /**
-   * FUNCTION: handlePublishSpot (Commit 15)
+   * FUNCTION: handlePublishSpot (Commit 25 -> Backported to 24 functionality)
+   * UPDATED (Commit 24): Now uses live Geocoding to place the new listing EXACTLY where the host specifies!
    */
-  const handlePublishSpot = (e) => {
+  const handlePublishSpot = async (e) => {
     e.preventDefault();
     if (!newAddress || !newPrice) {
       alert("Please enter an address and a price.");
       return;
     }
 
-    const newSpotData = {
-      id: Date.now().toString(), 
-      lat: 51.4060 + (Math.random() * 0.004 - 0.002), 
-      lng: -0.3040 + (Math.random() * 0.004 - 0.002), 
-      price: parseFloat(newPrice), 
-      address: newAddress, 
-      rating: 5.0, 
-      distance: '0 min walk', 
-      spotsLeft: 1
-    };
+    try {
+      // Query the live map API to convert the host's address into real coordinates
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(newAddress)}`);
+      const data = await response.json();
 
-    setSpots([...spots, newSpotData]);
-    setNewAddress('');
-    setNewPrice('');
-    
-    alert('Listing Published! Check the interactive map to see your new spot.');
-    setCurrentScreen('map');
+      if (data && data.length > 0) {
+        const actualLat = parseFloat(data[0].lat);
+        const actualLng = parseFloat(data[0].lon);
+
+        const newSpotData = {
+          id: Date.now().toString(), 
+          lat: actualLat, 
+          lng: actualLng, 
+          price: parseFloat(newPrice), 
+          address: newAddress, 
+          rating: 5.0, 
+          distance: '0 min walk', 
+          spotsLeft: 1
+        };
+
+        // Add the new spot to our state
+        setSpots([...spots, newSpotData]);
+        
+        // Clean up the form
+        setNewAddress('');
+        setNewPrice('');
+        
+        alert(`Success! Listing verified and added at exactly ${actualLat.toFixed(4)}, ${actualLng.toFixed(4)}.`);
+        
+        // Take them back to the map to prove it worked!
+        setCurrentScreen('map');
+        
+        // Automatically set the search bar to their new address
+        setSearchQuery(newAddress);
+
+        // Give the map a tiny fraction of a second to render, then fly there!
+        setTimeout(() => {
+          if (window.mapInstance) {
+            window.mapInstance.flyTo([actualLat, actualLng], 15, { duration: 1.5 });
+          }
+        }, 300);
+
+      } else {
+        alert("Could not find coordinates for this address. Try being more specific (e.g., adding a postcode or city).");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      alert("Error connecting to the geocoding service to verify address.");
+    }
   };
 
   const handleLogout = () => {
@@ -841,9 +874,9 @@ function App() {
               <div className="photo-upload-box" onClick={() => alert('Camera roll integration coming soon')}><Camera size={32} style={{marginBottom: 8}} /><span>Tap to add photos</span></div>
 
               <div className="form-section">
-                <div className="input-label">Address</div>
+                <div className="input-label">Address (or Postcode)</div>
                 <div className="ios-input-group" style={{marginBottom: 0}}>
-                  <div className="ios-input-row"><MapPin size={20} color="#8E8E93" /><input className="ios-input" placeholder="e.g. 10 Downing Street" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} required /></div>
+                  <div className="ios-input-row"><MapPin size={20} color="#8E8E93" /><input className="ios-input" placeholder="e.g. 10 Downing Street, London" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} required /></div>
                 </div>
               </div>
 

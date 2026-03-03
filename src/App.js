@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 25 (Insurance Toggle & Dynamic Checkout)
- * DESCRIPTION: Upgrades the checkout flow to make Insurance explicit, adding a dynamic toggle switch that recalculates the receipt total and updates the digital ticket.
+ * COMMIT: 26 (Photo Uploads & Listing Images)
+ * DESCRIPTION: Replaces placeholder boxes with real images on the map sheet, and implements a working file uploader for new host listings.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -85,7 +85,10 @@ const styles = `
   .sheet-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; }
   .sheet-subtitle { color: #8E8E93; font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }
   .close-btn { background: #F2F2F7; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
-  .sheet-image { width: 100%; height: 140px; border-radius: 12px; background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; color: #0056D2; font-weight: 600; }
+  
+  /* UPDATED (Commit 26): Sheet Image styling to properly support real photo URLs */
+  .sheet-image { width: 100%; height: 140px; border-radius: 12px; background: #E5E5EA; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #8E8E93; font-weight: 600; font-size: 14px; border: 1px solid #E5E5EA; }
+  
   .price-row { display: flex; justify-content: space-between; align-items: flex-end; }
   .price-label { margin: 0; color: #8E8E93; font-size: 14px; margin-bottom: 4px; }
   .sheet-price { font-size: 28px; font-weight: 800; color: #000; margin: 0; }
@@ -133,7 +136,8 @@ const styles = `
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 
   /* --- ADD SPOT SCREEN --- */
-  .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; }
+  .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; overflow: hidden; position: relative; }
+  .photo-preview { width: 100%; height: 100%; object-fit: cover; }
   .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
   .form-section { margin-bottom: 20px; }
 
@@ -191,6 +195,10 @@ function App() {
   // Variables to hold the new host listing data
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  
+  // NEW (Commit 26): Variables to hold the user's uploaded photo for a new spot
+  const [newImage, setNewImage] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Holds the text for live Firebase simulation notifications
   const [liveToastMessage, setLiveToastMessage] = useState(null);
@@ -208,10 +216,10 @@ function App() {
   // Search Dropdown state and expanded mock data
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  // Track if the user opted in for Insurance Protection (Commit 25)
+  // Track if the user opted in for Insurance Protection
   const [hasInsurance, setHasInsurance] = useState(true);
 
-  // (Commit 24): Added mock global locations and postcodes to demonstrate dynamic filtering
+  // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
     { title: 'Surbiton Station', subtext: 'Victoria Rd, Surbiton', lat: 51.3943, lng: -0.3023, isRecent: true },
     { title: 'KT1 2EE', subtext: 'Kingston upon Thames', lat: 51.4111, lng: -0.3005, isRecent: true },
@@ -237,10 +245,11 @@ function App() {
 
   // Load fake data when the app starts
   useEffect(() => {
+    // UPDATED (Commit 26): Added high-quality mock images to the default Kingston spots!
     setSpots([
-      { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3 },
-      { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1 },
-      { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8 }
+      { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
+      { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
+      { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8, imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
     ]);
   }, []);
 
@@ -387,7 +396,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleSearch (Commit 24)
+   * FUNCTION: handleSearch
    * Uses actual OpenStreetMap Nominatim Geocoding API!
    */
   const handleSearch = async (e) => {
@@ -471,6 +480,21 @@ function App() {
   };
 
   /**
+   * NEW FUNCTION (Commit 26): handleImageUpload
+   * Reads a file uploaded from the user's device and converts it to a preview URL.
+   */
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  /**
    * FUNCTION: handlePublishSpot
    */
   const handlePublishSpot = async (e) => {
@@ -496,12 +520,14 @@ function App() {
           address: newAddress, 
           rating: 5.0, 
           distance: '0 min walk', 
-          spotsLeft: 1
+          spotsLeft: 1,
+          imageUrl: newImage // (Commit 26): Attach the uploaded image to the new map pin!
         };
 
         setSpots([...spots, newSpotData]);
         setNewAddress('');
         setNewPrice('');
+        setNewImage(null); // Reset the image
         
         alert(`Success! Listing verified and added at exactly ${actualLat.toFixed(4)}, ${actualLng.toFixed(4)}.`);
         
@@ -711,7 +737,12 @@ function App() {
                   <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
-                <div className="sheet-image">Street View Image</div>
+                {/* UPDATED (Commit 26): Renders the real photograph dynamically from the 'selectedSpot' state! */}
+                {selectedSpot.imageUrl ? (
+                  <img src={selectedSpot.imageUrl} alt={selectedSpot.address} className="sheet-image" />
+                ) : (
+                  <div className="sheet-image">No Image Provided</div>
+                )}
 
                 <div className="price-row">
                   <div>
@@ -729,7 +760,7 @@ function App() {
           </div>
         )}
 
-        {/* --- CHECKOUT SCREEN (Commit 25) --- */}
+        {/* --- CHECKOUT SCREEN --- */}
         {currentScreen === 'checkout' && selectedSpot && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header">
@@ -881,7 +912,29 @@ function App() {
             </div>
 
             <form onSubmit={handlePublishSpot}>
-              <div className="photo-upload-box" onClick={() => alert('Camera roll integration coming soon')}><Camera size={32} style={{marginBottom: 8}} /><span>Tap to add photos</span></div>
+              
+              {/* UPDATED (Commit 26): Fully interactive file upload interface using HTML5 FileReader */}
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                style={{display: 'none'}} 
+              />
+              
+              <div 
+                className="photo-upload-box" 
+                onClick={() => fileInputRef.current.click()}
+              >
+                {newImage ? (
+                  <img src={newImage} alt="Driveway Preview" className="photo-preview" />
+                ) : (
+                  <>
+                    <Camera size={32} style={{marginBottom: 8}} />
+                    <span>Tap to upload a photo</span>
+                  </>
+                )}
+              </div>
 
               <div className="form-section">
                 <div className="input-label">Address (or Postcode)</div>

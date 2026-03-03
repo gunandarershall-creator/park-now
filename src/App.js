@@ -1,12 +1,11 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 25 (Live Geocoding for Host Listings)
- * DESCRIPTION: Upgrades the "Add Spot" functionality to use the live OpenStreetMap Nominatim API, allowing hosts to pin actual real-world locations.
- * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
+ * COMMIT: 25 (Insurance Toggle & Dynamic Checkout)
+ * DESCRIPTION: Upgrades the checkout flow to make Insurance explicit, adding a dynamic toggle switch that recalculates the receipt total and updates the digital ticket.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon. NEW (Commit 16): Added ChevronRight, ShieldCheck, LogOut icons. NEW (Commit 18): Added Car icon for license plate.
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react';
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -52,16 +51,14 @@ const styles = `
   .signup-link { color: #0056D2; font-weight: 600; border: none; background: none; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px; }
 
   /* --- MAP UI STYLES --- */
-  /* (Commit 21): Boosted Z-Indexes to sit above the Leaflet map */
   .search-header { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 3000 !important; display: flex; gap: 10px; align-items: flex-start; }
   .search-container { flex: 1; display: flex; flex-direction: column; position: relative; }
   .search-input { width: 100%; background: white; padding: 12px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: 500; margin: 0; box-sizing: border-box; height: 45px; }
   .icon-btn { background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; flex-shrink: 0; }
   
-  /* (Commit 23): Interactive Search Bar styles */
   .map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 15px; font-family: inherit; }
 
-  /* (Commit 24): Search Autocomplete Dropdown styles */
+  /* Search Autocomplete Dropdown styles (Commit 24) */
   .search-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; z-index: 3001; max-height: 300px; overflow-y: auto; }
   .dropdown-header { font-size: 12px; font-weight: 700; color: #8E8E93; text-transform: uppercase; padding: 12px 15px 4px; letter-spacing: 0.5px; }
   .search-suggestion { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #E5E5EA; cursor: pointer; transition: background 0.2s; text-align: left; }
@@ -71,7 +68,7 @@ const styles = `
   .suggestion-text { font-size: 15px; font-weight: 600; color: #000; margin-bottom: 2px; }
   .suggestion-subtext { font-size: 13px; color: #8E8E93; }
   
-  /* (Commit 21): Real Leaflet Map Container */
+  /* Real Leaflet Map Container */
   #real-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 0; background-color: #E2E2E0; }
   
   /* Airbnb-style Price Marker overrides for Leaflet */
@@ -112,13 +109,13 @@ const styles = `
   .driver-dot::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: rgba(0, 122, 255, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
   @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 
-  /* --- ACTIVE BOOKING TICKET (Commit 13) --- */
+  /* --- ACTIVE BOOKING TICKET --- */
   .ticket-card { background: #0056D2; color: white; border-radius: 20px; padding: 30px 20px; text-align: center; margin-top: 20px; box-shadow: 0 15px 30px rgba(0,86,210,0.3); }
   .timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
   .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
   .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
 
-  /* --- HOST DASHBOARD (Commit 14) --- */
+  /* --- HOST DASHBOARD --- */
   .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
   .earnings-card { background: linear-gradient(135deg, #0056D2 0%, #003b8e 100%); color: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,86,210,0.3); margin-bottom: 20px; }
   .earnings-title { font-size: 14px; opacity: 0.9; margin: 0 0 5px 0; }
@@ -135,12 +132,12 @@ const styles = `
   .nav-item.active { color: #0056D2; }
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 
-  /* --- ADD SPOT SCREEN (Commit 15) --- */
+  /* --- ADD SPOT SCREEN --- */
   .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; }
   .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
   .form-section { margin-bottom: 20px; }
 
-  /* --- USER PROFILE (Commit 16) --- */
+  /* --- USER PROFILE --- */
   .profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
   .avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
   .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
@@ -148,7 +145,7 @@ const styles = `
   .settings-row:last-child { border-bottom: none; }
   .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; }
 
-  /* --- REAL-TIME TOAST NOTIFICATION (Commit 17) --- */
+  /* --- REAL-TIME TOAST NOTIFICATION --- */
   .live-toast { 
     position: absolute; top: 80px; left: 50%; transform: translateX(-50%); 
     background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; 
@@ -163,7 +160,7 @@ const styles = `
   .live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
 
-  /* --- RATING & REVIEW SCREEN (Commit 19) --- */
+  /* --- RATING & REVIEW SCREEN --- */
   .review-header { text-align: center; padding: 40px 20px 20px; }
   .star-row { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
   .star-btn { background: none; border: none; padding: 0; cursor: pointer; transition: transform 0.2s; outline: none; }
@@ -191,26 +188,29 @@ function App() {
   // State to store the Driver's simulated GPS location
   const [driverLocation, setDriverLocation] = useState(null);
 
-  // Variables to hold the new host listing data (Commit 15)
+  // Variables to hold the new host listing data
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
 
-  // Holds the text for live Firebase simulation notifications (Commit 17)
+  // Holds the text for live Firebase simulation notifications
   const [liveToastMessage, setLiveToastMessage] = useState(null);
 
-  // Registration form fields (Commit 18)
+  // Registration form fields
   const [regName, setRegName] = useState('');
   const [regPlate, setRegPlate] = useState('');
 
-  // Holds the user's star rating (Commit 19)
+  // Holds the user's star rating
   const [rating, setRating] = useState(0);
 
-  // NEW STATE (Commit 23): Interactive map search query
+  // Interactive map search query
   const [searchQuery, setSearchQuery] = useState('');
 
-  // NEW STATE (Commit 24): Search Dropdown state and expanded mock data
+  // Search Dropdown state and expanded mock data
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
+  // Track if the user opted in for Insurance Protection (Commit 25)
+  const [hasInsurance, setHasInsurance] = useState(true);
+
   // (Commit 24): Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
     { title: 'Surbiton Station', subtext: 'Victoria Rd, Surbiton', lat: 51.3943, lng: -0.3023, isRecent: true },
@@ -232,12 +232,11 @@ function App() {
         item.subtext.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-  // Map Reference for Leaflet injection (Commit 21)
+  // Map Reference for Leaflet injection
   const mapContainerRef = useRef(null);
 
   // Load fake data when the app starts
   useEffect(() => {
-    // (Commit 20): Using actual London/Kingston Latitude and Longitude coordinates!
     setSpots([
       { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3 },
       { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1 },
@@ -246,7 +245,7 @@ function App() {
   }, []);
 
   /**
-   * EFFECT (Commit 21): Dynamic Leaflet Map Injector
+   * EFFECT: Dynamic Leaflet Map Injector
    */
   useEffect(() => {
     if (currentScreen !== 'map') return;
@@ -254,28 +253,23 @@ function App() {
     const initLeafletMap = () => {
       if (!mapContainerRef.current || window.mapInstance) return;
 
-      // Initialize the map centered on Kingston Upon Thames
       window.mapInstance = window.L.map(mapContainerRef.current, {
-        zoomControl: false, // We hide defaults for a cleaner UI
+        zoomControl: false,
       }).setView([51.4060, -0.3040], 15);
 
-      // Add modern, clean map tiles
       window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(window.mapInstance);
       
-      // Force an update to draw markers
       setSpots([...spots]);
     };
 
     if (!window.L) {
-      // Inject CSS safely
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
 
-      // Inject JS safely
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.async = true;
@@ -285,7 +279,6 @@ function App() {
       initLeafletMap();
     }
 
-    // Cleanup: Destroy the map instance when leaving the map screen to prevent memory leaks
     return () => {
       if (currentScreen !== 'map' && window.mapInstance) {
         window.mapInstance.remove();
@@ -296,40 +289,35 @@ function App() {
   }, [currentScreen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * EFFECT (Commit 21): Update Map Markers Dynamically
+   * EFFECT: Update Map Markers Dynamically
    */
   useEffect(() => {
     if (!window.mapInstance || !window.L || currentScreen !== 'map') return;
 
-    // Remove old markers to prevent duplicates
     if (window.markerLayer) {
       window.mapInstance.removeLayer(window.markerLayer);
     }
     
-    // Create a new layer for all current markers
     const newLayer = window.L.layerGroup().addTo(window.mapInstance);
     window.markerLayer = newLayer;
 
-    // Draw Parking Spots
     spots.forEach(spot => {
       const isSelected = selectedSpot?.id === spot.id;
       const icon = window.L.divIcon({
         className: 'custom-leaflet-icon',
         html: `<div class="price-marker ${isSelected ? 'active' : ''}">£${spot.price.toFixed(2)}</div>`,
         iconSize: [60, 30],
-        iconAnchor: [30, 30] // Anchor perfectly to the bottom point
+        iconAnchor: [30, 30]
       });
       
       const marker = window.L.marker([spot.lat, spot.lng], { icon }).addTo(newLayer);
       
-      // Bind click event to React State
       marker.on('click', () => {
         setSelectedSpot(spot);
         window.mapInstance.flyTo([spot.lat, spot.lng], 16, { duration: 0.5 });
       });
     });
 
-    // Draw Driver Location (Blue Dot)
     if (driverLocation) {
       const dIcon = window.L.divIcon({
         className: 'custom-leaflet-icon',
@@ -343,7 +331,7 @@ function App() {
   }, [spots, selectedSpot, driverLocation, currentScreen]);
 
   /**
-   * EFFECT (Commit 17): Simulate Firebase Real-Time Listener
+   * EFFECT: Simulate Firebase Real-Time Listener
    */
   useEffect(() => {
     let timeoutId;
@@ -373,7 +361,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleRegister (Commit 18)
+   * FUNCTION: handleRegister
    */
   const handleRegister = (e) => {
     e.preventDefault();
@@ -386,7 +374,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleResetPassword (Commit 22)
+   * FUNCTION: handleResetPassword
    */
   const handleResetPassword = (e) => {
     e.preventDefault();
@@ -400,24 +388,21 @@ function App() {
 
   /**
    * FUNCTION: handleSearch (Commit 24)
-   * UPDATED (Commit 24): Uses actual OpenStreetMap Nominatim Geocoding API!
-   * This proves you can query real-world coordinates and postcodes when you press Enter.
+   * Uses actual OpenStreetMap Nominatim Geocoding API!
    */
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery) return;
     
     try {
-      // Using Nominatim (OpenStreetMap's free Geocoding API) to prove the backend concept!
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
 
       if (data && data.length > 0) {
-        // Extract real coordinates from the API
         const lat = parseFloat(data[0].lat);
         const lng = parseFloat(data[0].lon);
         
-        setIsSearchFocused(false); // Close dropdown
+        setIsSearchFocused(false); 
         
         if (window.mapInstance) {
            window.mapInstance.flyTo([lat, lng], 13, { duration: 1.5 });
@@ -446,7 +431,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleSubmitReview (Commit 19)
+   * FUNCTION: handleSubmitReview
    */
   const handleSubmitReview = (e) => {
     e.preventDefault();
@@ -486,8 +471,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handlePublishSpot (Commit 25 -> Backported to 24 functionality)
-   * UPDATED (Commit 24): Now uses live Geocoding to place the new listing EXACTLY where the host specifies!
+   * FUNCTION: handlePublishSpot
    */
   const handlePublishSpot = async (e) => {
     e.preventDefault();
@@ -497,7 +481,6 @@ function App() {
     }
 
     try {
-      // Query the live map API to convert the host's address into real coordinates
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(newAddress)}`);
       const data = await response.json();
 
@@ -516,22 +499,15 @@ function App() {
           spotsLeft: 1
         };
 
-        // Add the new spot to our state
         setSpots([...spots, newSpotData]);
-        
-        // Clean up the form
         setNewAddress('');
         setNewPrice('');
         
         alert(`Success! Listing verified and added at exactly ${actualLat.toFixed(4)}, ${actualLng.toFixed(4)}.`);
         
-        // Take them back to the map to prove it worked!
         setCurrentScreen('map');
-        
-        // Automatically set the search bar to their new address
         setSearchQuery(newAddress);
 
-        // Give the map a tiny fraction of a second to render, then fly there!
         setTimeout(() => {
           if (window.mapInstance) {
             window.mapInstance.flyTo([actualLat, actualLng], 15, { duration: 1.5 });
@@ -591,7 +567,7 @@ function App() {
           </div>
         )}
 
-        {/* --- REGISTRATION SCREEN (Commit 18) --- */}
+        {/* --- REGISTRATION SCREEN --- */}
         {currentScreen === 'register' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -623,7 +599,7 @@ function App() {
           </div>
         )}
 
-        {/* --- FORGOT PASSWORD SCREEN (Commit 22) --- */}
+        {/* --- FORGOT PASSWORD SCREEN --- */}
         {currentScreen === 'forgotPassword' && (
           <div className="screen">
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -684,7 +660,7 @@ function App() {
                   )}
                 </form>
 
-                {/* Dropdown Suggestions (Commit 24) */}
+                {/* Dropdown Suggestions */}
                 {isSearchFocused && searchSuggestions.length > 0 && (
                   <div className="search-dropdown">
                     <div className="dropdown-header">
@@ -694,7 +670,7 @@ function App() {
                       <div 
                         key={idx} 
                         className="search-suggestion" 
-                        onMouseDown={(e) => e.preventDefault()} // Prevents onBlur from firing before click
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
                           setSearchQuery(item.title);
                           setIsSearchFocused(false);
@@ -753,9 +729,9 @@ function App() {
           </div>
         )}
 
-        {/* --- CHECKOUT SCREEN --- */}
+        {/* --- CHECKOUT SCREEN (Commit 25) --- */}
         {currentScreen === 'checkout' && selectedSpot && (
-          <div className="screen">
+          <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header">
               <button className="close-btn" onClick={() => setCurrentScreen('map')}><ArrowLeft size={20} color="#000" /></button>
               <h2 className="checkout-title">Confirm Booking</h2>
@@ -766,7 +742,34 @@ function App() {
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Duration</span><span>2 Hours (14:00 - 16:00)</span></div>
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Rate</span><span>£{selectedSpot.price.toFixed(2)} / hr</span></div>
-              <div className="receipt-row total"><span>Total Due</span><span>£{(selectedSpot.price * 2).toFixed(2)}</span></div>
+              
+              {/* Dynamic Insurance Line Item in Receipt */}
+              {hasInsurance && (
+                <div className="receipt-row"><span style={{color: '#34C759', fontWeight: 600}}>Premium Insurance</span><span style={{color: '#34C759', fontWeight: 600}}>£1.50</span></div>
+              )}
+              
+              <div className="receipt-row total">
+                <span>Total Due</span>
+                {/* Dynamic Total Calculation based on Insurance Toggle */}
+                <span>£{((selectedSpot.price * 2) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Interactive Insurance Toggle UI */}
+            <h4 style={{marginBottom: 10, color: '#666'}}>Add-ons</h4>
+            <div className="payment-method-row" style={{marginBottom: 20}}>
+              <ShieldCheck size={28} color={hasInsurance ? "#34C759" : "#8E8E93"} />
+              <div style={{flex: 1}}>
+                <div style={{fontWeight: 600}}>Premium Protection</div>
+                <div style={{fontSize: 13, color: '#8E8E93'}}>Cover up to £1M for your vehicle.</div>
+              </div>
+              <div 
+                className="toggle-switch" 
+                style={hasInsurance ? {} : {background: '#E5E5EA'}} 
+                onClick={() => setHasInsurance(!hasInsurance)}
+              >
+                <div className="toggle-knob" style={hasInsurance ? {} : {right: 'auto', left: 2}}></div>
+              </div>
             </div>
 
             <h4 style={{marginBottom: 10, color: '#666'}}>Payment Method</h4>
@@ -791,6 +794,13 @@ function App() {
               <div className="timer-display">01:59:59</div>
               <div className="qr-box"><QrCode size={100} color="#0056D2" /></div>
               <p style={{fontSize: 14, opacity: 0.9, margin: 0}}>Scan this QR code at the barrier to enter and exit <b>{selectedSpot.address}</b>.</p>
+              
+              {/* Shows the insurance badge directly on the digital ticket if purchased */}
+              {hasInsurance && (
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#34C759', fontSize: 13, fontWeight: 600, background: 'white', padding: '6px 12px', borderRadius: 12, width: 'fit-content', margin: '15px auto 0'}}>
+                  <ShieldCheck size={16} /> Protected by ParkNow
+                </div>
+              )}
             </div>
 
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
@@ -799,7 +809,7 @@ function App() {
           </div>
         )}
 
-        {/* --- RATING & REVIEW SCREEN (Commit 19) --- */}
+        {/* --- RATING & REVIEW SCREEN --- */}
         {currentScreen === 'review' && selectedSpot && (
           <div className="screen" style={{background: '#ffffff'}}>
             <div className="review-header">
@@ -822,7 +832,7 @@ function App() {
           </div>
         )}
 
-        {/* --- HOST DASHBOARD SCREEN (Commit 14) --- */}
+        {/* --- HOST DASHBOARD SCREEN --- */}
         {currentScreen === 'hostDashboard' && (
           <div className="screen" style={{paddingBottom: 80, overflowY: 'auto'}}>
             <div className="host-header">
@@ -862,7 +872,7 @@ function App() {
           </div>
         )}
 
-        {/* --- ADD SPOT SCREEN (Commit 15) --- */}
+        {/* --- ADD SPOT SCREEN --- */}
         {currentScreen === 'addSpot' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -892,7 +902,7 @@ function App() {
           </div>
         )}
 
-        {/* --- USER PROFILE & SETTINGS (Commit 16) --- */}
+        {/* --- USER PROFILE & SETTINGS --- */}
         {currentScreen === 'profile' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="host-header" style={{paddingBottom: 0}}>

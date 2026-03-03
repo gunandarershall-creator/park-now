@@ -1,15 +1,17 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 21 (Real Interactive Map & Live Geolocation)
- * DESCRIPTION: Integrates a real, interactive world map using Leaflet CDN to avoid build errors. Uses HTML5 Geolocation for real-world GPS tracking.
+ * COMMIT: 22 (Password Recovery Flow)
+ * DESCRIPTION: Adds a functional Forgot Password screen to complete the Authentication loop for Firebase.
  * NOTE: All previous comments and logic are preserved. New additions are marked with "Commit X".
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react';
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react'; // 'useState' allows us to store data (like email) in memory. Import icons for better User Experience (UX). NEW (Commit 13): Added Timer and QrCode icons. NEW (Commit 14): Added Plus, Home, Settings for the Host Nav. NEW (Commit 15): Added Camera icon. NEW (Commit 16): Added ChevronRight, ShieldCheck, LogOut icons. NEW (Commit 18): Added Car icon for license plate.
 
 /**
  * CSS STYLES (Internal Stylesheet)
+ * We define styles here to keep the component self-contained.
+ * Design Standard: iOS Human Interface Guidelines (clean, white, rounded corners).
  */
 const styles = `
   /* Reset default browser margins and set background to black */
@@ -189,7 +191,7 @@ function App() {
   // Holds the user's star rating (Commit 19)
   const [rating, setRating] = useState(0);
 
-  // NEW (Commit 21): Map Reference for Leaflet injection
+  // Map Reference for Leaflet injection (Commit 21)
   const mapContainerRef = useRef(null);
 
   // Load fake data when the app starts
@@ -203,7 +205,7 @@ function App() {
   }, []);
 
   /**
-   * NEW EFFECT (Commit 21): Dynamic Leaflet Map Injector
+   * EFFECT (Commit 21): Dynamic Leaflet Map Injector
    * To prevent build environment crashes, we inject the Leaflet scripts purely on the client side.
    */
   useEffect(() => {
@@ -254,7 +256,7 @@ function App() {
   }, [currentScreen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * NEW EFFECT (Commit 21): Update Map Markers Dynamically
+   * EFFECT (Commit 21): Update Map Markers Dynamically
    * Whenever 'spots', 'driverLocation', or 'selectedSpot' change, we redraw the markers.
    */
   useEffect(() => {
@@ -341,6 +343,20 @@ function App() {
       setCurrentScreen('map');
     } else {
       alert('Please fill out all fields to register.');
+    }
+  };
+
+  /**
+   * NEW FUNCTION (Commit 22): handleResetPassword
+   * Simulates sending a Firebase Auth password reset email.
+   */
+  const handleResetPassword = (e) => {
+    e.preventDefault();
+    if (email) {
+      alert(`A password reset link has been sent to ${email}`);
+      setCurrentScreen('login');
+    } else {
+      alert('Please enter your email address to receive a reset link.');
     }
   };
 
@@ -467,7 +483,9 @@ function App() {
               </div>
               
               <button className="primary-btn" type="submit">Sign In</button>
-              <button type="button" className="secondary-btn" onClick={() => alert('Coming soon')}>Forgot Password?</button>
+              
+              {/* NEW (Commit 22): Wired up the Forgot Password button */}
+              <button type="button" className="secondary-btn" onClick={() => setCurrentScreen('forgotPassword')}>Forgot Password?</button>
             </form>
 
             <div className="signup-area">
@@ -509,6 +527,40 @@ function App() {
           </div>
         )}
 
+        {/* --- NEW SECTION (Commit 22): FORGOT PASSWORD SCREEN --- */}
+        {currentScreen === 'forgotPassword' && (
+          <div className="screen">
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('login')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Reset Password</h2>
+            </div>
+            
+            <p style={{color: '#8E8E93', marginBottom: 25, fontSize: 15, textAlign: 'center'}}>
+              Enter the email address associated with your account, and we'll send you a link to reset your password.
+            </p>
+
+            <form onSubmit={handleResetPassword}>
+              <div className="ios-input-group">
+                <div className="ios-input-row">
+                  <Mail size={20} color="#8E8E93" />
+                  <input 
+                    className="ios-input" 
+                    placeholder="Email Address" 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    required 
+                  />
+                </div>
+              </div>
+              
+              <button className="primary-btn" type="submit" style={{marginTop: 10}}>
+                Send Reset Link
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* --- MAP SCREEN --- */}
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0, position: 'relative'}}>
@@ -523,7 +575,7 @@ function App() {
               <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
             
-            {/* NEW (Commit 21): Real Leaflet Map mount point */}
+            {/* Real Leaflet Map mount point */}
             <div id="real-map" ref={mapContainerRef}></div>
 
             {/* Locate Me Button */}

@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 26 (Photo Uploads & Listing Images)
- * DESCRIPTION: Replaces placeholder boxes with real images on the map sheet, and implements a working file uploader for new host listings.
+ * COMMIT: 27 (Interactive Host Toggles)
+ * DESCRIPTION: Replaces placeholder boxes with real images on the map sheet, and implements a working file uploader for new host listings. Makes the host dashboard availability toggles fully functional.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -199,6 +199,19 @@ function App() {
   // NEW (Commit 26): Variables to hold the user's uploaded photo for a new spot
   const [newImage, setNewImage] = useState(null);
   const fileInputRef = useRef(null);
+
+  // NEW STATE (Commit 27): Manage Host Dashboard Toggle Switches dynamically
+  const [hostListings, setHostListings] = useState([
+    { id: '1', address: '142 Penrhyn Road', details: '£6.00 / hr • 2 spots', isActive: true },
+    { id: '2', address: 'Kingston Uni Garage', details: '£4.50 / hr • 1 spot', isActive: false }
+  ]);
+  
+  // Toggles a specific driveway's availability on and off
+  const toggleHostListing = (id) => {
+    setHostListings(prev => prev.map(listing => 
+      listing.id === id ? { ...listing, isActive: !listing.isActive } : listing
+    ));
+  };
 
   // Holds the text for live Firebase simulation notifications
   const [liveToastMessage, setLiveToastMessage] = useState(null);
@@ -525,6 +538,15 @@ function App() {
         };
 
         setSpots([...spots, newSpotData]);
+
+        // NEW (Commit 27): Automatically add the new listing to the Host Dashboard!
+        setHostListings([...hostListings, {
+          id: newSpotData.id,
+          address: newAddress,
+          details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
+          isActive: true
+        }]);
+
         setNewAddress('');
         setNewPrice('');
         setNewImage(null); // Reset the image
@@ -879,21 +901,22 @@ function App() {
 
             <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Your Driveways</h3>
 
-            <div className="listing-item">
-              <div>
-                <div style={{fontWeight: 700, fontSize: 16}}>142 Penrhyn Road</div>
-                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>£6.00 / hr • 2 spots</div>
+            {/* UPDATED (Commit 27): Mapped through state to make toggles fully interactive */}
+            {hostListings.map(listing => (
+              <div className="listing-item" key={listing.id}>
+                <div>
+                  <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
+                  <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
+                </div>
+                <div 
+                  className="toggle-switch" 
+                  style={listing.isActive ? {} : {background: '#E5E5EA'}} 
+                  onClick={() => toggleHostListing(listing.id)}
+                >
+                  <div className="toggle-knob" style={listing.isActive ? {} : {right: 'auto', left: 2}}></div>
+                </div>
               </div>
-              <div className="toggle-switch" onClick={() => alert('Toggle availability coming soon.')}><div className="toggle-knob"></div></div>
-            </div>
-
-            <div className="listing-item">
-              <div>
-                <div style={{fontWeight: 700, fontSize: 16}}>Kingston Uni Garage</div>
-                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>£4.50 / hr • 1 spot</div>
-              </div>
-              <div className="toggle-switch" style={{background: '#E5E5EA'}} onClick={() => alert('Toggle availability coming soon.')}><div className="toggle-knob" style={{right: 'auto', left: 2}}></div></div>
-            </div>
+            ))}
 
             <div className="nav-bar-bottom">
               <div className="nav-item active"><Home size={24} /><span>Home</span></div>

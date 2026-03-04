@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 28 (Payment Methods Screen)
- * DESCRIPTION: Replaces placeholder alerts with a fully mocked Payment Methods / Digital Wallet screen for managing saved cards, including a manual card entry form.
+ * COMMIT: 29 (Active Session Background Navigation)
+ * DESCRIPTION: Allows the user to navigate away from an active session back to the map, and introduces a floating active session banner to return to it.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -114,6 +114,9 @@ const styles = `
   .timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
   .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
   .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
+  
+  /* NEW (Commit 29): Floating active session banner on map */
+  .active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 3000 !important; cursor: pointer; }
 
   /* --- HOST DASHBOARD --- */
   .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
@@ -227,6 +230,9 @@ function App() {
   
   // Track if the user opted in for Insurance Protection
   const [hasInsurance, setHasInsurance] = useState(true);
+
+  // NEW STATE (Commit 29): Track if there is a running booking in the background
+  const [isSessionActive, setIsSessionActive] = useState(false);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -435,8 +441,10 @@ function App() {
 
   /**
    * FUNCTION: handlePayment
+   * UPDATED (Commit 29): Now sets the session as active so we can track it in the background
    */
   const handlePayment = () => {
+    setIsSessionActive(true);
     setCurrentScreen('activeBooking');
   };
 
@@ -444,6 +452,7 @@ function App() {
    * FUNCTION: handleEndSession
    */
   const handleEndSession = () => {
+    setIsSessionActive(false);
     setCurrentScreen('review');
   };
 
@@ -731,6 +740,17 @@ function App() {
 
               <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
+
+            {/* NEW (Commit 29): Floating Active Session Banner */}
+            {isSessionActive && selectedSpot && (
+              <div className="active-session-banner" onClick={() => setCurrentScreen('activeBooking')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <div className="live-indicator" style={{background: '#fff', boxShadow: '0 0 8px #fff'}}></div>
+                  <span style={{fontWeight: 600}}>Return to Active Session</span>
+                </div>
+                <ChevronRight size={18} />
+              </div>
+            )}
             
             <div id="real-map" ref={mapContainerRef}></div>
 
@@ -740,7 +760,7 @@ function App() {
               </div>
             )}
 
-            {selectedSpot && (
+            {selectedSpot && !isSessionActive && (
               <div className="bottom-sheet">
                 <div className="sheet-header">
                   <div>
@@ -827,8 +847,10 @@ function App() {
         {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
           <div className="screen">
+            {/* UPDATED (Commit 29): Added back arrow to minimize the active session to the background */}
             <div className="checkout-header" style={{borderBottom: 'none'}}>
-              <h2 className="checkout-title" style={{paddingRight: 0}}>Active Session</h2>
+              <button className="close-btn" onClick={() => setCurrentScreen('map')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Active Session</h2>
             </div>
 
             <div className="ticket-card">
@@ -1011,7 +1033,7 @@ function App() {
           </div>
         )}
 
-        {/* --- PAYMENT METHODS SCREEN (Commit 28) --- */}
+        {/* --- PAYMENT METHODS SCREEN --- */}
         {currentScreen === 'paymentMethods' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -1056,7 +1078,7 @@ function App() {
           </div>
         )}
 
-        {/* --- ADD CARD SCREEN (Commit 28) --- */}
+        {/* --- ADD CARD SCREEN --- */}
         {currentScreen === 'addCard' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>

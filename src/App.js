@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 27 (Interactive Host Toggles)
- * DESCRIPTION: Replaces placeholder boxes with real images on the map sheet, and implements a working file uploader for new host listings. Makes the host dashboard availability toggles fully functional.
+ * COMMIT: 28 (Payment Methods Screen)
+ * DESCRIPTION: Replaces placeholder alerts with a fully mocked Payment Methods / Digital Wallet screen for managing saved cards, including a manual card entry form.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -58,7 +58,7 @@ const styles = `
   
   .map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 15px; font-family: inherit; }
 
-  /* Search Autocomplete Dropdown styles (Commit 24) */
+  /* Search Autocomplete Dropdown styles */
   .search-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; z-index: 3001; max-height: 300px; overflow-y: auto; }
   .dropdown-header { font-size: 12px; font-weight: 700; color: #8E8E93; text-transform: uppercase; padding: 12px 15px 4px; letter-spacing: 0.5px; }
   .search-suggestion { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #E5E5EA; cursor: pointer; transition: background 0.2s; text-align: left; }
@@ -85,10 +85,7 @@ const styles = `
   .sheet-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; }
   .sheet-subtitle { color: #8E8E93; font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }
   .close-btn { background: #F2F2F7; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
-  
-  /* UPDATED (Commit 26): Sheet Image styling to properly support real photo URLs */
   .sheet-image { width: 100%; height: 140px; border-radius: 12px; background: #E5E5EA; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #8E8E93; font-weight: 600; font-size: 14px; border: 1px solid #E5E5EA; }
-  
   .price-row { display: flex; justify-content: space-between; align-items: flex-end; }
   .price-label { margin: 0; color: #8E8E93; font-size: 14px; margin-bottom: 4px; }
   .sheet-price { font-size: 28px; font-weight: 800; color: #000; margin: 0; }
@@ -196,17 +193,16 @@ function App() {
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
   
-  // NEW (Commit 26): Variables to hold the user's uploaded photo for a new spot
+  // Variables to hold the user's uploaded photo for a new spot
   const [newImage, setNewImage] = useState(null);
   const fileInputRef = useRef(null);
 
-  // NEW STATE (Commit 27): Manage Host Dashboard Toggle Switches dynamically
+  // Manage Host Dashboard Toggle Switches dynamically
   const [hostListings, setHostListings] = useState([
     { id: '1', address: '142 Penrhyn Road', details: '£6.00 / hr • 2 spots', isActive: true },
     { id: '2', address: 'Kingston Uni Garage', details: '£4.50 / hr • 1 spot', isActive: false }
   ]);
   
-  // Toggles a specific driveway's availability on and off
   const toggleHostListing = (id) => {
     setHostListings(prev => prev.map(listing => 
       listing.id === id ? { ...listing, isActive: !listing.isActive } : listing
@@ -258,7 +254,6 @@ function App() {
 
   // Load fake data when the app starts
   useEffect(() => {
-    // UPDATED (Commit 26): Added high-quality mock images to the default Kingston spots!
     setSpots([
       { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
       { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
@@ -493,8 +488,7 @@ function App() {
   };
 
   /**
-   * NEW FUNCTION (Commit 26): handleImageUpload
-   * Reads a file uploaded from the user's device and converts it to a preview URL.
+   * FUNCTION: handleImageUpload
    */
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -534,12 +528,11 @@ function App() {
           rating: 5.0, 
           distance: '0 min walk', 
           spotsLeft: 1,
-          imageUrl: newImage // (Commit 26): Attach the uploaded image to the new map pin!
+          imageUrl: newImage
         };
 
         setSpots([...spots, newSpotData]);
-
-        // NEW (Commit 27): Automatically add the new listing to the Host Dashboard!
+        
         setHostListings([...hostListings, {
           id: newSpotData.id,
           address: newAddress,
@@ -549,7 +542,7 @@ function App() {
 
         setNewAddress('');
         setNewPrice('');
-        setNewImage(null); // Reset the image
+        setNewImage(null); 
         
         alert(`Success! Listing verified and added at exactly ${actualLat.toFixed(4)}, ${actualLng.toFixed(4)}.`);
         
@@ -759,7 +752,6 @@ function App() {
                   <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
-                {/* UPDATED (Commit 26): Renders the real photograph dynamically from the 'selectedSpot' state! */}
                 {selectedSpot.imageUrl ? (
                   <img src={selectedSpot.imageUrl} alt={selectedSpot.address} className="sheet-image" />
                 ) : (
@@ -796,19 +788,16 @@ function App() {
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Duration</span><span>2 Hours (14:00 - 16:00)</span></div>
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Rate</span><span>£{selectedSpot.price.toFixed(2)} / hr</span></div>
               
-              {/* Dynamic Insurance Line Item in Receipt */}
               {hasInsurance && (
                 <div className="receipt-row"><span style={{color: '#34C759', fontWeight: 600}}>Premium Insurance</span><span style={{color: '#34C759', fontWeight: 600}}>£1.50</span></div>
               )}
               
               <div className="receipt-row total">
                 <span>Total Due</span>
-                {/* Dynamic Total Calculation based on Insurance Toggle */}
                 <span>£{((selectedSpot.price * 2) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Interactive Insurance Toggle UI */}
             <h4 style={{marginBottom: 10, color: '#666'}}>Add-ons</h4>
             <div className="payment-method-row" style={{marginBottom: 20}}>
               <ShieldCheck size={28} color={hasInsurance ? "#34C759" : "#8E8E93"} />
@@ -848,7 +837,6 @@ function App() {
               <div className="qr-box"><QrCode size={100} color="#0056D2" /></div>
               <p style={{fontSize: 14, opacity: 0.9, margin: 0}}>Scan this QR code at the barrier to enter and exit <b>{selectedSpot.address}</b>.</p>
               
-              {/* Shows the insurance badge directly on the digital ticket if purchased */}
               {hasInsurance && (
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#34C759', fontSize: 13, fontWeight: 600, background: 'white', padding: '6px 12px', borderRadius: 12, width: 'fit-content', margin: '15px auto 0'}}>
                   <ShieldCheck size={16} /> Protected by ParkNow
@@ -901,7 +889,6 @@ function App() {
 
             <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Your Driveways</h3>
 
-            {/* UPDATED (Commit 27): Mapped through state to make toggles fully interactive */}
             {hostListings.map(listing => (
               <div className="listing-item" key={listing.id}>
                 <div>
@@ -936,7 +923,6 @@ function App() {
 
             <form onSubmit={handlePublishSpot}>
               
-              {/* UPDATED (Commit 26): Fully interactive file upload interface using HTML5 FileReader */}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -1007,7 +993,7 @@ function App() {
 
             <div className="settings-section-title" style={{marginTop: 25}}>Account Settings</div>
             <div className="ios-input-group">
-              <div className="settings-row" onClick={() => alert('Payment settings coming soon.')}>
+              <div className="settings-row" onClick={() => setCurrentScreen('paymentMethods')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}><CreditCard size={20} color="#0056D2" /><span style={{fontWeight: 500}}>Payment Methods</span></div>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
@@ -1022,6 +1008,91 @@ function App() {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* --- PAYMENT METHODS SCREEN (Commit 28) --- */}
+        {currentScreen === 'paymentMethods' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Payment Methods</h2>
+            </div>
+
+            <div className="settings-section-title">Saved Cards</div>
+            <div className="ios-input-group">
+              <div className="settings-row">
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <CreditCard size={20} color="#0056D2" />
+                  <div>
+                    <span style={{fontWeight: 500, display: 'block', marginBottom: 2}}>Personal Visa</span>
+                    <span style={{fontSize: 13, color: '#8E8E93'}}>**** **** **** 4242</span>
+                  </div>
+                </div>
+                <div style={{fontSize: 12, color: '#34C759', fontWeight: 600, background: '#E8F8EE', padding: '4px 8px', borderRadius: 6}}>Default</div>
+              </div>
+              
+              <div className="settings-row">
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <CreditCard size={20} color="#8E8E93" />
+                  <div>
+                    <span style={{fontWeight: 500, display: 'block', marginBottom: 2}}>Business Mastercard</span>
+                    <span style={{fontSize: 13, color: '#8E8E93'}}>**** **** **** 8899</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section-title" style={{marginTop: 25}}>Add New</div>
+            <div className="ios-input-group">
+               <div className="settings-row" onClick={() => setCurrentScreen('addCard')}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 12, color: '#0056D2'}}>
+                    <Plus size={20} />
+                    <span style={{fontWeight: 500}}>Enter Card Details Manually</span>
+                  </div>
+               </div>
+            </div>
+            
+          </div>
+        )}
+
+        {/* --- ADD CARD SCREEN (Commit 28) --- */}
+        {currentScreen === 'addCard' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('paymentMethods')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Add Card</h2>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              alert('Card details securely encrypted and saved!');
+              setCurrentScreen('paymentMethods');
+            }}>
+              <div className="form-section">
+                <div className="input-label">Card Information</div>
+                <div className="ios-input-group">
+                  <div className="ios-input-row">
+                    <User size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Cardholder Name" required />
+                  </div>
+                  <div className="ios-input-row">
+                    <CreditCard size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Card Number" type="text" maxLength="19" required />
+                  </div>
+                  <div style={{display: 'flex'}}>
+                    <div className="ios-input-row" style={{flex: 1, borderRight: '1px solid #E5E5EA'}}>
+                      <input className="ios-input" placeholder="MM/YY" type="text" maxLength="5" required style={{marginLeft: 0, textAlign: 'center'}} />
+                    </div>
+                    <div className="ios-input-row" style={{flex: 1}}>
+                      <input className="ios-input" placeholder="CVV" type="text" maxLength="4" required style={{marginLeft: 0, textAlign: 'center'}} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button className="primary-btn" type="submit" style={{marginTop: 20}}>Save Card</button>
+            </form>
           </div>
         )}
 

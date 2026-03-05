@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 29 (Active Session Background Navigation)
- * DESCRIPTION: Allows the user to navigate away from an active session back to the map, and introduces a floating active session banner to return to it.
+ * COMMIT: 30 (Session Management & Booking History)
+ * DESCRIPTION: Adds the ability to extend an active session and introduces a detailed preview screen for past bookings.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -113,9 +113,9 @@ const styles = `
   .ticket-card { background: #0056D2; color: white; border-radius: 20px; padding: 30px 20px; text-align: center; margin-top: 20px; box-shadow: 0 15px 30px rgba(0,86,210,0.3); }
   .timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
   .qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
-  .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; margin-bottom: 10px; }
+  .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 0; margin-bottom: 10px; }
   
-  /* NEW (Commit 29): Floating active session banner on map */
+  /* Floating active session banner on map */
   .active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 3000 !important; cursor: pointer; }
 
   /* --- HOST DASHBOARD --- */
@@ -147,7 +147,8 @@ const styles = `
   .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
   .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; }
   .settings-row:last-child { border-bottom: none; }
-  .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; }
+  .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; transition: background 0.2s; cursor: pointer; }
+  .booking-card:hover { background: #F8F9FA; }
 
   /* --- REAL-TIME TOAST NOTIFICATION --- */
   .live-toast { 
@@ -231,7 +232,7 @@ function App() {
   // Track if the user opted in for Insurance Protection
   const [hasInsurance, setHasInsurance] = useState(true);
 
-  // NEW STATE (Commit 29): Track if there is a running booking in the background
+  // Track if there is a running booking in the background
   const [isSessionActive, setIsSessionActive] = useState(false);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
@@ -411,7 +412,6 @@ function App() {
 
   /**
    * FUNCTION: handleSearch
-   * Uses actual OpenStreetMap Nominatim Geocoding API!
    */
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -441,11 +441,20 @@ function App() {
 
   /**
    * FUNCTION: handlePayment
-   * UPDATED (Commit 29): Now sets the session as active so we can track it in the background
    */
   const handlePayment = () => {
     setIsSessionActive(true);
     setCurrentScreen('activeBooking');
+  };
+
+  /**
+   * FUNCTION: handleExtendSession (Commit 30)
+   * Simulates charging the user's card to extend their active parking time.
+   */
+  const handleExtendSession = () => {
+    if (selectedSpot) {
+      alert(`Session successfully extended by 1 Hour.\n\nYour default payment method has been charged £${selectedSpot.price.toFixed(2)}.`);
+    }
   };
 
   /**
@@ -741,7 +750,7 @@ function App() {
               <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
 
-            {/* NEW (Commit 29): Floating Active Session Banner */}
+            {/* Floating Active Session Banner */}
             {isSessionActive && selectedSpot && (
               <div className="active-session-banner" onClick={() => setCurrentScreen('activeBooking')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
@@ -847,7 +856,6 @@ function App() {
         {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
           <div className="screen">
-            {/* UPDATED (Commit 29): Added back arrow to minimize the active session to the background */}
             <div className="checkout-header" style={{borderBottom: 'none'}}>
               <button className="close-btn" onClick={() => setCurrentScreen('map')}><ArrowLeft size={20} color="#000" /></button>
               <h2 className="checkout-title">Active Session</h2>
@@ -868,7 +876,11 @@ function App() {
 
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
-            <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
+            {/* UPDATED (Commit 30): Extended control options for Active Session */}
+            <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
+              <button className="primary-btn" onClick={handleExtendSession}>Extend Session (+1 Hr)</button>
+              <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
+            </div>
           </div>
         )}
 
@@ -1005,8 +1017,15 @@ function App() {
 
             <div className="settings-section-title">Past Bookings & Policies</div>
             
-            <div className="booking-card">
-              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}><span style={{fontWeight: 700}}>High St Garage</span><span style={{color: '#8E8E93', fontSize: 14}}>Oct 12</span></div>
+            {/* UPDATED (Commit 30): Made the past booking card clickable to show receipt details */}
+            <div className="booking-card" onClick={() => setCurrentScreen('pastBookingDetail')}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                 <div>
+                    <span style={{fontWeight: 700, display: 'block'}}>High St Garage</span>
+                    <span style={{color: '#8E8E93', fontSize: 14}}>Oct 12 • 14:00 - 17:00</span>
+                 </div>
+                 <ChevronRight size={20} color="#C7C7CC" />
+              </div>
               <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Duration: 3 Hours • £15.75</div>
               <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#34C759', fontSize: 12, fontWeight: 600, background: '#E8F8EE', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
                 <ShieldCheck size={14} /> Insurance Policy: #INS-992A-X
@@ -1029,7 +1048,38 @@ function App() {
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}><LogOut size={20} color="#FF3B30" /><span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span></div>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* --- PAST BOOKING RECEIPT (Commit 30) --- */}
+        {currentScreen === 'pastBookingDetail' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Receipt</h2>
+            </div>
+
+            <div className="receipt-box">
+              <h3 style={{marginTop: 0, marginBottom: 15}}>High St Garage</h3>
+              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Booking ID</span><span>#PN-894A2B</span></div>
+              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>October 12, 2025</span></div>
+              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Duration</span><span>3 Hours</span></div>
+              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Rate</span><span>£5.25 / hr</span></div>
+              <div className="receipt-row"><span style={{color: '#34C759'}}>Premium Insurance</span><span style={{color: '#34C759'}}>£1.50</span></div>
+              <div className="receipt-row total" style={{marginTop: 15, borderTop: '2px dashed #E5E5EA', paddingTop: 15}}>
+                <span>Total Paid</span>
+                <span>£17.25</span>
+              </div>
+            </div>
+
+            <div className="receipt-box" style={{background: '#E8F8EE', border: '1px solid #34C759'}}>
+               <div style={{display: 'flex', alignItems: 'center', gap: 10, color: '#34C759', fontWeight: 600, marginBottom: 8}}>
+                  <ShieldCheck size={24} /> Insurance Active
+               </div>
+               <p style={{margin: 0, fontSize: 14, color: '#333'}}>Policy Number: <b>#INS-992A-X</b><br/>This session was fully covered against accidental damage.</p>
+            </div>
+
+            <button className="primary-btn" onClick={() => alert('Receipt has been emailed to you.')} style={{marginTop: 'auto', marginBottom: 10}}>Email Receipt</button>
           </div>
         )}
 

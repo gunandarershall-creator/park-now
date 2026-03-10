@@ -1,11 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 33 (Dynamic Driver/Host Profile)
- * DESCRIPTION: Introduces a user mode toggle so the Profile and Settings screen dynamically adapts based on whether the user is acting as a Driver or a Host.
+ * COMMIT: 34 (Edit Host Listings)
+ * DESCRIPTION: Adds the ability for hosts to edit the details (address, price, photo) of their existing driveways.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car } from 'lucide-react';
+/* UPDATED (Commit 34): Added 'Pencil' to icon imports */
+import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil } from 'lucide-react';
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -240,6 +241,9 @@ function App() {
 
   // NEW STATE (Commit 33): Track if the user is currently operating as a Driver or a Host
   const [userMode, setUserMode] = useState('driver');
+
+  // NEW STATE (Commit 34): Track which spot is currently being edited
+  const [editingSpotId, setEditingSpotId] = useState(null);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -523,6 +527,58 @@ function App() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  /**
+   * FUNCTION: openEditSpot (Commit 34)
+   * Pre-fills the form with the existing spot's data
+   */
+  const openEditSpot = (id) => {
+    const spot = spots.find(s => s.id === id);
+    const hostListing = hostListings.find(h => h.id === id);
+    
+    if (spot && hostListing) {
+      setNewAddress(spot.address);
+      setNewPrice(spot.price.toString());
+      setNewImage(spot.imageUrl || null);
+      setEditingSpotId(id);
+      setCurrentScreen('editSpot');
+    }
+  };
+
+  /**
+   * FUNCTION: handleUpdateSpot (Commit 34)
+   * Saves modifications to an existing listing
+   */
+  const handleUpdateSpot = (e) => {
+    e.preventDefault();
+    if (!newAddress || !newPrice) {
+      alert("Please enter an address and a price.");
+      return;
+    }
+
+    // Update the main map spots array
+    setSpots(prevSpots => prevSpots.map(spot => 
+      spot.id === editingSpotId 
+        ? { ...spot, address: newAddress, price: parseFloat(newPrice), imageUrl: newImage } 
+        : spot
+    ));
+
+    // Update the host dashboard list
+    setHostListings(prevListings => prevListings.map(listing => 
+      listing.id === editingSpotId 
+        ? { ...listing, address: newAddress, details: `£${parseFloat(newPrice).toFixed(2)} / hr • ${listing.details.split('•')[1]?.trim() || '1 spot'}` } 
+        : listing
+    ));
+
+    alert('Listing successfully updated!');
+    
+    // Clear form state and return
+    setNewAddress('');
+    setNewPrice('');
+    setNewImage(null);
+    setEditingSpotId(null);
+    setCurrentScreen('hostDashboard');
   };
 
   /**
@@ -944,12 +1000,21 @@ function App() {
                   <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
                   <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
                 </div>
-                <div 
-                  className="toggle-switch" 
-                  style={listing.isActive ? {} : {background: '#E5E5EA'}} 
-                  onClick={() => toggleHostListing(listing.id)}
-                >
-                  <div className="toggle-knob" style={listing.isActive ? {} : {right: 'auto', left: 2}}></div>
+                {/* UPDATED (Commit 34): Added edit pencil icon next to the toggle switch */}
+                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                  <button 
+                    onClick={() => openEditSpot(listing.id)} 
+                    style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2', display: 'flex'}}
+                  >
+                    <Pencil size={20} />
+                  </button>
+                  <div 
+                    className="toggle-switch" 
+                    style={listing.isActive ? {} : {background: '#E5E5EA'}} 
+                    onClick={() => toggleHostListing(listing.id)}
+                  >
+                    <div className="toggle-knob" style={listing.isActive ? {} : {right: 'auto', left: 2}}></div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -966,7 +1031,8 @@ function App() {
         {currentScreen === 'addSpot' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
-              <button className="close-btn" onClick={() => setCurrentScreen('hostDashboard')}><ArrowLeft size={20} color="#000" /></button>
+              {/* UPDATED (Commit 34): Clears form state when returning without saving */}
+              <button className="close-btn" onClick={() => { setCurrentScreen('hostDashboard'); setNewAddress(''); setNewPrice(''); setNewImage(null); }}><ArrowLeft size={20} color="#000" /></button>
               <h2 className="checkout-title">List Driveway</h2>
             </div>
 
@@ -1009,6 +1075,57 @@ function App() {
               </div>
 
               <button className="primary-btn" type="submit" style={{marginTop: '40px'}}>Publish Listing</button>
+            </form>
+          </div>
+        )}
+
+        {/* --- EDIT SPOT SCREEN (Commit 34) --- */}
+        {currentScreen === 'editSpot' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => { setCurrentScreen('hostDashboard'); setNewAddress(''); setNewPrice(''); setNewImage(null); setEditingSpotId(null); }}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Edit Driveway</h2>
+            </div>
+
+            <form onSubmit={handleUpdateSpot}>
+              
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                style={{display: 'none'}} 
+              />
+              
+              <div 
+                className="photo-upload-box" 
+                onClick={() => fileInputRef.current.click()}
+              >
+                {newImage ? (
+                  <img src={newImage} alt="Driveway Preview" className="photo-preview" />
+                ) : (
+                  <>
+                    <Camera size={32} style={{marginBottom: 8}} />
+                    <span>Tap to change photo</span>
+                  </>
+                )}
+              </div>
+
+              <div className="form-section">
+                <div className="input-label">Address (or Postcode)</div>
+                <div className="ios-input-group" style={{marginBottom: 0}}>
+                  <div className="ios-input-row"><MapPin size={20} color="#8E8E93" /><input className="ios-input" placeholder="e.g. 10 Downing Street, London" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} required /></div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="input-label">Hourly Rate (£)</div>
+                <div className="ios-input-group" style={{marginBottom: 0}}>
+                  <div className="ios-input-row"><span style={{color: '#8E8E93', fontSize: 17, fontWeight: 500}}>£</span><input className="ios-input" type="number" step="0.10" placeholder="5.00" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required /></div>
+                </div>
+              </div>
+
+              <button className="primary-btn" type="submit" style={{marginTop: '40px'}}>Save Changes</button>
             </form>
           </div>
         )}

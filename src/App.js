@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 31 (Clickable Checkout Payment Methods)
- * DESCRIPTION: Repairs layout structure and makes the payment method on the checkout screen clickable, dynamically routing back and forth to the digital wallet.
+ * COMMIT: 32 (Active Session Done Button)
+ * DESCRIPTION: Replaces the Active Session back arrow with a clear 'Done' button grouped with the other session controls for better UX.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -867,9 +867,9 @@ function App() {
         {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
           <div className="screen">
-            <div className="checkout-header" style={{borderBottom: 'none'}}>
-              <button className="close-btn" onClick={() => setCurrentScreen('map')}><ArrowLeft size={20} color="#000" /></button>
-              <h2 className="checkout-title">Active Session</h2>
+            {/* Removed the back arrow from the header for a cleaner ticket look (Commit 32) */}
+            <div className="checkout-header" style={{borderBottom: 'none', justifyContent: 'center'}}>
+              <h2 className="checkout-title" style={{padding: 0, textAlign: 'center'}}>Active Session</h2>
             </div>
 
             <div className="ticket-card">
@@ -887,7 +887,9 @@ function App() {
 
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
+            {/* Added the explicit 'Done' button to the main action stack (Commit 32) */}
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
+              <button className="primary-btn" style={{background: '#000'}} onClick={() => setCurrentScreen('map')}>Done (Return to Map)</button>
               <button className="primary-btn" onClick={handleExtendSession}>Extend Session (+1 Hr)</button>
               <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
             </div>

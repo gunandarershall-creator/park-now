@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 30 (Session Management & Booking History)
- * DESCRIPTION: Adds the ability to extend an active session and introduces a detailed preview screen for past bookings.
+ * COMMIT: 31 (Clickable Checkout Payment Methods)
+ * DESCRIPTION: Repairs layout structure and makes the payment method on the checkout screen clickable, dynamically routing back and forth to the digital wallet.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -235,6 +235,9 @@ function App() {
   // Track if there is a running booking in the background
   const [isSessionActive, setIsSessionActive] = useState(false);
 
+  // Track where to return when leaving the Payment Methods screen
+  const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
+
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
     { title: 'Surbiton Station', subtext: 'Victoria Rd, Surbiton', lat: 51.3943, lng: -0.3023, isRecent: true },
@@ -412,6 +415,7 @@ function App() {
 
   /**
    * FUNCTION: handleSearch
+   * Uses actual OpenStreetMap Nominatim Geocoding API!
    */
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -448,8 +452,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleExtendSession (Commit 30)
-   * Simulates charging the user's card to extend their active parking time.
+   * FUNCTION: handleExtendSession
    */
   const handleExtendSession = () => {
     if (selectedSpot) {
@@ -844,9 +847,17 @@ function App() {
             </div>
 
             <h4 style={{marginBottom: 10, color: '#666'}}>Payment Method</h4>
-            <div className="payment-method-row">
+            <div 
+              className="payment-method-row" 
+              style={{cursor: 'pointer'}} 
+              onClick={() => {
+                setPaymentReturnScreen('checkout');
+                setCurrentScreen('paymentMethods');
+              }}
+            >
               <CreditCard size={24} color="#0056D2" />
               <div style={{flex: 1}}><div style={{fontWeight: 600}}>Personal Card</div><div style={{fontSize: 13, color: '#8E8E93'}}>Visa ending in 4242</div></div>
+              <ChevronRight size={20} color="#C7C7CC" />
             </div>
 
             <button className="apple-pay-btn" onClick={handlePayment}>Pay & Confirm</button>
@@ -876,7 +887,6 @@ function App() {
 
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
-            {/* UPDATED (Commit 30): Extended control options for Active Session */}
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
               <button className="primary-btn" onClick={handleExtendSession}>Extend Session (+1 Hr)</button>
               <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
@@ -1017,7 +1027,6 @@ function App() {
 
             <div className="settings-section-title">Past Bookings & Policies</div>
             
-            {/* UPDATED (Commit 30): Made the past booking card clickable to show receipt details */}
             <div className="booking-card" onClick={() => setCurrentScreen('pastBookingDetail')}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
                  <div>
@@ -1034,7 +1043,13 @@ function App() {
 
             <div className="settings-section-title" style={{marginTop: 25}}>Account Settings</div>
             <div className="ios-input-group">
-              <div className="settings-row" onClick={() => setCurrentScreen('paymentMethods')}>
+              <div 
+                className="settings-row" 
+                onClick={() => {
+                  setPaymentReturnScreen('profile');
+                  setCurrentScreen('paymentMethods');
+                }}
+              >
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}><CreditCard size={20} color="#0056D2" /><span style={{fontWeight: 500}}>Payment Methods</span></div>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
@@ -1051,7 +1066,7 @@ function App() {
           </div>
         )}
 
-        {/* --- PAST BOOKING RECEIPT (Commit 30) --- */}
+        {/* --- PAST BOOKING RECEIPT --- */}
         {currentScreen === 'pastBookingDetail' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -1087,7 +1102,7 @@ function App() {
         {currentScreen === 'paymentMethods' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
-              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <button className="close-btn" onClick={() => setCurrentScreen(paymentReturnScreen)}><ArrowLeft size={20} color="#000" /></button>
               <h2 className="checkout-title">Payment Methods</h2>
             </div>
 

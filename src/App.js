@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 32 (Active Session Done Button)
- * DESCRIPTION: Replaces the Active Session back arrow with a clear 'Done' button grouped with the other session controls for better UX.
+ * COMMIT: 33 (Dynamic Driver/Host Profile)
+ * DESCRIPTION: Introduces a user mode toggle so the Profile and Settings screen dynamically adapts based on whether the user is acting as a Driver or a Host.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -237,6 +237,9 @@ function App() {
 
   // Track where to return when leaving the Payment Methods screen
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
+
+  // NEW STATE (Commit 33): Track if the user is currently operating as a Driver or a Host
+  const [userMode, setUserMode] = useState('driver');
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -1015,33 +1018,58 @@ function App() {
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="host-header" style={{paddingBottom: 0}}>
               <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Profile</h2>
-              <button className="close-btn" onClick={() => setCurrentScreen('map')}><X size={20} color="#000" /></button>
+              {/* UPDATED (Commit 33): Back button returns to the correct dashboard based on mode */}
+              <button className="close-btn" onClick={() => setCurrentScreen(userMode === 'driver' ? 'map' : 'hostDashboard')}><X size={20} color="#000" /></button>
             </div>
 
             <div className="profile-header-card">
               <div className="avatar-circle">{regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}</div>
               <div>
-                <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>Driver Account</h3>
+                {/* UPDATED (Commit 33): Dynamically display Driver or Host Account details */}
+                <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>{userMode === 'driver' ? 'Driver Account' : 'Host Account'}</h3>
                 <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
-                {regPlate && (<p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>)}
+                {regPlate && userMode === 'driver' && (<p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>)}
               </div>
             </div>
 
-            <div className="settings-section-title">Past Bookings & Policies</div>
-            
-            <div className="booking-card" onClick={() => setCurrentScreen('pastBookingDetail')}>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
-                 <div>
-                    <span style={{fontWeight: 700, display: 'block'}}>High St Garage</span>
-                    <span style={{color: '#8E8E93', fontSize: 14}}>Oct 12 • 14:00 - 17:00</span>
-                 </div>
-                 <ChevronRight size={20} color="#C7C7CC" />
-              </div>
-              <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Duration: 3 Hours • £15.75</div>
-              <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#34C759', fontSize: 12, fontWeight: 600, background: '#E8F8EE', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
-                <ShieldCheck size={14} /> Insurance Policy: #INS-992A-X
-              </div>
-            </div>
+            {/* UPDATED (Commit 33): Conditional rendering for Driver vs Host history */}
+            {userMode === 'driver' ? (
+              <>
+                <div className="settings-section-title">Past Bookings & Policies</div>
+                
+                <div className="booking-card" onClick={() => setCurrentScreen('pastBookingDetail')}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                     <div>
+                        <span style={{fontWeight: 700, display: 'block'}}>High St Garage</span>
+                        <span style={{color: '#8E8E93', fontSize: 14}}>Oct 12 • 14:00 - 17:00</span>
+                     </div>
+                     <ChevronRight size={20} color="#C7C7CC" />
+                  </div>
+                  <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Duration: 3 Hours • £15.75</div>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#34C759', fontSize: 12, fontWeight: 600, background: '#E8F8EE', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
+                    <ShieldCheck size={14} /> Insurance Policy: #INS-992A-X
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="settings-section-title">Recent Payouts & Policies</div>
+                
+                <div className="booking-card" onClick={() => alert('Detailed payout breakdown coming soon.')}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                     <div>
+                        <span style={{fontWeight: 700, display: 'block'}}>Monthly Payout</span>
+                        <span style={{color: '#8E8E93', fontSize: 14}}>Processed on Oct 1</span>
+                     </div>
+                     <ChevronRight size={20} color="#C7C7CC" />
+                  </div>
+                  <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Amount: £342.50</div>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#0056D2', fontSize: 12, fontWeight: 600, background: '#E6F0FF', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
+                    <ShieldCheck size={14} /> Host Guarantee Active
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="settings-section-title" style={{marginTop: 25}}>Account Settings</div>
             <div className="ios-input-group">
@@ -1052,14 +1080,44 @@ function App() {
                   setCurrentScreen('paymentMethods');
                 }}
               >
-                <div style={{display: 'flex', alignItems: 'center', gap: 12}}><CreditCard size={20} color="#0056D2" /><span style={{fontWeight: 500}}>Payment Methods</span></div>
+                {/* UPDATED (Commit 33): Language shifts based on context */}
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <CreditCard size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>{userMode === 'driver' ? 'Payment Methods' : 'Payout Methods'}</span>
+                </div>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
               
-              <div className="settings-row" onClick={() => setCurrentScreen('hostDashboard')}>
-                <div style={{display: 'flex', alignItems: 'center', gap: 12}}><Home size={20} color="#0056D2" /><span style={{fontWeight: 500}}>Switch to Host Dashboard</span></div>
-                <ChevronRight size={20} color="#C7C7CC" />
-              </div>
+              {/* UPDATED (Commit 33): Contextual mode switching button */}
+              {userMode === 'driver' ? (
+                <div 
+                  className="settings-row" 
+                  onClick={() => {
+                    setUserMode('host');
+                    setCurrentScreen('hostDashboard');
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                    <Home size={20} color="#0056D2" />
+                    <span style={{fontWeight: 500}}>Switch to Host Dashboard</span>
+                  </div>
+                  <ChevronRight size={20} color="#C7C7CC" />
+                </div>
+              ) : (
+                <div 
+                  className="settings-row" 
+                  onClick={() => {
+                    setUserMode('driver');
+                    setCurrentScreen('map');
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                    <MapPin size={20} color="#0056D2" />
+                    <span style={{fontWeight: 500}}>Switch to Driver Mode</span>
+                  </div>
+                  <ChevronRight size={20} color="#C7C7CC" />
+                </div>
+              )}
 
               <div className="settings-row" onClick={handleLogout}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}><LogOut size={20} color="#FF3B30" /><span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span></div>

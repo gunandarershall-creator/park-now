@@ -1,11 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 41 (Bug Fixes & Toast Restoration)
- * DESCRIPTION: Cleans up unused imports causing linter errors and restores the real-time "Someone just booked a spot" toast notification on the map screen.
+ * COMMIT: 40 (Expanded Profile Settings)
+ * DESCRIPTION: Overhauls the Profile screen with realistic, categorized application settings including Personal Information, Vehicle Management, Notifications, and Support.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil } from 'lucide-react';
+/* UPDATED (Commit 40): Added Bell, HelpCircle, and FileText icons for the new settings menu */
+import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil, Bell, HelpCircle, FileText } from 'lucide-react';
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -145,8 +146,9 @@ const styles = `
   .profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
   .avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
   .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; background: white;}
   .settings-row:last-child { border-bottom: none; }
+  .settings-row:hover { background: #F8F9FA; }
   .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; transition: background 0.2s; cursor: pointer; }
   .booking-card:hover { background: #F8F9FA; }
 
@@ -390,7 +392,6 @@ function App() {
         if (selectedSpot && selectedSpot.id === '2') {
           setSelectedSpot(null);
         }
-        // Restored real-time notification functionality
         setLiveToastMessage("Someone just booked Penrhyn Road");
         setTimeout(() => setLiveToastMessage(null), 4000);
       }, 8000); // Triggers 8 seconds after opening the map
@@ -837,7 +838,6 @@ function App() {
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0, position: 'relative'}}>
             
-            {/* Restored Live Toast Rendering block (Commit 41) */}
             {liveToastMessage && (
               <div className="live-toast"><div className="live-indicator"></div>{liveToastMessage}</div>
             )}
@@ -1050,7 +1050,6 @@ function App() {
 
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
               
-              {/* Smart Extension Widget with Dropdown */}
               <div style={{background: 'white', borderRadius: 14, padding: 15, marginBottom: 5, boxShadow: '0 2px 10px rgba(0,0,0,0.05)'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
                   <span style={{fontWeight: 600}}>Extend Time</span>
@@ -1260,46 +1259,27 @@ function App() {
               </div>
             </div>
 
-            {userMode === 'driver' ? (
-              <>
-                <div className="settings-section-title">Past Bookings & Policies</div>
-                
-                <div className="booking-card" onClick={() => setCurrentScreen('pastBookingDetail')}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
-                     <div>
-                        <span style={{fontWeight: 700, display: 'block'}}>High St Garage</span>
-                        <span style={{color: '#8E8E93', fontSize: 14}}>Oct 12 • 14:00 - 17:00</span>
-                     </div>
-                     <ChevronRight size={20} color="#C7C7CC" />
-                  </div>
-                  <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Duration: 3 Hours • £15.75</div>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#34C759', fontSize: 12, fontWeight: 600, background: '#E8F8EE', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
-                    <ShieldCheck size={14} /> Insurance Policy: #INS-992A-X
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="settings-section-title">Recent Payouts & Policies</div>
-                
-                <div className="booking-card" onClick={() => alert('Detailed payout breakdown coming soon.')}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
-                     <div>
-                        <span style={{fontWeight: 700, display: 'block'}}>Monthly Payout</span>
-                        <span style={{color: '#8E8E93', fontSize: 14}}>Processed on Oct 1</span>
-                     </div>
-                     <ChevronRight size={20} color="#C7C7CC" />
-                  </div>
-                  <div style={{fontSize: 14, color: '#333', marginBottom: 12}}>Amount: £342.50</div>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#0056D2', fontSize: 12, fontWeight: 600, background: '#E6F0FF', padding: '6px 10px', borderRadius: 8, width: 'fit-content'}}>
-                    <ShieldCheck size={14} /> Host Guarantee Active
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="settings-section-title" style={{marginTop: 25}}>Account Settings</div>
+            {/* UPDATED (Commit 40): Expanded Settings UI */}
+            <div className="settings-section-title">Account Settings</div>
             <div className="ios-input-group">
+              <div className="settings-row" onClick={() => alert('Personal Information editing coming soon.')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <User size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Personal Information</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+
+              {userMode === 'driver' && (
+                <div className="settings-row" onClick={() => alert('Vehicle Management coming soon.')}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                    <Car size={20} color="#0056D2" />
+                    <span style={{fontWeight: 500}}>Manage Vehicles</span>
+                  </div>
+                  <ChevronRight size={20} color="#C7C7CC" />
+                </div>
+              )}
+
               <div 
                 className="settings-row" 
                 onClick={() => {
@@ -1313,15 +1293,41 @@ function App() {
                 </div>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
-              
+            </div>
+
+            <div className="settings-section-title" style={{marginTop: 25}}>Preferences</div>
+            <div className="ios-input-group">
+              <div className="settings-row" onClick={() => alert('Notification preferences opened.')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <Bell size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Notifications</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+            </div>
+
+            <div className="settings-section-title" style={{marginTop: 25}}>Support & About</div>
+            <div className="ios-input-group">
+              <div className="settings-row" onClick={() => alert('Opening Help Center...')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <HelpCircle size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Help Center</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+              <div className="settings-row" onClick={() => alert('Viewing Terms of Service & Privacy Policy.')}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <FileText size={20} color="#0056D2" />
+                  <span style={{fontWeight: 500}}>Terms & Privacy</span>
+                </div>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+            </div>
+
+            <div className="settings-section-title" style={{marginTop: 25}}>App Actions</div>
+            <div className="ios-input-group">
               {userMode === 'driver' ? (
-                <div 
-                  className="settings-row" 
-                  onClick={() => {
-                    setUserMode('host');
-                    setCurrentScreen('hostDashboard');
-                  }}
-                >
+                <div className="settings-row" onClick={() => { setUserMode('host'); setCurrentScreen('hostDashboard'); }}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <Home size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Switch to Host Dashboard</span>
@@ -1329,13 +1335,7 @@ function App() {
                   <ChevronRight size={20} color="#C7C7CC" />
                 </div>
               ) : (
-                <div 
-                  className="settings-row" 
-                  onClick={() => {
-                    setUserMode('driver');
-                    setCurrentScreen('map');
-                  }}
-                >
+                <div className="settings-row" onClick={() => { setUserMode('driver'); setCurrentScreen('map'); }}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <Car size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Switch to Driver Mode</span>
@@ -1345,7 +1345,10 @@ function App() {
               )}
 
               <div className="settings-row" onClick={handleLogout}>
-                <div style={{display: 'flex', alignItems: 'center', gap: 12}}><LogOut size={20} color="#FF3B30" /><span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span></div>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <LogOut size={20} color="#FF3B30" />
+                  <span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span>
+                </div>
               </div>
             </div>
 

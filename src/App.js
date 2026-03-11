@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 36 (Fullscreen Image Viewer)
- * DESCRIPTION: Adds a sleek, dark-mode fullscreen overlay allowing users to tap and expand parking spot thumbnails.
+ * COMMIT: 37 (Dynamic Checkout Duration)
+ * DESCRIPTION: Adds an interactive dropdown on the checkout screen to dynamically select booking duration, automatically recalculating the end time and total price.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -173,7 +173,7 @@ const styles = `
   .review-textarea { width: 100%; background: white; border: 1px solid #E5E5EA; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 15px; resize: none; box-sizing: border-box; margin-bottom: 20px; outline: none; height: 120px; }
   .review-textarea:focus { border-color: #0056D2; }
 
-  /* NEW (Commit 36): Fullscreen Image Viewer */
+  /* Fullscreen Image Viewer */
   .fullscreen-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999 !important; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .fullscreen-img { width: 100%; max-height: 100%; object-fit: contain; }
@@ -251,8 +251,11 @@ function App() {
   // Track which spot is currently being edited
   const [editingSpotId, setEditingSpotId] = useState(null);
 
-  // NEW STATE (Commit 36): Track if an image is being viewed in full screen
+  // Track if an image is being viewed in full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
+
+  // NEW STATE (Commit 37): Track the selected booking duration in hours
+  const [bookingDuration, setBookingDuration] = useState(2);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -280,7 +283,6 @@ function App() {
 
   // Load fake data when the app starts
   useEffect(() => {
-    // UPDATED (Commit 35): Changed 'distance' from generic walking minutes to specific Location Tags
     setSpots([
       { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
       { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: 'Surbiton, Surrey', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
@@ -847,7 +849,6 @@ function App() {
                   <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
-                {/* UPDATED (Commit 36): Added cursor and click handler to open full screen image */}
                 {selectedSpot.imageUrl ? (
                   <img 
                     src={selectedSpot.imageUrl} 
@@ -887,7 +888,27 @@ function App() {
             <div className="receipt-box">
               <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
-              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Duration</span><span>2 Hours (14:00 - 16:00)</span></div>
+              
+              {/* Dynamic Time Calculation based on Duration */}
+              <div className="receipt-row"><span style={{color: '#8E8E93'}}>Time</span><span>14:00 - {14 + bookingDuration}:00</span></div>
+              
+              {/* Interactive Dropdown for Duration */}
+              <div className="receipt-row" style={{alignItems: 'center'}}>
+                <span style={{color: '#8E8E93'}}>Duration</span>
+                <select 
+                  value={bookingDuration}
+                  onChange={(e) => setBookingDuration(Number(e.target.value))}
+                  style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+                >
+                  <option value={1}>1 Hour</option>
+                  <option value={2}>2 Hours</option>
+                  <option value={3}>3 Hours</option>
+                  <option value={4}>4 Hours</option>
+                  <option value={5}>5 Hours</option>
+                  <option value={8}>8 Hours (Full Day)</option>
+                </select>
+              </div>
+
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Rate</span><span>£{selectedSpot.price.toFixed(2)} / hr</span></div>
               
               {hasInsurance && (
@@ -896,7 +917,8 @@ function App() {
               
               <div className="receipt-row total">
                 <span>Total Due</span>
-                <span>£{((selectedSpot.price * 2) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
+                {/* Total dynamically multiplies by the selected duration */}
+                <span>£{((selectedSpot.price * bookingDuration) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
               </div>
             </div>
 
@@ -1362,7 +1384,7 @@ function App() {
           </div>
         )}
 
-        {/* NEW (Commit 36): Fullscreen Image Viewer Overlay */}
+        {/* Fullscreen Image Viewer Overlay */}
         {fullScreenImage && (
           <div className="fullscreen-overlay" onClick={() => setFullScreenImage(null)}>
             <button className="fullscreen-close" onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}>

@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 37 (Dynamic Checkout Duration)
- * DESCRIPTION: Adds an interactive dropdown on the checkout screen to dynamically select booking duration, automatically recalculating the end time and total price.
+ * COMMIT: 38 (Extend Session Options)
+ * DESCRIPTION: Upgrades the "Extend Session" feature into a smart widget with a dropdown, dynamically calculating the cost of adding multiple hours to an active booking.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -254,8 +254,11 @@ function App() {
   // Track if an image is being viewed in full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  // NEW STATE (Commit 37): Track the selected booking duration in hours
+  // Track the selected booking duration in hours
   const [bookingDuration, setBookingDuration] = useState(2);
+
+  // NEW STATE (Commit 38): Track the selected extension duration in hours
+  const [extensionDuration, setExtensionDuration] = useState(1);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -471,10 +474,12 @@ function App() {
 
   /**
    * FUNCTION: handleExtendSession
+   * UPDATED (Commit 38): Dynamically calculate the extension cost based on selected hours
    */
   const handleExtendSession = () => {
     if (selectedSpot) {
-      alert(`Session successfully extended by 1 Hour.\n\nYour default payment method has been charged £${selectedSpot.price.toFixed(2)}.`);
+      const extensionCost = selectedSpot.price * extensionDuration;
+      alert(`Session successfully extended by ${extensionDuration} Hour${extensionDuration > 1 ? 's' : ''}.\n\nYour default payment method has been charged £${extensionCost.toFixed(2)}.`);
     }
   };
 
@@ -979,8 +984,28 @@ function App() {
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
+              
+              {/* NEW (Commit 38): Smart Extension Widget with Dropdown */}
+              <div style={{background: 'white', borderRadius: 14, padding: 15, marginBottom: 5, boxShadow: '0 2px 10px rgba(0,0,0,0.05)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
+                  <span style={{fontWeight: 600}}>Extend Time</span>
+                  <select 
+                    value={extensionDuration}
+                    onChange={(e) => setExtensionDuration(Number(e.target.value))}
+                    style={{border: 'none', background: '#F2F2F7', padding: '8px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+                  >
+                    <option value={1}>+ 1 Hour</option>
+                    <option value={2}>+ 2 Hours</option>
+                    <option value={3}>+ 3 Hours</option>
+                    <option value={4}>+ 4 Hours</option>
+                  </select>
+                </div>
+                <button className="primary-btn" onClick={handleExtendSession}>
+                  Pay & Extend (£{(selectedSpot.price * extensionDuration).toFixed(2)})
+                </button>
+              </div>
+
               <button className="primary-btn" style={{background: '#000'}} onClick={() => setCurrentScreen('map')}>Done (Return to Map)</button>
-              <button className="primary-btn" onClick={handleExtendSession}>Extend Session (+1 Hr)</button>
               <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
             </div>
           </div>

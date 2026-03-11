@@ -1,11 +1,10 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 34 (Edit Host Listings)
- * DESCRIPTION: Adds the ability for hosts to edit the details (address, price, photo) of their existing driveways.
+ * COMMIT: 35 (Location Tags)
+ * DESCRIPTION: Replaces generic walking distances with specific neighborhood and city location tags for a more professional UX.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-/* UPDATED (Commit 34): Added 'Pencil' to icon imports */
 import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil } from 'lucide-react';
 
 /**
@@ -239,10 +238,10 @@ function App() {
   // Track where to return when leaving the Payment Methods screen
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
 
-  // NEW STATE (Commit 33): Track if the user is currently operating as a Driver or a Host
+  // Track if the user is currently operating as a Driver or a Host
   const [userMode, setUserMode] = useState('driver');
 
-  // NEW STATE (Commit 34): Track which spot is currently being edited
+  // Track which spot is currently being edited
   const [editingSpotId, setEditingSpotId] = useState(null);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
@@ -271,10 +270,11 @@ function App() {
 
   // Load fake data when the app starts
   useEffect(() => {
+    // UPDATED (Commit 35): Changed 'distance' from generic walking minutes to specific Location Tags
     setSpots([
-      { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: '2 min walk', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
-      { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: '5 min walk', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
-      { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: '1 min walk', spotsLeft: 8, imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
+      { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
+      { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: 'Surbiton, Surrey', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
+      { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: 'Kingston City Centre', spotsLeft: 8, imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
     ]);
   }, []);
 
@@ -422,7 +422,6 @@ function App() {
 
   /**
    * FUNCTION: handleSearch
-   * Uses actual OpenStreetMap Nominatim Geocoding API!
    */
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -530,8 +529,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: openEditSpot (Commit 34)
-   * Pre-fills the form with the existing spot's data
+   * FUNCTION: openEditSpot
    */
   const openEditSpot = (id) => {
     const spot = spots.find(s => s.id === id);
@@ -547,8 +545,7 @@ function App() {
   };
 
   /**
-   * FUNCTION: handleUpdateSpot (Commit 34)
-   * Saves modifications to an existing listing
+   * FUNCTION: handleUpdateSpot
    */
   const handleUpdateSpot = (e) => {
     e.preventDefault();
@@ -557,14 +554,12 @@ function App() {
       return;
     }
 
-    // Update the main map spots array
     setSpots(prevSpots => prevSpots.map(spot => 
       spot.id === editingSpotId 
         ? { ...spot, address: newAddress, price: parseFloat(newPrice), imageUrl: newImage } 
         : spot
     ));
 
-    // Update the host dashboard list
     setHostListings(prevListings => prevListings.map(listing => 
       listing.id === editingSpotId 
         ? { ...listing, address: newAddress, details: `£${parseFloat(newPrice).toFixed(2)} / hr • ${listing.details.split('•')[1]?.trim() || '1 spot'}` } 
@@ -573,7 +568,6 @@ function App() {
 
     alert('Listing successfully updated!');
     
-    // Clear form state and return
     setNewAddress('');
     setNewPrice('');
     setNewImage(null);
@@ -606,7 +600,7 @@ function App() {
           price: parseFloat(newPrice), 
           address: newAddress, 
           rating: 5.0, 
-          distance: '0 min walk', 
+          distance: 'Local Neighbourhood', // UPDATED (Commit 35): Added descriptive location tag here too
           spotsLeft: 1,
           imageUrl: newImage
         };
@@ -926,7 +920,6 @@ function App() {
         {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
           <div className="screen">
-            {/* Removed the back arrow from the header for a cleaner ticket look (Commit 32) */}
             <div className="checkout-header" style={{borderBottom: 'none', justifyContent: 'center'}}>
               <h2 className="checkout-title" style={{padding: 0, textAlign: 'center'}}>Active Session</h2>
             </div>
@@ -946,7 +939,6 @@ function App() {
 
             <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
-            {/* Added the explicit 'Done' button to the main action stack (Commit 32) */}
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
               <button className="primary-btn" style={{background: '#000'}} onClick={() => setCurrentScreen('map')}>Done (Return to Map)</button>
               <button className="primary-btn" onClick={handleExtendSession}>Extend Session (+1 Hr)</button>
@@ -1000,7 +992,6 @@ function App() {
                   <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
                   <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
                 </div>
-                {/* UPDATED (Commit 34): Added edit pencil icon next to the toggle switch */}
                 <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                   <button 
                     onClick={() => openEditSpot(listing.id)} 
@@ -1031,7 +1022,6 @@ function App() {
         {currentScreen === 'addSpot' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
-              {/* UPDATED (Commit 34): Clears form state when returning without saving */}
               <button className="close-btn" onClick={() => { setCurrentScreen('hostDashboard'); setNewAddress(''); setNewPrice(''); setNewImage(null); }}><ArrowLeft size={20} color="#000" /></button>
               <h2 className="checkout-title">List Driveway</h2>
             </div>
@@ -1079,7 +1069,7 @@ function App() {
           </div>
         )}
 
-        {/* --- EDIT SPOT SCREEN (Commit 34) --- */}
+        {/* --- EDIT SPOT SCREEN --- */}
         {currentScreen === 'editSpot' && (
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="checkout-header" style={{marginTop: 10}}>
@@ -1135,21 +1125,18 @@ function App() {
           <div className="screen" style={{overflowY: 'auto'}}>
             <div className="host-header" style={{paddingBottom: 0}}>
               <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Profile</h2>
-              {/* UPDATED (Commit 33): Back button returns to the correct dashboard based on mode */}
               <button className="close-btn" onClick={() => setCurrentScreen(userMode === 'driver' ? 'map' : 'hostDashboard')}><X size={20} color="#000" /></button>
             </div>
 
             <div className="profile-header-card">
               <div className="avatar-circle">{regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}</div>
               <div>
-                {/* UPDATED (Commit 33): Dynamically display Driver or Host Account details */}
                 <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>{userMode === 'driver' ? 'Driver Account' : 'Host Account'}</h3>
                 <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
                 {regPlate && userMode === 'driver' && (<p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>)}
               </div>
             </div>
 
-            {/* UPDATED (Commit 33): Conditional rendering for Driver vs Host history */}
             {userMode === 'driver' ? (
               <>
                 <div className="settings-section-title">Past Bookings & Policies</div>
@@ -1197,7 +1184,6 @@ function App() {
                   setCurrentScreen('paymentMethods');
                 }}
               >
-                {/* UPDATED (Commit 33): Language shifts based on context */}
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <CreditCard size={20} color="#0056D2" />
                   <span style={{fontWeight: 500}}>{userMode === 'driver' ? 'Payment Methods' : 'Payout Methods'}</span>
@@ -1205,7 +1191,6 @@ function App() {
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
               
-              {/* UPDATED (Commit 33): Contextual mode switching button */}
               {userMode === 'driver' ? (
                 <div 
                   className="settings-row" 

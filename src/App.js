@@ -1,11 +1,11 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 38 (Extend Session Options)
- * DESCRIPTION: Upgrades the "Extend Session" feature into a smart widget with a dropdown, dynamically calculating the cost of adding multiple hours to an active booking.
+ * COMMIT: 41 (Bug Fixes & Toast Restoration)
+ * DESCRIPTION: Cleans up unused imports causing linter errors and restores the real-time "Someone just booked a spot" toast notification on the map screen.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Mail, Lock, Menu, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Settings, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil } from 'lucide-react';
+import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil } from 'lucide-react';
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -53,10 +53,10 @@ const styles = `
   /* --- MAP UI STYLES --- */
   .search-header { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 3000 !important; display: flex; gap: 10px; align-items: flex-start; }
   .search-container { flex: 1; display: flex; flex-direction: column; position: relative; }
-  .search-input { width: 100%; background: white; padding: 12px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: 500; margin: 0; box-sizing: border-box; height: 45px; }
+  .search-input { width: 100%; background: white; padding: 12px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: 500; margin: 0; box-sizing: border-box; height: 50px; }
   .icon-btn { background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; flex-shrink: 0; }
   
-  .map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 15px; font-family: inherit; }
+  .map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 16px; font-family: inherit; }
 
   /* Search Autocomplete Dropdown styles */
   .search-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; z-index: 3001; max-height: 300px; overflow-y: auto; }
@@ -101,7 +101,7 @@ const styles = `
   .payment-method-row { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; border: 1px solid #E5E5EA;}
 
   /* --- ALGORITHM VISUALS STYLES --- */
-  .locate-btn { position: absolute; right: 20px; bottom: 30px; z-index: 3000 !important; background: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer; }
+  .locate-btn { position: absolute; right: 20px; bottom: 100px; z-index: 2000 !important; background: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer; }
   .locate-btn:hover { background: #F2F2F7; }
   
   /* The Blue Dot representing the Driver's GPS Location */
@@ -116,7 +116,7 @@ const styles = `
   .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 0; margin-bottom: 10px; }
   
   /* Floating active session banner on map */
-  .active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 3000 !important; cursor: pointer; }
+  .active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 2000 !important; cursor: pointer; }
 
   /* --- HOST DASHBOARD --- */
   .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
@@ -129,9 +129,9 @@ const styles = `
   .toggle-switch { width: 50px; height: 30px; background: #34C759; border-radius: 30px; position: relative; cursor: pointer; transition: 0.3s; }
   .toggle-knob { width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; }
   
-  /* Bottom Nav Bar for Host View */
-  .nav-bar-bottom { display: flex; justify-content: space-around; align-items: center; background: white; padding: 15px 20px 25px; border-top: 1px solid #E5E5EA; position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0 0 28px 28px; z-index: 100; }
-  .nav-item { display: flex; flex-direction: column; align-items: center; color: #8E8E93; font-size: 11px; gap: 4px; cursor: pointer; }
+  /* Bottom Nav Bar (Global) */
+  .nav-bar-bottom { display: flex; justify-content: space-around; align-items: center; background: white; padding: 15px 20px 25px; border-top: 1px solid #E5E5EA; position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0 0 28px 28px; z-index: 2500; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; color: #8E8E93; font-size: 11px; gap: 4px; cursor: pointer; font-weight: 500; transition: color 0.2s;}
   .nav-item.active { color: #0056D2; }
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 
@@ -152,7 +152,7 @@ const styles = `
 
   /* --- REAL-TIME TOAST NOTIFICATION --- */
   .live-toast { 
-    position: absolute; top: 80px; left: 50%; transform: translateX(-50%); 
+    position: absolute; top: 140px; left: 50%; transform: translateX(-50%); 
     background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; 
     border-radius: 30px; font-size: 14px; font-weight: 500; 
     z-index: 4000 !important; display: flex; align-items: center; gap: 8px;
@@ -160,7 +160,7 @@ const styles = `
     animation: slideDownToast 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOutToast 0.4s ease 3.6s forwards;
     white-space: nowrap;
   }
-  @keyframes slideDownToast { from { top: 60px; opacity: 0; } to { top: 80px; opacity: 1; } }
+  @keyframes slideDownToast { from { top: 60px; opacity: 0; } to { top: 140px; opacity: 1; } }
   @keyframes fadeOutToast { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
   .live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
@@ -257,7 +257,7 @@ function App() {
   // Track the selected booking duration in hours
   const [bookingDuration, setBookingDuration] = useState(2);
 
-  // NEW STATE (Commit 38): Track the selected extension duration in hours
+  // Track the selected extension duration in hours
   const [extensionDuration, setExtensionDuration] = useState(1);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
@@ -390,6 +390,7 @@ function App() {
         if (selectedSpot && selectedSpot.id === '2') {
           setSelectedSpot(null);
         }
+        // Restored real-time notification functionality
         setLiveToastMessage("Someone just booked Penrhyn Road");
         setTimeout(() => setLiveToastMessage(null), 4000);
       }, 8000); // Triggers 8 seconds after opening the map
@@ -474,7 +475,6 @@ function App() {
 
   /**
    * FUNCTION: handleExtendSession
-   * UPDATED (Commit 38): Dynamically calculate the extension cost based on selected hours
    */
   const handleExtendSession = () => {
     if (selectedSpot) {
@@ -660,6 +660,39 @@ function App() {
     setCurrentScreen('login');
   };
 
+  // Reusable UI Component: Driver Bottom Navigation Bar
+  const renderDriverNav = () => (
+    <div className="nav-bar-bottom">
+      <div className={`nav-item ${currentScreen === 'map' ? 'active' : ''}`} onClick={() => setCurrentScreen('map')}>
+        <MapPin size={24} color={currentScreen === 'map' ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: currentScreen === 'map' ? '#0056D2' : '#8E8E93'}}>Map</span>
+      </div>
+      <div className={`nav-item ${currentScreen === 'driverDashboard' ? 'active' : ''}`} onClick={() => setCurrentScreen('driverDashboard')}>
+        <Home size={24} color={currentScreen === 'driverDashboard' ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: currentScreen === 'driverDashboard' ? '#0056D2' : '#8E8E93'}}>Activity</span>
+      </div>
+      <div className={`nav-item ${currentScreen === 'profile' ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
+        <User size={24} color={currentScreen === 'profile' ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: currentScreen === 'profile' ? '#0056D2' : '#8E8E93'}}>Profile</span>
+      </div>
+    </div>
+  );
+
+  // Reusable UI Component: Host Bottom Navigation Bar
+  const renderHostNav = () => (
+    <div className="nav-bar-bottom">
+      <div className={`nav-item ${currentScreen === 'hostDashboard' ? 'active' : ''}`} onClick={() => setCurrentScreen('hostDashboard')}>
+        <Home size={24} color={currentScreen === 'hostDashboard' ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: currentScreen === 'hostDashboard' ? '#0056D2' : '#8E8E93'}}>Dashboard</span>
+      </div>
+      <div className="add-btn" onClick={() => setCurrentScreen('addSpot')}><Plus size={28} /></div>
+      <div className={`nav-item ${currentScreen === 'profile' ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
+        <User size={24} color={currentScreen === 'profile' ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: currentScreen === 'profile' ? '#0056D2' : '#8E8E93'}}>Profile</span>
+      </div>
+    </div>
+  );
+
   // RENDER: This is the HTML that appears on screen
   return (
     <>
@@ -765,30 +798,64 @@ function App() {
           </div>
         )}
 
+        {/* --- DRIVER DASHBOARD SCREEN (ACTIVITY) --- */}
+        {currentScreen === 'driverDashboard' && (
+          <div className="screen" style={{paddingBottom: 90, overflowY: 'auto'}}>
+            <div className="host-header">
+              <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Activity Hub</h2>
+            </div>
+
+            {isSessionActive ? (
+              <div className="earnings-card" style={{background: 'linear-gradient(135deg, #34C759 0%, #28a745 100%)', cursor: 'pointer'}} onClick={() => setCurrentScreen('activeBooking')}>
+                <p className="earnings-title">Current Status</p>
+                <p className="earnings-amount">Active Session</p>
+                <p style={{margin: '10px 0 0 0', fontSize: 14, opacity: 0.9, display: 'flex', alignItems: 'center', gap: '6px'}}><Timer size={16} /> Tap to view ticket</p>
+              </div>
+            ) : (
+              <div className="earnings-card" style={{cursor: 'pointer'}} onClick={() => setCurrentScreen('map')}>
+                <p className="earnings-title">Ready to park?</p>
+                <p className="earnings-amount">Find a Spot</p>
+                <p style={{margin: '10px 0 0 0', fontSize: 14, opacity: 0.9, display: 'flex', alignItems: 'center', gap: '6px'}}><MapPin size={16} /> View live map</p>
+              </div>
+            )}
+
+            <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Recent Bookings</h3>
+
+            <div className="listing-item" onClick={() => setCurrentScreen('pastBookingDetail')} style={{cursor: 'pointer'}}>
+              <div>
+                <div style={{fontWeight: 700, fontSize: 16}}>High St Garage</div>
+                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>Oct 12 • 3 Hours</div>
+              </div>
+              <ChevronRight size={20} color="#C7C7CC" />
+            </div>
+
+            {renderDriverNav()}
+          </div>
+        )}
+
         {/* --- MAP SCREEN --- */}
         {currentScreen === 'map' && (
           <div className="screen" style={{padding: 0, position: 'relative'}}>
             
+            {/* Restored Live Toast Rendering block (Commit 41) */}
             {liveToastMessage && (
               <div className="live-toast"><div className="live-indicator"></div>{liveToastMessage}</div>
             )}
 
             <div className="search-header">
-              <div className="icon-btn" onClick={() => setCurrentScreen('profile')}><Menu size={24} color="#000" /></div>
-              
               <div className="search-container">
                 <form className="search-input" onSubmit={handleSearch}>
-                  <MapPin size={16} color="#0056D2" />
+                  <MapPin size={20} color="#0056D2" />
                   <input 
                     className="map-search-field"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                    placeholder="Where to?"
+                    placeholder="Search for an address or postcode"
                   />
                   {searchQuery && (
-                    <X size={16} color="#8E8E93" onClick={() => setSearchQuery('')} style={{cursor: 'pointer'}} />
+                    <X size={18} color="#8E8E93" onClick={() => setSearchQuery('')} style={{cursor: 'pointer'}} />
                   )}
                 </form>
 
@@ -819,8 +886,6 @@ function App() {
                   </div>
                 )}
               </div>
-
-              <div className="icon-btn" onClick={() => setCurrentScreen('hostDashboard')}><User size={24} color="#000" /></div>
             </div>
 
             {/* Floating Active Session Banner */}
@@ -879,6 +944,9 @@ function App() {
                 <button className="primary-btn" onClick={() => setCurrentScreen('checkout')}>Book Spot</button>
               </div>
             )}
+
+            {/* Global Bottom Nav overlaps the Map */}
+            {renderDriverNav()}
           </div>
         )}
 
@@ -894,10 +962,8 @@ function App() {
               <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
               
-              {/* Dynamic Time Calculation based on Duration */}
               <div className="receipt-row"><span style={{color: '#8E8E93'}}>Time</span><span>14:00 - {14 + bookingDuration}:00</span></div>
               
-              {/* Interactive Dropdown for Duration */}
               <div className="receipt-row" style={{alignItems: 'center'}}>
                 <span style={{color: '#8E8E93'}}>Duration</span>
                 <select 
@@ -922,7 +988,6 @@ function App() {
               
               <div className="receipt-row total">
                 <span>Total Due</span>
-                {/* Total dynamically multiplies by the selected duration */}
                 <span>£{((selectedSpot.price * bookingDuration) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
               </div>
             </div>
@@ -985,7 +1050,7 @@ function App() {
 
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
               
-              {/* NEW (Commit 38): Smart Extension Widget with Dropdown */}
+              {/* Smart Extension Widget with Dropdown */}
               <div style={{background: 'white', borderRadius: 14, padding: 15, marginBottom: 5, boxShadow: '0 2px 10px rgba(0,0,0,0.05)'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
                   <span style={{fontWeight: 600}}>Extend Time</span>
@@ -1036,10 +1101,9 @@ function App() {
 
         {/* --- HOST DASHBOARD SCREEN --- */}
         {currentScreen === 'hostDashboard' && (
-          <div className="screen" style={{paddingBottom: 80, overflowY: 'auto'}}>
+          <div className="screen" style={{paddingBottom: 90, overflowY: 'auto'}}>
             <div className="host-header">
               <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Host Dashboard</h2>
-              <button className="close-btn" onClick={() => setCurrentScreen('map')}><X size={20} color="#000" /></button>
             </div>
 
             <div className="earnings-card">
@@ -1074,11 +1138,7 @@ function App() {
               </div>
             ))}
 
-            <div className="nav-bar-bottom">
-              <div className="nav-item active"><Home size={24} /><span>Home</span></div>
-              <div className="add-btn" onClick={() => setCurrentScreen('addSpot')}><Plus size={28} /></div>
-              <div className="nav-item" onClick={() => setCurrentScreen('profile')}><Settings size={24} color="#8E8E93" /><span>Settings</span></div>
-            </div>
+            {renderHostNav()}
           </div>
         )}
 
@@ -1186,10 +1246,9 @@ function App() {
 
         {/* --- USER PROFILE & SETTINGS --- */}
         {currentScreen === 'profile' && (
-          <div className="screen" style={{overflowY: 'auto'}}>
+          <div className="screen" style={{paddingBottom: 90, overflowY: 'auto'}}>
             <div className="host-header" style={{paddingBottom: 0}}>
               <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Profile</h2>
-              <button className="close-btn" onClick={() => setCurrentScreen(userMode === 'driver' ? 'map' : 'hostDashboard')}><X size={20} color="#000" /></button>
             </div>
 
             <div className="profile-header-card">
@@ -1278,7 +1337,7 @@ function App() {
                   }}
                 >
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-                    <MapPin size={20} color="#0056D2" />
+                    <Car size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Switch to Driver Mode</span>
                   </div>
                   <ChevronRight size={20} color="#C7C7CC" />
@@ -1289,6 +1348,8 @@ function App() {
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}><LogOut size={20} color="#FF3B30" /><span style={{fontWeight: 500, color: '#FF3B30'}}>Log Out</span></div>
               </div>
             </div>
+
+            {userMode === 'driver' ? renderDriverNav() : renderHostNav()}
           </div>
         )}
 

@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 35 (Location Tags)
- * DESCRIPTION: Replaces generic walking distances with specific neighborhood and city location tags for a more professional UX.
+ * COMMIT: 36 (Fullscreen Image Viewer)
+ * DESCRIPTION: Adds a sleek, dark-mode fullscreen overlay allowing users to tap and expand parking spot thumbnails.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -172,6 +172,13 @@ const styles = `
   .star-btn:hover { transform: scale(1.15); }
   .review-textarea { width: 100%; background: white; border: 1px solid #E5E5EA; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 15px; resize: none; box-sizing: border-box; margin-bottom: 20px; outline: none; height: 120px; }
   .review-textarea:focus { border-color: #0056D2; }
+
+  /* NEW (Commit 36): Fullscreen Image Viewer */
+  .fullscreen-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999 !important; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .fullscreen-img { width: 100%; max-height: 100%; object-fit: contain; }
+  .fullscreen-close { position: absolute; top: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+  .fullscreen-close:hover { background: rgba(255,255,255,0.4); }
 `;
 
 /**
@@ -243,6 +250,9 @@ function App() {
 
   // Track which spot is currently being edited
   const [editingSpotId, setEditingSpotId] = useState(null);
+
+  // NEW STATE (Commit 36): Track if an image is being viewed in full screen
+  const [fullScreenImage, setFullScreenImage] = useState(null);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -600,7 +610,7 @@ function App() {
           price: parseFloat(newPrice), 
           address: newAddress, 
           rating: 5.0, 
-          distance: 'Local Neighbourhood', // UPDATED (Commit 35): Added descriptive location tag here too
+          distance: 'Local Neighbourhood',
           spotsLeft: 1,
           imageUrl: newImage
         };
@@ -837,8 +847,15 @@ function App() {
                   <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
                 </div>
 
+                {/* UPDATED (Commit 36): Added cursor and click handler to open full screen image */}
                 {selectedSpot.imageUrl ? (
-                  <img src={selectedSpot.imageUrl} alt={selectedSpot.address} className="sheet-image" />
+                  <img 
+                    src={selectedSpot.imageUrl} 
+                    alt={selectedSpot.address} 
+                    className="sheet-image" 
+                    style={{cursor: 'pointer'}} 
+                    onClick={() => setFullScreenImage(selectedSpot.imageUrl)} 
+                  />
                 ) : (
                   <div className="sheet-image">No Image Provided</div>
                 )}
@@ -1342,6 +1359,16 @@ function App() {
               
               <button className="primary-btn" type="submit" style={{marginTop: 20}}>Save Card</button>
             </form>
+          </div>
+        )}
+
+        {/* NEW (Commit 36): Fullscreen Image Viewer Overlay */}
+        {fullScreenImage && (
+          <div className="fullscreen-overlay" onClick={() => setFullScreenImage(null)}>
+            <button className="fullscreen-close" onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}>
+              <X size={24} color="#FFF" />
+            </button>
+            <img src={fullScreenImage} alt="Full Screen View" className="fullscreen-img" />
           </div>
         )}
 

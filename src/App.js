@@ -1,12 +1,12 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 40 (Expanded Profile Settings)
- * DESCRIPTION: Overhauls the Profile screen with realistic, categorized application settings including Personal Information, Vehicle Management, Notifications, and Support.
+ * COMMIT: 41 (Contact Host & Driver Messaging)
+ * DESCRIPTION: Adds in-app messaging capabilities, allowing Drivers to contact Hosts from their active ticket, and Hosts to contact active Drivers from their dashboard.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-/* UPDATED (Commit 40): Added Bell, HelpCircle, and FileText icons for the new settings menu */
-import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil, Bell, HelpCircle, FileText } from 'lucide-react';
+/* UPDATED (Commit 41): Added MessageCircle, Phone, and Send icons for the chat interface */
+import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil, Bell, HelpCircle, FileText, MessageCircle, Phone, Send } from 'lucide-react';
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -136,13 +136,21 @@ const styles = `
   .nav-item.active { color: #0056D2; }
   .add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
 
-  /* --- ADD SPOT SCREEN --- */
+  /* --- IN-APP MESSAGING STYLES (Commit 41) --- */
+  .chat-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; }
+  .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; }
+  .chat-bubble.received { background: #E5E5EA; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .chat-bubble.sent { background: #0056D2; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-input-bar { background: white; padding: 15px; border-top: 1px solid #E5E5EA; display: flex; gap: 10px; align-items: center; margin: 0 -20px -20px; }
+  .chat-input { flex: 1; background: #F2F2F7; border: none; padding: 12px 16px; border-radius: 20px; outline: none; font-size: 15px; }
+  .send-btn { background: #0056D2; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;}
+
+  /* --- OTHER STYLES --- */
   .photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; overflow: hidden; position: relative; }
   .photo-preview { width: 100%; height: 100%; object-fit: cover; }
   .input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
   .form-section { margin-bottom: 20px; }
 
-  /* --- USER PROFILE --- */
   .profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
   .avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
   .settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
@@ -152,7 +160,6 @@ const styles = `
   .booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; transition: background 0.2s; cursor: pointer; }
   .booking-card:hover { background: #F8F9FA; }
 
-  /* --- REAL-TIME TOAST NOTIFICATION --- */
   .live-toast { 
     position: absolute; top: 140px; left: 50%; transform: translateX(-50%); 
     background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; 
@@ -167,7 +174,6 @@ const styles = `
   .live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
 
-  /* --- RATING & REVIEW SCREEN --- */
   .review-header { text-align: center; padding: 40px 20px 20px; }
   .star-row { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
   .star-btn { background: none; border: none; padding: 0; cursor: pointer; transition: transform 0.2s; outline: none; }
@@ -175,7 +181,6 @@ const styles = `
   .review-textarea { width: 100%; background: white; border: 1px solid #E5E5EA; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 15px; resize: none; box-sizing: border-box; margin-bottom: 20px; outline: none; height: 120px; }
   .review-textarea:focus { border-color: #0056D2; }
 
-  /* Fullscreen Image Viewer */
   .fullscreen-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999 !important; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .fullscreen-img { width: 100%; max-height: 100%; object-fit: contain; }
@@ -261,6 +266,9 @@ function App() {
 
   // Track the selected extension duration in hours
   const [extensionDuration, setExtensionDuration] = useState(1);
+
+  // NEW STATE (Commit 41): Track chat context (who we are messaging and where to return)
+  const [chatContext, setChatContext] = useState({ name: '', returnScreen: '' });
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -502,6 +510,15 @@ function App() {
     setSelectedSpot(null);
     setDriverLocation(null);
     setCurrentScreen('map');
+  };
+
+  /**
+   * FUNCTION: openChat (Commit 41)
+   * Opens the chat interface securely
+   */
+  const openChat = (recipientName, returnScreen) => {
+    setChatContext({ name: recipientName, returnScreen: returnScreen });
+    setCurrentScreen('chat');
   };
 
   /**
@@ -1028,7 +1045,7 @@ function App() {
 
         {/* --- ACTIVE BOOKING SCREEN --- */}
         {currentScreen === 'activeBooking' && selectedSpot && (
-          <div className="screen">
+          <div className="screen" style={{paddingBottom: 20, overflowY: 'auto'}}>
             <div className="checkout-header" style={{borderBottom: 'none', justifyContent: 'center'}}>
               <h2 className="checkout-title" style={{padding: 0, textAlign: 'center'}}>Active Session</h2>
             </div>
@@ -1046,7 +1063,7 @@ function App() {
               )}
             </div>
 
-            <div style={{marginTop: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
+            <div style={{marginTop: 20, marginBottom: 20, textAlign: 'center'}}><p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p></div>
 
             <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>
               
@@ -1069,8 +1086,46 @@ function App() {
                 </button>
               </div>
 
+              {/* UPDATED (Commit 41): Added the Contact Host button to the Active Session action stack */}
+              <button 
+                className="secondary-btn" 
+                style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8}} 
+                onClick={() => openChat(`Host (${selectedSpot.address})`, 'activeBooking')}
+              >
+                <MessageCircle size={20} /> Message Host
+              </button>
+
               <button className="primary-btn" style={{background: '#000'}} onClick={() => setCurrentScreen('map')}>Done (Return to Map)</button>
               <button className="danger-btn" onClick={handleEndSession}>End Session Early</button>
+            </div>
+          </div>
+        )}
+
+        {/* --- IN-APP CHAT SCREEN (Commit 41) --- */}
+        {currentScreen === 'chat' && (
+          <div className="screen" style={{padding: 0, display: 'flex', flexDirection: 'column', background: '#fff'}}>
+            <div className="checkout-header" style={{padding: '20px', margin: 0, background: '#fff', zIndex: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen(chatContext.returnScreen)}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title" style={{paddingRight: 0}}>{chatContext.name}</h2>
+              <button className="close-btn" style={{background: 'transparent'}} onClick={() => alert('Calling feature coming soon.')}><Phone size={20} color="#0056D2" /></button>
+            </div>
+            
+            <div className="chat-area">
+              <div style={{textAlign: 'center', color: '#8E8E93', fontSize: 12, margin: '10px 0'}}>Today 14:02</div>
+              
+              {/* Dynamic message layout based on whether user is Host or Driver */}
+              <div className={`chat-bubble ${userMode === 'driver' ? 'sent' : 'received'}`}>
+                Hi there, just wanted to double check if my vehicle is okay parked on the left side?
+              </div>
+              <div className={`chat-bubble ${userMode === 'driver' ? 'received' : 'sent'}`}>
+                Yes, that's perfect! Let me know if you need anything else.
+              </div>
+            </div>
+
+            <div className="chat-input-bar">
+              <Plus size={24} color="#8E8E93" style={{cursor: 'pointer'}} />
+              <input className="chat-input" placeholder="Type a message..." />
+              <button className="send-btn" onClick={() => alert('Message sent!')}><Send size={18} /></button>
             </div>
           </div>
         )}
@@ -1111,7 +1166,26 @@ function App() {
               <p style={{margin: '10px 0 0 0', fontSize: 14, opacity: 0.9}}>+12% from last month</p>
             </div>
 
-            <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Your Driveways</h3>
+            {/* NEW (Commit 41): Active Guests section on Host Dashboard */}
+            <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Active Guests</h3>
+            <div className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #34C759'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center'}}>
+                <div>
+                  <div style={{fontWeight: 700, fontSize: 16}}>Jane Doe (Ford Fiesta)</div>
+                  <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>142 Penrhyn Road • Ends in 1h 20m</div>
+                </div>
+                <div className="live-indicator" style={{position: 'static'}}></div>
+              </div>
+              <button 
+                className="secondary-btn" 
+                style={{background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}} 
+                onClick={() => openChat('Driver (Jane D.)', 'hostDashboard')}
+              >
+                <MessageCircle size={18}/> Message Driver
+              </button>
+            </div>
+
+            <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>
 
             {hostListings.map(listing => (
               <div className="listing-item" key={listing.id}>
@@ -1259,7 +1333,7 @@ function App() {
               </div>
             </div>
 
-            {/* UPDATED (Commit 40): Expanded Settings UI */}
+            {/* Expanded Settings UI */}
             <div className="settings-section-title">Account Settings</div>
             <div className="ios-input-group">
               <div className="settings-row" onClick={() => alert('Personal Information editing coming soon.')}>

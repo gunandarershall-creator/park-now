@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 41 (Contact Host & Driver Messaging)
- * DESCRIPTION: Adds in-app messaging capabilities, allowing Drivers to contact Hosts from their active ticket, and Hosts to contact active Drivers from their dashboard.
+ * COMMIT: 42 (Functional Profile Screens)
+ * DESCRIPTION: Replaces placeholder alerts in the Profile section with fully functional screens for Personal Info, Vehicle Management, Notifications, Help Center, and Legal Terms.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -269,6 +269,10 @@ function App() {
 
   // NEW STATE (Commit 41): Track chat context (who we are messaging and where to return)
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '' });
+
+  // NEW STATE (Commit 42): Notification preferences
+  const [notifBooking, setNotifBooking] = useState(true);
+  const [notifPromo, setNotifPromo] = useState(false);
 
   // Added mock global locations and postcodes to demonstrate dynamic filtering
   const allSuggestions = [
@@ -1336,7 +1340,8 @@ function App() {
             {/* Expanded Settings UI */}
             <div className="settings-section-title">Account Settings</div>
             <div className="ios-input-group">
-              <div className="settings-row" onClick={() => alert('Personal Information editing coming soon.')}>
+              {/* UPDATED (Commit 42): Linked to actual screens instead of alerts */}
+              <div className="settings-row" onClick={() => setCurrentScreen('personalInfo')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <User size={20} color="#0056D2" />
                   <span style={{fontWeight: 500}}>Personal Information</span>
@@ -1345,7 +1350,7 @@ function App() {
               </div>
 
               {userMode === 'driver' && (
-                <div className="settings-row" onClick={() => alert('Vehicle Management coming soon.')}>
+                <div className="settings-row" onClick={() => setCurrentScreen('manageVehicles')}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <Car size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Manage Vehicles</span>
@@ -1371,7 +1376,7 @@ function App() {
 
             <div className="settings-section-title" style={{marginTop: 25}}>Preferences</div>
             <div className="ios-input-group">
-              <div className="settings-row" onClick={() => alert('Notification preferences opened.')}>
+              <div className="settings-row" onClick={() => setCurrentScreen('notifications')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <Bell size={20} color="#0056D2" />
                   <span style={{fontWeight: 500}}>Notifications</span>
@@ -1382,14 +1387,14 @@ function App() {
 
             <div className="settings-section-title" style={{marginTop: 25}}>Support & About</div>
             <div className="ios-input-group">
-              <div className="settings-row" onClick={() => alert('Opening Help Center...')}>
+              <div className="settings-row" onClick={() => setCurrentScreen('helpCenter')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <HelpCircle size={20} color="#0056D2" />
                   <span style={{fontWeight: 500}}>Help Center</span>
                 </div>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
-              <div className="settings-row" onClick={() => alert('Viewing Terms of Service & Privacy Policy.')}>
+              <div className="settings-row" onClick={() => setCurrentScreen('termsPrivacy')}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <FileText size={20} color="#0056D2" />
                   <span style={{fontWeight: 500}}>Terms & Privacy</span>
@@ -1544,6 +1549,166 @@ function App() {
               
               <button className="primary-btn" type="submit" style={{marginTop: 20}}>Save Card</button>
             </form>
+          </div>
+        )}
+
+        {/* --- NEW SCREENS FOR COMMIT 42 --- */}
+
+        {/* --- PERSONAL INFO SCREEN --- */}
+        {currentScreen === 'personalInfo' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Personal Info</h2>
+            </div>
+            
+            <form onSubmit={(e) => { e.preventDefault(); alert('Information saved successfully!'); setCurrentScreen('profile'); }}>
+              <div className="form-section">
+                <div className="input-label">Update Details</div>
+                <div className="ios-input-group">
+                  <div className="ios-input-row">
+                    <User size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Full Name" value={regName} onChange={(e) => setRegName(e.target.value)} required />
+                  </div>
+                  <div className="ios-input-row">
+                    <Mail size={20} color="#8E8E93" />
+                    <input className="ios-input" placeholder="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                </div>
+              </div>
+              <button className="primary-btn" type="submit" style={{marginTop: 20}}>Save Changes</button>
+            </form>
+          </div>
+        )}
+
+        {/* --- MANAGE VEHICLES SCREEN --- */}
+        {currentScreen === 'manageVehicles' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">My Vehicles</h2>
+            </div>
+
+            <div className="settings-section-title">Active Vehicle</div>
+            <div className="ios-input-group">
+              <div className="settings-row" style={{cursor: 'default', background: 'white'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <Car size={20} color="#0056D2" />
+                  <div>
+                    <span style={{fontWeight: 500, display: 'block', marginBottom: 2}}>{regPlate ? regPlate.toUpperCase() : 'NO PLATE ADDED'}</span>
+                    <span style={{fontSize: 13, color: '#8E8E93'}}>Primary Vehicle</span>
+                  </div>
+                </div>
+                <div style={{fontSize: 12, color: '#34C759', fontWeight: 600, background: '#E8F8EE', padding: '4px 8px', borderRadius: 6}}>Default</div>
+              </div>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); alert('Vehicle added!'); setCurrentScreen('profile'); }}>
+              <div className="settings-section-title" style={{marginTop: 25}}>Add New Vehicle</div>
+              <div className="ios-input-group">
+                <div className="ios-input-row">
+                  <input className="ios-input" style={{marginLeft: 0, textTransform: 'uppercase'}} placeholder="Enter License Plate (e.g. AB12 CDE)" onChange={(e) => setRegPlate(e.target.value)} required />
+                </div>
+              </div>
+              <button className="primary-btn" type="submit" style={{marginTop: 10}}>Add Vehicle</button>
+            </form>
+          </div>
+        )}
+
+        {/* --- NOTIFICATIONS SCREEN --- */}
+        {currentScreen === 'notifications' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Notifications</h2>
+            </div>
+
+            <div className="settings-section-title">Push Notifications</div>
+            <div className="ios-input-group">
+              <div className="payment-method-row" style={{marginBottom: 0, borderBottom: '1px solid #E5E5EA', borderRadius: 0, border: 'none'}}>
+                <div style={{flex: 1}}>
+                  <div style={{fontWeight: 600}}>Booking Updates</div>
+                  <div style={{fontSize: 13, color: '#8E8E93', marginTop: 2}}>Reminders, expiry warnings, and receipts.</div>
+                </div>
+                <div className="toggle-switch" style={notifBooking ? {} : {background: '#E5E5EA'}} onClick={() => setNotifBooking(!notifBooking)}>
+                  <div className="toggle-knob" style={notifBooking ? {} : {right: 'auto', left: 2}}></div>
+                </div>
+              </div>
+              
+              <div className="payment-method-row" style={{marginBottom: 0, borderRadius: 0, border: 'none'}}>
+                <div style={{flex: 1}}>
+                  <div style={{fontWeight: 600}}>Promotions & Offers</div>
+                  <div style={{fontSize: 13, color: '#8E8E93', marginTop: 2}}>Discounts and new features.</div>
+                </div>
+                <div className="toggle-switch" style={notifPromo ? {} : {background: '#E5E5EA'}} onClick={() => setNotifPromo(!notifPromo)}>
+                  <div className="toggle-knob" style={notifPromo ? {} : {right: 'auto', left: 2}}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- HELP CENTER SCREEN --- */}
+        {currentScreen === 'helpCenter' && (
+          <div className="screen" style={{overflowY: 'auto'}}>
+            <div className="checkout-header" style={{marginTop: 10}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Help Center</h2>
+            </div>
+
+            <div className="ios-input-group" style={{background: '#E5E5EA', padding: '12px 15px', borderRadius: 12, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10}}>
+               <HelpCircle size={18} color="#8E8E93"/>
+               <input style={{border: 'none', background: 'transparent', outline: 'none', fontSize: 16, flex: 1}} placeholder="Search for help..." />
+            </div>
+
+            <div className="settings-section-title">Frequently Asked Questions</div>
+            <div className="ios-input-group">
+              <div className="settings-row" onClick={() => alert('To book a spot, simply tap a pin on the map and proceed to checkout!')}>
+                <span style={{fontWeight: 500}}>How do I book a parking spot?</span>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+              <div className="settings-row" onClick={() => alert('Go to your profile, tap "Switch to Host Dashboard", and click the + icon.')}>
+                <span style={{fontWeight: 500}}>How do I list my driveway?</span>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+              <div className="settings-row" onClick={() => alert('You can extend your time directly from the Active Session ticket using the dropdown.')}>
+                <span style={{fontWeight: 500}}>Can I extend my booking?</span>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+            </div>
+
+            <button className="secondary-btn" style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: 'auto'}} onClick={() => alert('Connecting to support chat...')}>
+               Contact Live Support
+            </button>
+          </div>
+        )}
+
+        {/* --- TERMS & PRIVACY SCREEN --- */}
+        {currentScreen === 'termsPrivacy' && (
+          <div className="screen" style={{overflowY: 'auto', background: '#fff'}}>
+            <div className="checkout-header" style={{marginTop: 10, background: '#fff', position: 'sticky', top: 0, zIndex: 10, paddingBottom: 15}}>
+              <button className="close-btn" onClick={() => setCurrentScreen('profile')}><ArrowLeft size={20} color="#000" /></button>
+              <h2 className="checkout-title">Terms & Privacy</h2>
+            </div>
+
+            <div style={{color: '#333', fontSize: 14, lineHeight: 1.6, paddingBottom: 40}}>
+              <h3 style={{fontSize: 18, color: '#000'}}>1. Acceptance of Terms</h3>
+              <p>By accessing or using the Park Now application, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our services.</p>
+
+              <h3 style={{fontSize: 18, color: '#000'}}>2. User Responsibilities (Drivers)</h3>
+              <p>As a driver, you agree to park only in the designated areas outlined by the Host. You must strictly adhere to the booking times. Overstaying may result in additional penalty fees or your vehicle being towed at your own expense.</p>
+
+              <h3 style={{fontSize: 18, color: '#000'}}>3. Host Responsibilities</h3>
+              <p>As a host, you guarantee that you have the legal right to rent out the driveway or parking space listed. The space must be accurately represented in photos and descriptions, and be reasonably accessible during the booking period.</p>
+
+              <h3 style={{fontSize: 18, color: '#000'}}>4. Privacy & Data Collection</h3>
+              <p>We collect location data (GPS) to provide you with accurate nearby parking spots. Your payment information is securely encrypted and processed by a third-party gateway. We do not sell your personal data to advertisers.</p>
+              
+              <h3 style={{fontSize: 18, color: '#000'}}>5. Cancellations & Refunds</h3>
+              <p>Bookings can be cancelled up to 1 hour before the scheduled start time for a full refund. Cancellations made within 1 hour are not eligible for refunds. Host-initiated cancellations will result in a 100% refund to the driver.</p>
+
+              <p style={{color: '#8E8E93', marginTop: 30, fontSize: 12, textAlign: 'center'}}>Last updated: October 2025</p>
+            </div>
           </div>
         )}
 

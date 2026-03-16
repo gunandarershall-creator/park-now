@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 43 (Cloud Database Integration)
- * DESCRIPTION: Replaces placeholder alerts in the Profile section with functional screens for Personal Info, Vehicle Management, Notifications, Help Center, and Legal Terms. Implemented Firebase for production database syncing while maintaining local development fallbacks.
+ * COMMIT: 44 (Real Booking Transactions)
+ * DESCRIPTION: Replaces placeholder alerts in the Profile section with functional screens for Personal Info, Vehicle Management, Notifications, Help Center, and Legal Terms. Implemented Firebase for production database syncing while maintaining local development fallbacks. Added live transaction logic to deduct inventory and clear sold-out spots from the cloud.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -15,7 +15,7 @@ import {
 
 /* --- FIREBASE INTEGRATION --- */
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, addDoc, setDoc, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
 
 /* Environment Configuration */
@@ -473,7 +473,8 @@ function App() {
     const newLayer = window.L.layerGroup().addTo(window.mapInstance);
     window.markerLayer = newLayer;
 
-    spots.forEach(spot => {
+    // Render ONLY spots that have inventory left (> 0)
+    spots.filter(spot => spot.spotsLeft > 0).forEach(spot => {
       const isSelected = selectedSpot?.id === spot.id;
       const icon = window.L.divIcon({
         className: 'custom-leaflet-icon',
@@ -509,6 +510,7 @@ function App() {
     let timeoutId;
     if (currentScreen === 'map' && spots.length >= 3) {
       timeoutId = setTimeout(() => {
+        // Mock notification only
         if (selectedSpot && selectedSpot.id === '2') {
           setSelectedSpot(null);
         }
@@ -587,9 +589,38 @@ function App() {
   };
 
   /**
-   * FUNCTION: handlePayment
+   * FUNCTION: handlePayment (Commit 44: Real Booking Transactions)
+   * Deducts inventory from Firebase and removes the pin if sold out.
    */
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (selectedSpot) {
+      // 1. Optimistic Local UI Update (Instant visual feedback)
+      const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
+      
+      if (updatedSpotsLeft <= 0) {
+        setSpots(prev => prev.filter(s => s.id !== selectedSpot.id));
+      } else {
+        setSpots(prev => prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: updatedSpotsLeft } : s));
+      }
+
+      // 2. Firebase Cloud Transaction
+      if (db && !['1', '2', '3'].includes(selectedSpot.id)) {
+        try {
+          const spotRef = doc(getSpotsRef(), selectedSpot.id);
+          if (updatedSpotsLeft <= 0) {
+             // Wipes the spot completely from the cloud so it vanishes off all maps
+            await deleteDoc(spotRef);
+            console.log("Spot sold out and removed from Firebase!");
+          } else {
+            await updateDoc(spotRef, { spotsLeft: updatedSpotsLeft });
+            console.log("Spot inventory updated in Firebase!");
+          }
+        } catch (error) {
+          console.error("Firebase transaction failed:", error);
+        }
+      }
+    }
+
     setIsSessionActive(true);
     setCurrentScreen('activeBooking');
   };
@@ -765,7 +796,8 @@ function App() {
         // 2. Push new listing to Firebase database
         if (db) {
            try {
-             await addDoc(getSpotsRef(), newSpotData);
+             // By using setDoc, we force Firebase to use the exact same ID as the local map.
+             await setDoc(doc(getSpotsRef(), newSpotData.id), newSpotData);
              console.log("Successfully pushed new spot to Firebase!");
            } catch (err) {
              console.error("Failed to push to Firebase. Check your Firestore Rules (Test Mode) and Authentication.", err);

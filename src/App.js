@@ -1,12 +1,54 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 42 (Functional Profile Screens)
- * DESCRIPTION: Replaces placeholder alerts in the Profile section with fully functional screens for Personal Info, Vehicle Management, Notifications, Help Center, and Legal Terms.
+ * COMMIT: 43 (Cloud Database Integration)
+ * DESCRIPTION: Replaces placeholder alerts in the Profile section with functional screens for Personal Info, Vehicle Management, Notifications, Help Center, and Legal Terms. Implemented Firebase for production database syncing while maintaining local development fallbacks.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 /* UPDATED (Commit 41): Added MessageCircle, Phone, and Send icons for the chat interface */
-import { MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, ShieldCheck, LogOut, Car, Pencil, Bell, HelpCircle, FileText, MessageCircle, Phone, Send } from 'lucide-react';
+import { 
+  MapPin, Mail, Lock, User, Star, X, ArrowLeft, CreditCard, 
+  Navigation, Timer, QrCode, Plus, Home, Camera, ChevronRight, 
+  ShieldCheck, LogOut, Car, Pencil, Bell, HelpCircle, FileText, 
+  MessageCircle, Phone, Send, Loader2, Settings, Clock 
+} from 'lucide-react';
+
+/* --- FIREBASE INTEGRATION --- */
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
+
+/* Environment Configuration */
+const firebaseConfig = typeof window !== 'undefined' && window.__firebase_config 
+  ? JSON.parse(window.__firebase_config) 
+  : {
+      apiKey: "AIzaSyA7iaKO86PbxO2BJeA0SulWqpAfB1qs7NU",
+      authDomain: "fyp-backend-parknow.firebaseapp.com",
+      projectId: "fyp-backend-parknow",
+      storageBucket: "fyp-backend-parknow.firebasestorage.app",
+      messagingSenderId: "762323405309",
+      appId: "1:762323405309:web:cca5363efc85606b807194"
+    };
+
+// Retrieve application ID for scoped database access
+const rawAppId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
+
+// Initialize core Firebase instances
+let app, db, auth;
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} catch (e) {
+  console.warn("Firebase initialization bypassed. Defaulting to local memory.");
+}
+
+// Determine correct collection reference based on current environment variables
+const getSpotsRef = () => {
+  return typeof window !== 'undefined' && window.__app_id 
+    ? collection(db, 'artifacts', rawAppId, 'public', 'data', 'spots')
+    : collection(db, 'spots');
+};
 
 /**
  * CSS STYLES (Internal Stylesheet)
@@ -298,14 +340,75 @@ function App() {
   // Map Reference for Leaflet injection
   const mapContainerRef = useRef(null);
 
-  // Load fake data when the app starts
+  const [user, setUser] = useState(null);
+
+  /**
+   * FIREBASE AUTHENTICATION
+   */
   useEffect(() => {
-    setSpots([
+    if (!auth) return;
+    const initAuth = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.__initial_auth_token) {
+          await signInWithCustomToken(auth, window.__initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn("Firebase Auth Error:", err);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  /**
+   * FIREBASE REAL-TIME SYNC
+   */
+  useEffect(() => {
+    const defaultSpots = [
       { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
       { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: 'Surbiton, Surrey', spotsLeft: 1, imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
       { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: 'Kingston City Centre', spotsLeft: 8, imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
-    ]);
-  }, []);
+    ];
+
+    // 1. Load local fallback data initially so the map never appears blank
+    setSpots(defaultSpots);
+    setHostListings(defaultSpots.map(s => ({
+      id: s.id,
+      address: s.address,
+      details: `£${Number(s.price).toFixed(2)} / hr • ${s.spotsLeft || 1} spot`,
+      isActive: true
+    })));
+
+    // 2. Connect to database
+    if (!user || !db) return;
+    
+    try {
+      const spotsRef = getSpotsRef();
+      const unsubscribe = onSnapshot(spotsRef, (snapshot) => {
+        const cloudDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Merge cloud data with original spots
+        const allSpots = [...defaultSpots, ...cloudDocs];
+        setSpots(allSpots);
+        
+        setHostListings(allSpots.map(s => ({
+          id: s.id,
+          address: s.address,
+          details: `£${Number(s.price).toFixed(2)} / hr • ${s.spotsLeft || 1} spot`,
+          isActive: true
+        })));
+        
+      }, (err) => {
+        console.error("Firestore Read Error:", err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.error("Firestore Sync Error:", e);
+    }
+  }, [user]);
 
   /**
    * EFFECT: Dynamic Leaflet Map Injector
@@ -314,7 +417,13 @@ function App() {
     if (currentScreen !== 'map') return;
 
     const initLeafletMap = () => {
-      if (!mapContainerRef.current || window.mapInstance) return;
+      if (!mapContainerRef.current) return;
+      
+      // Prevent "Map container is already initialized" crash from Leaflet unmounting
+      if (window.mapInstance) {
+        window.mapInstance.remove();
+        window.mapInstance = null;
+      }
 
       window.mapInstance = window.L.map(mapContainerRef.current, {
         zoomControl: false,
@@ -343,7 +452,7 @@ function App() {
     }
 
     return () => {
-      if (currentScreen !== 'map' && window.mapInstance) {
+      if (window.mapInstance) {
         window.mapInstance.remove();
         window.mapInstance = null;
         window.markerLayer = null;
@@ -394,13 +503,12 @@ function App() {
   }, [spots, selectedSpot, driverLocation, currentScreen]);
 
   /**
-   * EFFECT: Simulate Firebase Real-Time Listener
+   * EFFECT: Simulate Firebase Real-Time Listener (UI Demo logic)
    */
   useEffect(() => {
     let timeoutId;
     if (currentScreen === 'map' && spots.length >= 3) {
       timeoutId = setTimeout(() => {
-        setSpots(prevSpots => prevSpots.filter(s => s.id !== '2'));
         if (selectedSpot && selectedSpot.id === '2') {
           setSelectedSpot(null);
         }
@@ -644,6 +752,7 @@ function App() {
           imageUrl: newImage
         };
 
+        // 1. Optimistic Local Update (Instant feedback)
         setSpots([...spots, newSpotData]);
         
         setHostListings([...hostListings, {
@@ -652,6 +761,16 @@ function App() {
           details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
           isActive: true
         }]);
+
+        // 2. Push new listing to Firebase database
+        if (db) {
+           try {
+             await addDoc(getSpotsRef(), newSpotData);
+             console.log("Successfully pushed new spot to Firebase!");
+           } catch (err) {
+             console.error("Failed to push to Firebase. Check your Firestore Rules (Test Mode) and Authentication.", err);
+           }
+        }
 
         setNewAddress('');
         setNewPrice('');
@@ -693,9 +812,9 @@ function App() {
         <Home size={24} color={currentScreen === 'driverDashboard' ? "#0056D2" : "#8E8E93"} />
         <span style={{color: currentScreen === 'driverDashboard' ? '#0056D2' : '#8E8E93'}}>Activity</span>
       </div>
-      <div className={`nav-item ${currentScreen === 'profile' ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
-        <User size={24} color={currentScreen === 'profile' ? "#0056D2" : "#8E8E93"} />
-        <span style={{color: currentScreen === 'profile' ? '#0056D2' : '#8E8E93'}}>Profile</span>
+      <div className={`nav-item ${['profile', 'personalInfo', 'manageVehicles', 'notifications', 'helpCenter', 'termsPrivacy', 'paymentMethods', 'addCard'].includes(currentScreen) ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
+        <User size={24} color={['profile', 'personalInfo', 'manageVehicles', 'notifications', 'helpCenter', 'termsPrivacy', 'paymentMethods', 'addCard'].includes(currentScreen) ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: ['profile', 'personalInfo', 'manageVehicles', 'notifications', 'helpCenter', 'termsPrivacy', 'paymentMethods', 'addCard'].includes(currentScreen) ? '#0056D2' : '#8E8E93'}}>Profile</span>
       </div>
     </div>
   );
@@ -708,9 +827,9 @@ function App() {
         <span style={{color: currentScreen === 'hostDashboard' ? '#0056D2' : '#8E8E93'}}>Dashboard</span>
       </div>
       <div className="add-btn" onClick={() => setCurrentScreen('addSpot')}><Plus size={28} /></div>
-      <div className={`nav-item ${currentScreen === 'profile' ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
-        <User size={24} color={currentScreen === 'profile' ? "#0056D2" : "#8E8E93"} />
-        <span style={{color: currentScreen === 'profile' ? '#0056D2' : '#8E8E93'}}>Profile</span>
+      <div className={`nav-item ${['profile', 'personalInfo', 'notifications', 'helpCenter', 'termsPrivacy'].includes(currentScreen) ? 'active' : ''}`} onClick={() => setCurrentScreen('profile')}>
+        <User size={24} color={['profile', 'personalInfo', 'notifications', 'helpCenter', 'termsPrivacy'].includes(currentScreen) ? "#0056D2" : "#8E8E93"} />
+        <span style={{color: ['profile', 'personalInfo', 'notifications', 'helpCenter', 'termsPrivacy'].includes(currentScreen) ? '#0056D2' : '#8E8E93'}}>Profile</span>
       </div>
     </div>
   );
@@ -1077,7 +1196,7 @@ function App() {
                   <select 
                     value={extensionDuration}
                     onChange={(e) => setExtensionDuration(Number(e.target.value))}
-                    style={{border: 'none', background: '#F2F2F7', padding: '8px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+                    style={{border: 'none', background: '#F2F2F7', padding: '8px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'} }
                   >
                     <option value={1}>+ 1 Hour</option>
                     <option value={2}>+ 2 Hours</option>
@@ -1675,9 +1794,17 @@ function App() {
                 <span style={{fontWeight: 500}}>Can I extend my booking?</span>
                 <ChevronRight size={20} color="#C7C7CC" />
               </div>
+              <div className="settings-row" onClick={() => alert('Use the Contact Host button on your active ticket to resolve the issue directly, or contact support for a full refund.')}>
+                <span style={{fontWeight: 500}}>What if someone is in my spot?</span>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
+              <div className="settings-row border-none" onClick={() => alert('Payouts are processed automatically to your default payment method at the end of each month.')}>
+                <span style={{fontWeight: 500}}>How do host payouts work?</span>
+                <ChevronRight size={20} color="#C7C7CC" />
+              </div>
             </div>
 
-            <button className="secondary-btn" style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: 'auto'}} onClick={() => alert('Connecting to support chat...')}>
+            <button className="secondary-btn" style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: 'auto'}} onClick={() => openChat('Support Agent', 'helpCenter')}>
                Contact Live Support
             </button>
           </div>
@@ -1693,19 +1820,25 @@ function App() {
 
             <div style={{color: '#333', fontSize: 14, lineHeight: 1.6, paddingBottom: 40}}>
               <h3 style={{fontSize: 18, color: '#000'}}>1. Acceptance of Terms</h3>
-              <p>By accessing or using the Park Now application, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our services.</p>
+              <p className="mb-4 font-medium">By accessing or using the Park Now application, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our services.</p>
 
-              <h3 style={{fontSize: 18, color: '#000'}}>2. User Responsibilities (Drivers)</h3>
-              <p>As a driver, you agree to park only in the designated areas outlined by the Host. You must strictly adhere to the booking times. Overstaying may result in additional penalty fees or your vehicle being towed at your own expense.</p>
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>2. User Responsibilities (Drivers)</h3>
+              <p className="mb-4 font-medium">As a driver, you agree to park only in the designated areas outlined by the Host. You must strictly adhere to the booking times. Overstaying may result in additional penalty fees or your vehicle being towed at your own expense.</p>
 
-              <h3 style={{fontSize: 18, color: '#000'}}>3. Host Responsibilities</h3>
-              <p>As a host, you guarantee that you have the legal right to rent out the driveway or parking space listed. The space must be accurately represented in photos and descriptions, and be reasonably accessible during the booking period.</p>
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>3. Host Responsibilities</h3>
+              <p className="mb-4 font-medium">As a host, you guarantee that you have the legal right to rent out the driveway or parking space listed. The space must be accurately represented in photos and descriptions, and be reasonably accessible during the booking period.</p>
 
-              <h3 style={{fontSize: 18, color: '#000'}}>4. Privacy & Data Collection</h3>
-              <p>We collect location data (GPS) to provide you with accurate nearby parking spots. Your payment information is securely encrypted and processed by a third-party gateway. We do not sell your personal data to advertisers.</p>
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>4. Privacy & Data Collection</h3>
+              <p className="mb-4 font-medium">We collect location data (GPS) to provide you with accurate nearby parking spots. Your payment information is securely encrypted and processed by a third-party gateway. We do not sell your personal data to advertisers.</p>
               
-              <h3 style={{fontSize: 18, color: '#000'}}>5. Cancellations & Refunds</h3>
-              <p>Bookings can be cancelled up to 1 hour before the scheduled start time for a full refund. Cancellations made within 1 hour are not eligible for refunds. Host-initiated cancellations will result in a 100% refund to the driver.</p>
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>5. Cancellations & Refunds</h3>
+              <p className="mb-4 font-medium">Bookings can be cancelled up to 1 hour before the scheduled start time for a full refund. Cancellations made within 1 hour are not eligible for refunds. Host-initiated cancellations will result in a 100% refund to the driver.</p>
+
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>6. Insurance Policy</h3>
+              <p className="mb-4 font-medium">Every booking includes a standard public liability protection for both the host and the driver. This is included in the service fee. Damage must be reported within 24 hours of the session end time.</p>
+
+              <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>7. Community Safety</h3>
+              <p className="mb-4 font-medium">We maintain a strict code of conduct. All students must be respectful and park within the designated lines of the host's property. Any reports of inappropriate behaviour will result in an immediate account review.</p>
 
               <p style={{color: '#8E8E93', marginTop: 30, fontSize: 12, textAlign: 'center'}}>Last updated: October 2025</p>
             </div>
@@ -1726,4 +1859,5 @@ function App() {
     </>
   );
 }
+
 export default App;

@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 46 (Google Authentication Integration)
- * DESCRIPTION: Added "Continue with Google" OAuth integration to both Login and Registration screens. Includes a seamless popup flow that automatically creates or merges user documents in Firestore. Added password minimum character requirements to the registration UI. Full 1.8k codebase maintained without cut corners.
+ * COMMIT: 47 (Forgot Password Integration)
+ * DESCRIPTION: Wired up the Forgot Password screen to Firebase Auth using sendPasswordResetEmail. Added "Continue with Google" OAuth integration to both Login and Registration screens. Includes a seamless popup flow that automatically creates or merges user documents in Firestore. Added password minimum character requirements to the registration UI. Full 1.8k codebase maintained without cut corners.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,8 +16,7 @@ import {
 /* --- FIREBASE INTEGRATION --- */
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, setDoc, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
-// UPDATED (Commit 46): Imported GoogleAuthProvider and signInWithPopup
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
 
 /* Exact Configuration from Firebase Console */
 const firebaseConfig = typeof window !== 'undefined' && window.__firebase_config 
@@ -650,11 +649,21 @@ function App() {
   /**
    * FUNCTION: handleResetPassword
    */
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (email) {
-      alert(`A password reset link has been sent to ${email}`);
-      setCurrentScreen('login');
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert(`A password reset link has been sent to ${email}`);
+        setCurrentScreen('login');
+      } catch (error) {
+        console.error("Password reset error:", error);
+        if (error.code === 'auth/user-not-found') {
+           alert("No account found with this email address.");
+        } else {
+           alert("Failed to send reset link: " + error.message);
+        }
+      }
     } else {
       alert('Please enter your email address to receive a reset link.');
     }

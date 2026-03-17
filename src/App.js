@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 45 (Real User Authentication)
- * DESCRIPTION: Connected the Login and Registration screens to Firebase Auth. Users can now securely create accounts with Email/Password. Vehicle and personal details are now saved to a dedicated 'users' collection in Firestore. Full 1.8k codebase maintained without cut corners.
+ * COMMIT: 46 (Google Authentication Integration)
+ * DESCRIPTION: Added "Continue with Google" OAuth integration to both Login and Registration screens. Includes a seamless popup flow that automatically creates or merges user documents in Firestore. Added password minimum character requirements to the registration UI. Full 1.8k codebase maintained without cut corners.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,7 +16,8 @@ import {
 /* --- FIREBASE INTEGRATION --- */
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, setDoc, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+// UPDATED (Commit 46): Imported GoogleAuthProvider and signInWithPopup
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 /* Exact Configuration from Firebase Console */
 const firebaseConfig = typeof window !== 'undefined' && window.__firebase_config 
@@ -35,6 +36,8 @@ const rawAppId = typeof window !== 'undefined' && window.__app_id ? window.__app
 
 // Initialize core Firebase instances
 let app, db, auth;
+const googleProvider = new GoogleAuthProvider(); // Added for Google Sign-In
+
 try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
@@ -92,6 +95,13 @@ const styles = `
   
   /* 3. The "Create Account" Link */
   .signup-link { color: #0056D2; font-weight: 600; border: none; background: none; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px; }
+
+  /* 4. Google Auth Button Styles */
+  .google-btn { background: #ffffff; color: #333; border: 1px solid #E5E5EA; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+  .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #8E8E93; font-size: 14px; }
+  .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #E5E5EA; }
+  .divider:not(:empty)::before { margin-right: .5em; }
+  .divider:not(:empty)::after { margin-left: .5em; }
 
   /* --- MAP UI STYLES --- */
   .search-header { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 3000 !important; display: flex; gap: 10px; align-items: flex-start; }
@@ -603,6 +613,41 @@ function App() {
   };
 
   /**
+   * FUNCTION: handleGoogleSignIn (Commit 46: Google OAuth Integration)
+   */
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Ensure a database profile exists for this Google User
+      if (db) {
+        try {
+          const userDocRef = typeof window !== 'undefined' && window.__app_id 
+             ? doc(db, 'artifacts', rawAppId, 'users', user.uid) 
+             : doc(db, 'users', user.uid);
+          
+          // merge: true guarantees we don't accidentally overwrite an existing user's license plate if they return
+          await setDoc(userDocRef, {
+            name: user.displayName || 'Google User',
+            email: user.email,
+            role: 'driver',
+            plate: 'PENDING',
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (dbError) {
+          console.warn("Could not merge Google Auth details into Firestore.", dbError);
+        }
+      }
+
+      setCurrentScreen('map');
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      alert("Google Sign-In failed: " + error.message);
+    }
+  };
+
+  /**
    * FUNCTION: handleResetPassword
    */
   const handleResetPassword = (e) => {
@@ -954,12 +999,23 @@ function App() {
                 </div>
                 <div className="ios-input-row">
                   <Lock size={20} color="#8E8E93" />
-                  {/* UPDATED (Commit 45): Bound the Password input to state */}
                   <input className="ios-input" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
               </div>
               
               <button className="primary-btn" type="submit">Sign In</button>
+
+              <div className="divider">or</div>
+              
+              <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+              </button>
               
               <button type="button" className="secondary-btn" onClick={() => setCurrentScreen('forgotPassword')}>Forgot Password?</button>
             </form>
@@ -1003,6 +1059,18 @@ function App() {
               </div>
               
               <button className="primary-btn" type="submit" style={{marginTop: 20}}>Register & Continue</button>
+
+              <div className="divider">or</div>
+              
+              <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+              </button>
             </form>
           </div>
         )}

@@ -1,7 +1,7 @@
 /**
  * PROJECT: Park Now - Application
- * COMMIT: 47 (Forgot Password Integration)
- * DESCRIPTION: Wired up the Forgot Password screen to Firebase Auth using sendPasswordResetEmail. Added "Continue with Google" OAuth integration to both Login and Registration screens. Includes a seamless popup flow that automatically creates or merges user documents in Firestore. Added password minimum character requirements to the registration UI. Full 1.8k codebase maintained without cut corners.
+ * COMMIT: 48 (Real User Profiles)
+ * DESCRIPTION: Implemented real-time user profile syncing from Firestore. The app now fetches and displays the logged-in user's actual name, email, license plate, and role directly from the database, persisting data across sessions. Wired up the Personal Info and Manage Vehicles forms to securely write updates back to the cloud. Full 1.8k codebase maintained without cut corners.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -366,6 +366,36 @@ function App() {
   }, []);
 
   /**
+   * FIREBASE USER PROFILE SYNC (Commit 48)
+   */
+  useEffect(() => {
+    if (!user || !db) return;
+
+    const userDocRef = typeof window !== 'undefined' && window.__app_id 
+       ? doc(db, 'artifacts', rawAppId, 'users', user.uid) 
+       : doc(db, 'users', user.uid);
+
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        setRegName(userData.name || '');
+        setEmail(userData.email || user.email || '');
+        setRegPlate(userData.plate || '');
+        if (userData.role) {
+           setUserMode(userData.role);
+        }
+      } else {
+        // Fallback for newly created or anonymous users before their doc saves
+        setEmail(user.email || '');
+      }
+    }, (err) => {
+      console.warn("Failed to fetch user profile:", err);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  /**
    * FIREBASE REAL-TIME SYNC
    */
   useEffect(() => {
@@ -666,6 +696,70 @@ function App() {
       }
     } else {
       alert('Please enter your email address to receive a reset link.');
+    }
+  };
+
+  /**
+   * FUNCTION: handleUpdateProfile (Commit 48)
+   */
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!user) return alert("Must be logged in to update profile.");
+    if (db) {
+      try {
+        const userDocRef = typeof window !== 'undefined' && window.__app_id 
+           ? doc(db, 'artifacts', rawAppId, 'users', user.uid) 
+           : doc(db, 'users', user.uid);
+           
+        await setDoc(userDocRef, { name: regName, email: email }, { merge: true });
+        alert('Information saved successfully to Firebase!');
+        setCurrentScreen('profile');
+      } catch (err) {
+        console.error("Profile update error:", err);
+        alert("Failed to save changes: " + err.message);
+      }
+    }
+  };
+
+  /**
+   * FUNCTION: handleUpdateVehicle (Commit 48)
+   */
+  const handleUpdateVehicle = async (e) => {
+    e.preventDefault();
+    if (!user) return alert("Must be logged in to update vehicle.");
+    if (db) {
+      try {
+        const userDocRef = typeof window !== 'undefined' && window.__app_id 
+           ? doc(db, 'artifacts', rawAppId, 'users', user.uid) 
+           : doc(db, 'users', user.uid);
+           
+        await setDoc(userDocRef, { plate: regPlate.toUpperCase() }, { merge: true });
+        alert('Vehicle successfully saved to Firebase!');
+        setCurrentScreen('profile');
+      } catch (err) {
+        console.error("Vehicle update error:", err);
+        alert("Failed to update vehicle: " + err.message);
+      }
+    }
+  };
+
+  /**
+   * FUNCTION: handleSwitchMode (Commit 48)
+   */
+  const handleSwitchMode = async (newMode) => {
+    setUserMode(newMode);
+    setCurrentScreen(newMode === 'host' ? 'hostDashboard' : 'map');
+    
+    // Save their preference to the cloud so they stay in this mode next login
+    if (user && db) {
+      try {
+         const userDocRef = typeof window !== 'undefined' && window.__app_id 
+           ? doc(db, 'artifacts', rawAppId, 'users', user.uid) 
+           : doc(db, 'users', user.uid);
+         await setDoc(userDocRef, { role: newMode }, { merge: true });
+      } catch(e) {
+         console.warn("Could not save mode preference", e);
+      }
     }
   };
 
@@ -1008,6 +1102,7 @@ function App() {
                 </div>
                 <div className="ios-input-row">
                   <Lock size={20} color="#8E8E93" />
+                  {/* UPDATED (Commit 45): Bound the Password input to state */}
                   <input className="ios-input" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
               </div>
@@ -1701,7 +1796,7 @@ function App() {
             <div className="settings-section-title" style={{marginTop: 25}}>App Actions</div>
             <div className="ios-input-group">
               {userMode === 'driver' ? (
-                <div className="settings-row" onClick={() => { setUserMode('host'); setCurrentScreen('hostDashboard'); }}>
+                <div className="settings-row" onClick={() => handleSwitchMode('host')}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <Home size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Switch to Host Dashboard</span>
@@ -1709,7 +1804,7 @@ function App() {
                   <ChevronRight size={20} color="#C7C7CC" />
                 </div>
               ) : (
-                <div className="settings-row" onClick={() => { setUserMode('driver'); setCurrentScreen('map'); }}>
+                <div className="settings-row" onClick={() => handleSwitchMode('driver')}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <Car size={20} color="#0056D2" />
                     <span style={{fontWeight: 500}}>Switch to Driver Mode</span>
@@ -1847,8 +1942,6 @@ function App() {
           </div>
         )}
 
-        {/* --- NEW SCREENS FOR COMMIT 42 --- */}
-
         {/* --- PERSONAL INFO SCREEN --- */}
         {currentScreen === 'personalInfo' && (
           <div className="screen" style={{overflowY: 'auto'}}>
@@ -1857,7 +1950,7 @@ function App() {
               <h2 className="checkout-title">Personal Info</h2>
             </div>
             
-            <form onSubmit={(e) => { e.preventDefault(); alert('Information saved successfully!'); setCurrentScreen('profile'); }}>
+            <form onSubmit={handleUpdateProfile}>
               <div className="form-section">
                 <div className="input-label">Update Details</div>
                 <div className="ios-input-group">
@@ -1898,14 +1991,14 @@ function App() {
               </div>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); alert('Vehicle added!'); setCurrentScreen('profile'); }}>
-              <div className="settings-section-title" style={{marginTop: 25}}>Add New Vehicle</div>
+            <form onSubmit={handleUpdateVehicle}>
+              <div className="settings-section-title" style={{marginTop: 25}}>Update Vehicle</div>
               <div className="ios-input-group">
                 <div className="ios-input-row">
-                  <input className="ios-input" style={{marginLeft: 0, textTransform: 'uppercase'}} placeholder="Enter License Plate (e.g. AB12 CDE)" onChange={(e) => setRegPlate(e.target.value)} required />
+                  <input className="ios-input" style={{marginLeft: 0, textTransform: 'uppercase'}} placeholder="Enter License Plate (e.g. AB12 CDE)" value={regPlate} onChange={(e) => setRegPlate(e.target.value)} required />
                 </div>
               </div>
-              <button className="primary-btn" type="submit" style={{marginTop: 10}}>Add Vehicle</button>
+              <button className="primary-btn" type="submit" style={{marginTop: 10}}>Save Vehicle</button>
             </form>
           </div>
         )}

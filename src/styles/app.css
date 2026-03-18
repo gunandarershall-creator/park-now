@@ -1,0 +1,179 @@
+/* Reset default browser margins and set background to black */
+body { margin: 0; padding: 0; background: #000; }
+
+/* The Main App Container - Simulates an iPhone 14 Pro dimensions */
+.app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+
+/* The Content Screen inside the phone */
+.screen { height: 100%; display: flex; flex-direction: column; background: #F2F2F7; padding: 20px; box-sizing: border-box; position: relative; flex: 1; overflow: hidden; }
+
+/* Header Section Styling */
+.login-header { margin-top: 60px; text-align: center; margin-bottom: 40px; }
+
+/* Logo Styling - The Blue Box */
+.app-logo { width: 80px; height: 80px; background: #0056D2; border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,86,210,0.3); }
+
+/* Input Group Container - Grouped style like iOS Settings */
+.ios-input-group { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 25px; }
+
+/* Individual Input Row */
+.ios-input-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #E5E5EA; }
+.ios-input-row:last-child { border-bottom: none; }
+
+/* The actual typing field */
+.ios-input { border: none; outline: none; font-size: 17px; flex: 1; margin-left: 10px; }
+
+/* Main Action Button */
+.primary-btn { background: #0056D2; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; }
+
+/* Forgot Password Button (Transparent "Ghost" Button) */
+.secondary-btn { background: transparent; color: #0056D2; border: none; width: 100%; padding: 10px; margin-top: 10px; font-size: 15px; font-weight: 500; cursor: pointer; }
+
+/* Sign Up Area (Pushed to the bottom of the screen) */
+.signup-area { margin-top: auto; margin-bottom: 20px; text-align: center; font-size: 15px; color: #8E8E93; }
+
+/* The "Create Account" Link */
+.signup-link { color: #0056D2; font-weight: 600; border: none; background: none; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px; }
+
+/* Google Auth Button Styles */
+.google-btn { background: #ffffff; color: #333; border: 1px solid #E5E5EA; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #8E8E93; font-size: 14px; }
+.divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #E5E5EA; }
+.divider:not(:empty)::before { margin-right: .5em; }
+.divider:not(:empty)::after { margin-left: .5em; }
+
+/* --- MAP UI STYLES --- */
+.search-header { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 3000 !important; display: flex; gap: 10px; align-items: flex-start; }
+.search-container { flex: 1; display: flex; flex-direction: column; position: relative; }
+.search-input { width: 100%; background: white; padding: 12px 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: 500; margin: 0; box-sizing: border-box; height: 50px; }
+.icon-btn { background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; flex-shrink: 0; }
+
+.map-search-field { border: none; outline: none; background: transparent; flex: 1; font-weight: 500; font-size: 16px; font-family: inherit; }
+
+/* Search Autocomplete Dropdown styles */
+.search-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; z-index: 3001; max-height: 300px; overflow-y: auto; }
+.dropdown-header { font-size: 12px; font-weight: 700; color: #8E8E93; text-transform: uppercase; padding: 12px 15px 4px; letter-spacing: 0.5px; }
+.search-suggestion { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #E5E5EA; cursor: pointer; transition: background 0.2s; text-align: left; }
+.search-suggestion:last-child { border-bottom: none; }
+.search-suggestion:hover { background: #F2F2F7; }
+.suggestion-icon { background: #F2F2F7; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.suggestion-text { font-size: 15px; font-weight: 600; color: #000; margin-bottom: 2px; }
+.suggestion-subtext { font-size: 13px; color: #8E8E93; }
+
+/* Real Leaflet Map Container */
+#real-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 0; background-color: #E2E2E0; }
+
+/* Airbnb-style Price Marker overrides for Leaflet */
+.custom-leaflet-icon { background: transparent; border: none; display: flex; justify-content: center; align-items: flex-end; }
+.price-marker { background: white; border-radius: 20px; padding: 6px 12px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; position: relative; }
+.price-marker.active { transform: scale(1.15); background: #0056D2; color: white; border-color: #0056D2; z-index: 20; }
+.price-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: white transparent transparent transparent; }
+.price-marker.active::after { border-color: #0056D2 transparent transparent transparent; }
+
+/* --- BOTTOM SHEET STYLES --- */
+.bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 25px rgba(0,0,0,0.15); z-index: 3000 !important; display: flex; flex-direction: column; gap: 16px; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.sheet-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; }
+.sheet-subtitle { color: #8E8E93; font-size: 15px; margin: 0; display: flex; align-items: center; gap: 4px; }
+.close-btn { background: #F2F2F7; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+.sheet-image { width: 100%; height: 140px; border-radius: 12px; background: #E5E5EA; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #8E8E93; font-weight: 600; font-size: 14px; border: 1px solid #E5E5EA; }
+.price-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.price-label { margin: 0; color: #8E8E93; font-size: 14px; margin-bottom: 4px; }
+.sheet-price { font-size: 28px; font-weight: 800; color: #000; margin: 0; }
+.spots-left { color: #FF3B30; font-weight: 600; font-size: 14px; margin: 0; background: #FFEBEA; padding: 4px 10px; border-radius: 8px; }
+
+/* --- CHECKOUT SCREEN STYLES --- */
+.checkout-header { display: flex; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #E5E5EA; margin-bottom: 20px; margin-top: 30px;}
+.checkout-title { flex: 1; text-align: center; font-size: 20px; font-weight: 700; margin: 0; padding-right: 24px;}
+.receipt-box { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.receipt-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; color: #333; }
+.receipt-row.total { font-weight: 800; font-size: 18px; border-top: 1px solid #E5E5EA; padding-top: 12px; margin-top: 4px; margin-bottom: 0; color: #000;}
+.apple-pay-btn { background: #000; color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: auto; margin-bottom: 10px; }
+.payment-method-row { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 12px; margin-bottom: 20px; border: 1px solid #E5E5EA;}
+
+/* --- ALGORITHM VISUALS STYLES --- */
+.locate-btn { position: absolute; right: 20px; bottom: 100px; z-index: 2000 !important; background: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer; }
+.locate-btn:hover { background: #F2F2F7; }
+
+/* The Blue Dot representing the Driver's GPS Location */
+.driver-dot { position: relative; width: 22px; height: 22px; background: #007AFF; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+.driver-dot::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: rgba(0, 122, 255, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+/* --- ACTIVE BOOKING TICKET --- */
+.ticket-card { background: #0056D2; color: white; border-radius: 20px; padding: 30px 20px; text-align: center; margin-top: 20px; box-shadow: 0 15px 30px rgba(0,86,210,0.3); }
+.timer-display { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 10px 0; }
+.qr-box { background: white; padding: 15px; border-radius: 16px; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
+.danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 0; margin-bottom: 10px; }
+
+/* Floating active session banner on map */
+.active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 2000 !important; cursor: pointer; }
+
+/* --- HOST DASHBOARD --- */
+.host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+.earnings-card { background: linear-gradient(135deg, #0056D2 0%, #003b8e 100%); color: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,86,210,0.3); margin-bottom: 20px; }
+.earnings-title { font-size: 14px; opacity: 0.9; margin: 0 0 5px 0; }
+.earnings-amount { font-size: 36px; font-weight: 800; margin: 0; }
+.listing-item { background: white; padding: 15px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+/* Custom iOS Toggle Switch for Host Listings */
+.toggle-switch { width: 50px; height: 30px; background: #34C759; border-radius: 30px; position: relative; cursor: pointer; transition: 0.3s; }
+.toggle-knob { width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; }
+
+/* Bottom Nav Bar (Global) */
+.nav-bar-bottom { display: flex; justify-content: space-around; align-items: center; background: white; padding: 15px 20px 25px; border-top: 1px solid #E5E5EA; position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0 0 28px 28px; z-index: 2500; }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: #8E8E93; font-size: 11px; gap: 4px; cursor: pointer; font-weight: 500; transition: color 0.2s;}
+.nav-item.active { color: #0056D2; }
+.add-btn { background: #0056D2; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 8px 15px rgba(0,86,210,0.4); border: 4px solid #F2F2F7; cursor: pointer; }
+
+/* --- IN-APP MESSAGING STYLES --- */
+.chat-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; }
+.chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; }
+.chat-bubble.received { background: #E5E5EA; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+.chat-bubble.sent { background: #0056D2; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-input-bar { background: white; padding: 15px; border-top: 1px solid #E5E5EA; display: flex; gap: 10px; align-items: center; margin: 0 -20px -20px; }
+.chat-input { flex: 1; background: #F2F2F7; border: none; padding: 12px 16px; border-radius: 20px; outline: none; font-size: 15px; }
+.send-btn { background: #0056D2; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;}
+
+/* --- OTHER STYLES --- */
+.photo-upload-box { background: #E5E5EA; height: 160px; border-radius: 16px; border: 2px dashed #C7C7CC; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8E8E93; margin-bottom: 25px; cursor: pointer; overflow: hidden; position: relative; }
+.photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.input-label { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+.form-section { margin-bottom: 20px; }
+
+.profile-header-card { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 10px; }
+.avatar-circle { width: 64px; height: 64px; background: #0056D2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; }
+.settings-section-title { font-size: 13px; color: #8E8E93; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; margin-left: 5px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #E5E5EA; cursor: pointer; background: white;}
+.settings-row:last-child { border-bottom: none; }
+.settings-row:hover { background: #F8F9FA; }
+.booking-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #E5E5EA; border-left: 4px solid #0056D2; transition: background 0.2s; cursor: pointer; }
+.booking-card:hover { background: #F8F9FA; }
+
+.live-toast {
+  position: absolute; top: 140px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.85); color: white; padding: 12px 20px;
+  border-radius: 30px; font-size: 14px; font-weight: 500;
+  z-index: 4000 !important; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: slideDownToast 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOutToast 0.4s ease 3.6s forwards;
+  white-space: nowrap;
+}
+@keyframes slideDownToast { from { top: 60px; opacity: 0; } to { top: 140px; opacity: 1; } }
+@keyframes fadeOutToast { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+.live-indicator { width: 8px; height: 8px; background: #34C759; border-radius: 50%; box-shadow: 0 0 8px #34C759; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+.review-header { text-align: center; padding: 40px 20px 20px; }
+.star-row { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
+.star-btn { background: none; border: none; padding: 0; cursor: pointer; transition: transform 0.2s; outline: none; }
+.star-btn:hover { transform: scale(1.15); }
+.review-textarea { width: 100%; background: white; border: 1px solid #E5E5EA; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 15px; resize: none; box-sizing: border-box; margin-bottom: 20px; outline: none; height: 120px; }
+.review-textarea:focus { border-color: #0056D2; }
+
+.fullscreen-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999 !important; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fullscreen-img { width: 100%; max-height: 100%; object-fit: contain; }
+.fullscreen-close { position: absolute; top: 40px; right: 20px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+.fullscreen-close:hover { background: rgba(255,255,255,0.4); }

@@ -1,0 +1,39 @@
+/**
+ * VIEW: ForgotPasswordView.jsx
+ * Password reset screen — enter email to receive reset link.
+ */
+
+import React from 'react';
+import { ArrowLeft, Mail } from 'lucide-react';
+
+const ForgotPasswordView = ({ email, setEmail, onSubmit, onBack }) => (
+  <div className="screen">
+    <div className="checkout-header" style={{marginTop: 10}}>
+      <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
+      <h2 className="checkout-title">Reset Password</h2>
+    </div>
+
+    <p style={{color: '#8E8E93', marginBottom: 25, fontSize: 15, textAlign: 'center'}}>
+      Enter the email address associated with your account, and we'll send you a link to reset your password.
+    </p>
+
+    <form onSubmit={onSubmit}>
+      <div className="ios-input-group">
+        <div className="ios-input-row">
+          <Mail size={20} color="#8E8E93" />
+          <input
+            className="ios-input"
+            placeholder="Email Address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+      <button className="primary-btn" type="submit" style={{marginTop: 10}}>Send Reset Link</button>
+    </form>
+  </div>
+);
+
+export default ForgotPasswordView;

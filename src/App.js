@@ -69,6 +69,7 @@ function App() {
   const [notifBooking, setNotifBooking] = useState(true);
   const [notifPromo, setNotifPromo] = useState(false);
   const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
 
   // --- TOAST (must come first — passed into all controllers) ---
   const { toast, showToast } = useToast();
@@ -129,10 +130,28 @@ function App() {
     navigate('review');
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
+    if (bookings.activeBooking?.id) {
+      try {
+        const { updateBooking } = await import('./models/bookingModel');
+        await updateBooking(bookings.activeBooking.id, {
+          review: {
+            rating,
+            text: reviewText.trim(),
+            timestamp: new Date().toISOString(),
+          },
+          status: 'reviewed',
+        });
+      } catch (err) {
+        console.warn('Could not save review to Firestore:', err);
+      }
+    }
     showToast(`Thank you! Your ${rating}-star review has been saved.`, 'success');
     setRating(0);
+    setReviewText('');
+    bookings.setActiveBooking(null);
+    bookings.setIsSessionActive(false);
     spots.setSelectedSpot(null);
     spots.setDriverLocation(null);
     navigate('map');
@@ -220,6 +239,7 @@ function App() {
           liveToastMessage={spots.liveToastMessage}
           selectedSpot={spots.selectedSpot} setSelectedSpot={spots.setSelectedSpot}
           isSessionActive={bookings.isSessionActive}
+          allBookings={bookings.bookings}
           onSearch={spots.handleSearch}
           onLocate={spots.findClosestSpot}
           onBookSpot={() => navigate('checkout')}
@@ -271,6 +291,7 @@ function App() {
         <ReviewView
           selectedSpot={spots.selectedSpot}
           rating={rating} setRating={setRating}
+          reviewText={reviewText} setReviewText={setReviewText}
           onSubmit={handleSubmitReview}
         />
       )}
@@ -288,6 +309,7 @@ function App() {
         <HostDashboardView
           myHostEarnings={bookings.myHostEarnings}
           hostListings={host.hostListings}
+          allBookings={bookings.bookings}
           currentScreen={currentScreen}
           onNavigate={navigate}
           onToggleListing={host.toggleHostListing}

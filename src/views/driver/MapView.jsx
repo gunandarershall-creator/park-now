@@ -15,6 +15,7 @@ const MapView = ({
   liveToastMessage,
   selectedSpot, setSelectedSpot,
   isSessionActive,
+  allBookings,
   onSearch,
   onLocate,
   onBookSpot,
@@ -22,7 +23,15 @@ const MapView = ({
   onViewFullImage,
   currentScreen,
   onNavigate,
-}) => (
+}) => {
+  const spotReviews = selectedSpot
+    ? (allBookings || []).filter(b => b.spotId === selectedSpot.id && b.review)
+    : [];
+  const avgRating = spotReviews.length > 0
+    ? (spotReviews.reduce((sum, b) => sum + b.review.rating, 0) / spotReviews.length).toFixed(1)
+    : selectedSpot?.rating ?? null;
+
+  return (
   <div className="screen" style={{padding: 0, position: 'relative'}}>
 
     {liveToastMessage && (
@@ -93,12 +102,14 @@ const MapView = ({
     )}
 
     {selectedSpot && !isSessionActive && (
-      <div className="bottom-sheet">
+      <div className="bottom-sheet" style={{maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden'}}>
         <div className="sheet-header">
           <div>
             <h3 className="sheet-title">{selectedSpot.address}</h3>
             <p className="sheet-subtitle">
-              <Star size={16} fill="#FFCC00" color="#FFCC00" /> {selectedSpot.rating} • <span style={{marginLeft: 8}}>{selectedSpot.distance}</span>
+              <Star size={16} fill="#FFCC00" color="#FFCC00" />
+              {avgRating ? ` ${avgRating} (${spotReviews.length} review${spotReviews.length !== 1 ? 's' : ''})` : ' No reviews yet'}
+              {selectedSpot.distance ? <span style={{marginLeft: 8}}>• {selectedSpot.distance}</span> : null}
             </p>
           </div>
           <button className="close-btn" onClick={() => setSelectedSpot(null)}><X size={18} color="#000" /></button>
@@ -127,11 +138,33 @@ const MapView = ({
         </div>
 
         <button className="primary-btn" onClick={onBookSpot}>Book Spot</button>
+
+        {spotReviews.length > 0 && (
+          <div style={{marginTop: 16, borderTop: '1px solid #F2F2F7', paddingTop: 16}}>
+            <p style={{fontWeight: 700, fontSize: 15, margin: '0 0 12px 0'}}>Reviews</p>
+            {spotReviews.map((b, i) => (
+              <div key={i} style={{marginBottom: 12, padding: '12px', background: '#F9F9F9', borderRadius: 12}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6}}>
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={13} fill={b.review.rating >= s ? '#FFCC00' : 'transparent'} color={b.review.rating >= s ? '#FFCC00' : '#E5E5EA'} />
+                  ))}
+                  <span style={{fontSize: 12, color: '#8E8E93', marginLeft: 6}}>
+                    {new Date(b.review.timestamp).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})}
+                  </span>
+                </div>
+                {b.review.text && (
+                  <p style={{margin: 0, fontSize: 14, color: '#1C1C1E'}}>{b.review.text}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )}
 
     <DriverNav currentScreen={currentScreen} onNavigate={onNavigate} />
   </div>
-);
+  );
+};
 
 export default MapView;

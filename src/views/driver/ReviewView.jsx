@@ -6,7 +6,7 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
-const ReviewView = ({ selectedSpot, rating, setRating, onSubmit }) => (
+const ReviewView = ({ selectedSpot, rating, setRating, reviewText, setReviewText, onSubmit }) => (
   <div className="screen" style={{background: '#ffffff'}}>
     <div className="review-header">
       <h2 style={{fontSize: 28, fontWeight: 800, margin: '0 0 10px 0'}}>Session Ended</h2>
@@ -31,6 +31,8 @@ const ReviewView = ({ selectedSpot, rating, setRating, onSubmit }) => (
       <textarea
         className="review-textarea"
         placeholder="Leave a public review for the host (optional)..."
+        value={reviewText}
+        onChange={(e) => setReviewText(e.target.value)}
       ></textarea>
       <button
         className="primary-btn"

@@ -4,12 +4,13 @@
  */
 
 import React from 'react';
-import { Pencil, MessageCircle } from 'lucide-react';
+import { Pencil, MessageCircle, Star } from 'lucide-react';
 import HostNav from '../shared/HostNav';
 
 const HostDashboardView = ({
   myHostEarnings,
   hostListings,
+  allBookings,
   currentScreen,
   onNavigate,
   onToggleListing,
@@ -47,29 +48,68 @@ const HostDashboardView = ({
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>
 
-    {hostListings.map(listing => (
-      <div className="listing-item" key={listing.id}>
-        <div>
-          <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
-          <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
-        </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-          <button
-            onClick={() => onEditSpot(listing.id)}
-            style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2', display: 'flex'}}
-          >
-            <Pencil size={20} />
-          </button>
-          <div
-            className="toggle-switch"
-            style={listing.isActive ? {} : {background: '#E5E5EA'}}
-            onClick={() => onToggleListing(listing.id)}
-          >
-            <div className="toggle-knob" style={listing.isActive ? {} : {right: 'auto', left: 2}}></div>
+    {hostListings.map(listing => {
+      const listingReviews = (allBookings || []).filter(b => b.spotId === listing.id && b.review);
+      const avgRating = listingReviews.length > 0
+        ? (listingReviews.reduce((sum, b) => sum + b.review.rating, 0) / listingReviews.length).toFixed(1)
+        : null;
+
+      return (
+        <div className="listing-item" key={listing.id} style={{flexDirection: 'column', alignItems: 'stretch', gap: 8}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <div>
+              <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
+              <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
+              {avgRating ? (
+                <div style={{display: 'flex', alignItems: 'center', gap: 4, marginTop: 6}}>
+                  <Star size={13} fill="#FFCC00" color="#FFCC00" />
+                  <span style={{fontSize: 13, fontWeight: 600}}>{avgRating}</span>
+                  <span style={{fontSize: 13, color: '#8E8E93'}}>({listingReviews.length} review{listingReviews.length !== 1 ? 's' : ''})</span>
+                </div>
+              ) : (
+                <div style={{fontSize: 13, color: '#C7C7CC', marginTop: 6}}>No reviews yet</div>
+              )}
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+              <button
+                onClick={() => onEditSpot(listing.id)}
+                style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2', display: 'flex'}}
+              >
+                <Pencil size={20} />
+              </button>
+              <div
+                className="toggle-switch"
+                style={listing.isActive ? {} : {background: '#E5E5EA'}}
+                onClick={() => onToggleListing(listing.id)}
+              >
+                <div className="toggle-knob" style={listing.isActive ? {} : {right: 'auto', left: 2}}></div>
+              </div>
+            </div>
           </div>
+
+          {listingReviews.length > 0 && (
+            <div style={{borderTop: '1px solid #F2F2F7', paddingTop: 10, marginTop: 4}}>
+              {listingReviews.slice(0, 2).map((b, i) => (
+                <div key={i} style={{marginBottom: 8}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 3, marginBottom: 3}}>
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} size={11} fill={b.review.rating >= s ? '#FFCC00' : 'transparent'} color={b.review.rating >= s ? '#FFCC00' : '#E5E5EA'} />
+                    ))}
+                    <span style={{fontSize: 11, color: '#8E8E93', marginLeft: 4}}>
+                      {new Date(b.review.timestamp).toLocaleDateString('en-GB', {day:'numeric', month:'short'})}
+                    </span>
+                  </div>
+                  {b.review.text && <p style={{margin: 0, fontSize: 13, color: '#3A3A3C'}}>{b.review.text}</p>}
+                </div>
+              ))}
+              {listingReviews.length > 2 && (
+                <p style={{margin: 0, fontSize: 13, color: '#0056D2'}}>+{listingReviews.length - 2} more reviews</p>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-    ))}
+      );
+    })}
 
     <HostNav currentScreen={currentScreen} onNavigate={onNavigate} />
   </div>

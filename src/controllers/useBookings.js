@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { subscribeToBookings, saveBooking } from '../models/bookingModel';
-import { updateSpot, deleteSpot } from '../models/spotModel';
+import { bookSpotAtomically } from '../models/concurrencyModel';
 
 export const useBookings = (user) => {
   const [bookings, setBookings] = useState([]);
@@ -42,46 +42,60 @@ export const useBookings = (user) => {
 
   const handlePayment = async (selectedSpot, setSpots) => {
     if (!selectedSpot) return;
-    const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
-    const amountToCharge = (selectedSpot.price * bookingDuration) + (hasInsurance ? 1.50 : 0);
 
-    // Optimistic local update
-    if (updatedSpotsLeft <= 0) {
-      setSpots(prev => prev.filter(s => s.id !== selectedSpot.id));
-    } else {
-      setSpots(prev => prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: updatedSpotsLeft } : s));
-    }
+    const isDemoSpot = ['1', '2', '3'].includes(selectedSpot.id);
 
-    // Adjust Firestore inventory (skip system/default spots)
-    if (!['1', '2', '3'].includes(selectedSpot.id)) {
-      try {
-        if (updatedSpotsLeft <= 0) {
-          await deleteSpot(selectedSpot.id);
-        } else {
-          await updateSpot(selectedSpot.id, { spotsLeft: updatedSpotsLeft });
-        }
-      } catch (error) {
-        console.error("Firebase inventory update failed:", error);
-      }
-    }
+    if (isDemoSpot) {
+      // ── Demo spots: simple optimistic update (not in Firestore) ──────────────
+      const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
+      const amountToCharge = +(selectedSpot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
 
-    // Save official booking record
-    if (user) {
-      try {
-        const bookingId = Date.now().toString();
+      setSpots(prev =>
+        updatedSpotsLeft <= 0
+          ? prev.filter(s => s.id !== selectedSpot.id)
+          : prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: updatedSpotsLeft } : s)
+      );
+
+      if (user) {
         await saveBooking({
-          id: bookingId,
-          driverId: user.uid,
-          hostId: selectedSpot.hostId || 'unknown',
-          address: selectedSpot.address,
-          duration: bookingDuration,
-          totalPaid: amountToCharge,
-          hasInsurance: hasInsurance,
-          timestamp: new Date().toISOString(),
-          status: 'active'
+          id: Date.now().toString(),
+          driverId:    user.uid,
+          hostId:      selectedSpot.hostId || 'unknown',
+          spotId:      selectedSpot.id,
+          address:     selectedSpot.address,
+          duration:    bookingDuration,
+          totalPaid:   amountToCharge,
+          hasInsurance,
+          timestamp:   new Date().toISOString(),
+          startTime:   new Date().toISOString(),
+          endTime:     new Date(Date.now() + bookingDuration * 3600000).toISOString(),
+          status:      'confirmed',
         });
-      } catch (e) {
-        console.warn("Failed to create official booking record.", e);
+      }
+    } else {
+      // ── Real spots: Hybrid OCC transaction (concurrency-safe) ────────────────
+      try {
+        const { newSpotsLeft, amountToCharge } = await bookSpotAtomically({
+          spot: selectedSpot,
+          user,
+          bookingDuration,
+          hasInsurance,
+        });
+
+        // Mirror confirmed server state into local UI
+        setSpots(prev =>
+          newSpotsLeft <= 0
+            ? prev.filter(s => s.id !== selectedSpot.id)
+            : prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: newSpotsLeft } : s)
+        );
+      } catch (err) {
+        const msg =
+          err.code === 'SPOT_NOT_FOUND'   ? "This spot no longer exists — it may have been removed by the host." :
+          err.code === 'SPOT_UNAVAILABLE' ? "This spot was just taken by another driver. Please choose another." :
+          err.code === 'TIME_CONFLICT'    ? "This spot is already booked for that time window. Please adjust your duration." :
+                                           "Booking failed. Please try again.";
+        alert(msg);
+        return false;
       }
     }
 

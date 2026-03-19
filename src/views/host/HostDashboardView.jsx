@@ -11,6 +11,7 @@ const HostDashboardView = ({
   myHostEarnings,
   hostListings,
   allBookings,
+  activeHostBookings,
   currentScreen,
   onNavigate,
   onToggleListing,
@@ -29,22 +30,36 @@ const HostDashboardView = ({
     </div>
 
     <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Active Guests</h3>
-    <div className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #34C759'}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center'}}>
-        <div>
-          <div style={{fontWeight: 700, fontSize: 16}}>Jane Doe (Ford Fiesta)</div>
-          <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>142 Penrhyn Road • Ends in 1h 20m</div>
-        </div>
-        <div className="live-indicator" style={{position: 'static'}}></div>
-      </div>
-      <button
-        className="secondary-btn"
-        style={{background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}}
-        onClick={onMessageDriver}
-      >
-        <MessageCircle size={18}/> Message Driver
-      </button>
-    </div>
+    {activeHostBookings.length === 0 ? (
+      <div style={{color: '#8E8E93', fontSize: 14, textAlign: 'center', padding: '20px 0'}}>No active guests right now.</div>
+    ) : (
+      activeHostBookings.map(booking => {
+        const endsAt = new Date(booking.endTime);
+        const minsLeft = Math.max(0, Math.round((endsAt - Date.now()) / 60000));
+        const timeLeft = minsLeft >= 60
+          ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`
+          : `${minsLeft}m`;
+
+        return (
+          <div key={booking.id} className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #34C759'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center'}}>
+              <div>
+                <div style={{fontWeight: 700, fontSize: 16}}>{booking.address}</div>
+                <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>Ends in {timeLeft}</div>
+              </div>
+              <div className="live-indicator" style={{position: 'static'}}></div>
+            </div>
+            <button
+              className="secondary-btn"
+              style={{background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}}
+              onClick={() => onMessageDriver(booking)}
+            >
+              <MessageCircle size={18}/> Message Driver
+            </button>
+          </div>
+        );
+      })
+    )}
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>
 

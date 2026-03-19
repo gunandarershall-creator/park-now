@@ -23,6 +23,8 @@ import { useSpots }        from './controllers/useSpots';
 import { useBookings }     from './controllers/useBookings';
 import { useHost }         from './controllers/useHost';
 import { useSessionTimer } from './controllers/useSessionTimer';
+import { useChat }         from './controllers/useChat';
+import { getChatId }       from './models/chatModel';
 
 // --- VIEWS: Shared ---
 import Toast from './views/shared/Toast';
@@ -65,7 +67,7 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
   const [fullScreenImage, setFullScreenImage] = useState(null);
-  const [chatContext, setChatContext] = useState({ name: '', returnScreen: '' });
+  const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
   const [notifBooking, setNotifBooking] = useState(true);
   const [notifPromo, setNotifPromo] = useState(false);
   const [rating, setRating] = useState(0);
@@ -81,12 +83,13 @@ function App() {
   const bookings = useBookings(auth.user, showToast);
   const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast);
   const session  = useSessionTimer(bookings.activeBooking?.endTime ?? null);
+  const chat     = useChat(chatContext.chatId, auth.user?.uid);
 
   // --- NAVIGATION HELPERS ---
   const navigate = (screen) => setCurrentScreen(screen);
 
-  const openChat = (recipientName, returnScreen) => {
-    setChatContext({ name: recipientName, returnScreen });
+  const openChat = (recipientName, returnScreen, chatId = null) => {
+    setChatContext({ name: recipientName, returnScreen, chatId });
     navigate('chat');
   };
 
@@ -283,7 +286,11 @@ function App() {
           isExpired={session.isExpired}
           bookingId={bookings.activeBooking?.id ?? null}
           onReturnToMap={() => navigate('map')}
-          onMessageHost={() => openChat(`Host (${spots.selectedSpot.address})`, 'activeBooking')}
+          onMessageHost={() => openChat(
+            `Host (${spots.selectedSpot.address})`,
+            'activeBooking',
+            getChatId(auth.user?.uid, spots.selectedSpot?.hostId, spots.selectedSpot?.id)
+          )}
         />
       )}
 
@@ -310,11 +317,20 @@ function App() {
           myHostEarnings={bookings.myHostEarnings}
           hostListings={host.hostListings}
           allBookings={bookings.bookings}
+          activeHostBookings={bookings.bookings.filter(b =>
+            b.hostId === auth.user?.uid &&
+            b.status === 'confirmed' &&
+            new Date(b.endTime) > new Date()
+          )}
           currentScreen={currentScreen}
           onNavigate={navigate}
           onToggleListing={host.toggleHostListing}
           onEditSpot={handleOpenEditSpot}
-          onMessageDriver={() => openChat('Driver (Jane D.)', 'hostDashboard')}
+          onMessageDriver={(booking) => openChat(
+            `Driver • ${booking.address}`,
+            'hostDashboard',
+            getChatId(booking.driverId, booking.hostId, booking.spotId)
+          )}
         />
       )}
 
@@ -396,7 +412,11 @@ function App() {
       {currentScreen === 'chat' && (
         <ChatView
           chatContext={chatContext}
-          userMode={profile.userMode}
+          userId={auth.user?.uid}
+          messages={chat.messages}
+          messageText={chat.messageText} setMessageText={chat.setMessageText}
+          onSend={chat.handleSendMessage}
+          isSending={chat.isSending}
           onBack={() => navigate(chatContext.returnScreen)}
           showToast={showToast}
         />

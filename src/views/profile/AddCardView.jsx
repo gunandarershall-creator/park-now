@@ -6,7 +6,7 @@
 import React from 'react';
 import { ArrowLeft, User, CreditCard } from 'lucide-react';
 
-const AddCardView = ({ onBack }) => (
+const AddCardView = ({ onBack, showToast }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -15,7 +15,7 @@ const AddCardView = ({ onBack }) => (
 
     <form onSubmit={(e) => {
       e.preventDefault();
-      alert('Card details securely encrypted and saved!');
+      showToast('Card details securely encrypted and saved!', 'success');
       onBack();
     }}>
       <div className="form-section">

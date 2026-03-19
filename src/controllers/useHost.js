@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 import { saveSpot } from '../models/spotModel';
 
 
-export const useHost = (user, spots, setSpots) => {
+export const useHost = (user, spots, setSpots, showToast) => {
   const [hostListings, setHostListings] = useState([]);
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -53,7 +53,7 @@ export const useHost = (user, spots, setSpots) => {
 
   const handleUpdateSpot = (e) => {
     e.preventDefault();
-    if (!newAddress || !newPrice) return alert("Please enter an address and a price.");
+    if (!newAddress || !newPrice) { showToast('Please enter an address and a price.', 'error'); return false; }
     setSpots(prev => prev.map(s =>
       s.id === editingSpotId
         ? { ...s, address: newAddress, price: parseFloat(newPrice), imageUrl: newImage }
@@ -64,14 +64,14 @@ export const useHost = (user, spots, setSpots) => {
         ? { ...l, address: newAddress, details: `£${parseFloat(newPrice).toFixed(2)} / hr • ${l.details.split('•')[1]?.trim() || '1 spot'}` }
         : l
     ));
-    alert('Listing successfully updated!');
+    showToast('Listing updated successfully!', 'success');
     setNewAddress(''); setNewPrice(''); setNewImage(null); setEditingSpotId(null);
     return true;
   };
 
   const handlePublishSpot = async (e, setCurrentScreen, setSearchQuery) => {
     e.preventDefault();
-    if (!newAddress || !newPrice) return alert("Please enter an address and a price.");
+    if (!newAddress || !newPrice) { showToast('Please enter an address and a price.', 'error'); return; }
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(newAddress)}`);
       const data = await res.json();
@@ -103,17 +103,17 @@ export const useHost = (user, spots, setSpots) => {
           console.error("Failed to push to Firebase.", err);
         }
         setNewAddress(''); setNewPrice(''); setNewImage(null);
-        alert(`Success! Listing verified and added at exactly ${actualLat.toFixed(4)}, ${actualLng.toFixed(4)}.`);
+        showToast('Spot listed successfully!', 'success');
         setCurrentScreen('map');
         setSearchQuery(newAddress);
         setTimeout(() => {
           if (window.mapInstance) window.mapInstance.flyTo([actualLat, actualLng], 15, { duration: 1.5 });
         }, 300);
       } else {
-        alert("Could not find coordinates for this address. Try being more specific.");
+        showToast('Could not find this address. Try being more specific.', 'error');
       }
     } catch (error) {
-      alert("Error connecting to the geocoding service to verify address.");
+      showToast('Error connecting to the geocoding service.', 'error');
     }
   };
 

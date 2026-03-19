@@ -26,7 +26,7 @@ const ALL_SUGGESTIONS = [
   { title: 'Jakarta', subtext: 'Indonesia', lat: -6.2088, lng: 106.8456, isRecent: false },
 ];
 
-export const useSpots = (user, currentScreen) => {
+export const useSpots = (user, currentScreen, showToast) => {
   const [spots, setSpots] = useState(DEFAULT_SPOTS);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
@@ -174,15 +174,15 @@ export const useSpots = (user, currentScreen) => {
           window.mapInstance.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 13, { duration: 1.5 });
         }
       } else {
-        alert(`Could not find coordinates for: ${searchQuery}`);
+        showToast(`Could not find: ${searchQuery}`, 'error');
       }
     } catch (error) {
-      alert("Error connecting to the geocoding service.");
+      showToast('Error connecting to the geocoding service.', 'error');
     }
   };
 
   const findClosestSpot = () => {
-    if (!("geolocation" in navigator)) return alert("Geolocation is not supported by your browser");
+    if (!("geolocation" in navigator)) { showToast('Geolocation is not supported by your browser', 'error'); return; }
 
     const applyProximity = (loc) => {
       setDriverLocation(loc);

@@ -6,12 +6,12 @@
 import React from 'react';
 import { ArrowLeft, Phone, Plus, Send } from 'lucide-react';
 
-const ChatView = ({ chatContext, userMode, onBack }) => (
+const ChatView = ({ chatContext, userMode, onBack, showToast }) => (
   <div className="screen" style={{padding: 0, display: 'flex', flexDirection: 'column', background: '#fff'}}>
     <div className="checkout-header" style={{padding: '20px', margin: 0, background: '#fff', zIndex: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
       <h2 className="checkout-title" style={{paddingRight: 0}}>{chatContext.name}</h2>
-      <button className="close-btn" style={{background: 'transparent'}} onClick={() => alert('Calling feature coming soon.')}>
+      <button className="close-btn" style={{background: 'transparent'}} onClick={() => showToast('Calling feature coming soon.', 'info')}>
         <Phone size={20} color="#0056D2" />
       </button>
     </div>
@@ -29,7 +29,7 @@ const ChatView = ({ chatContext, userMode, onBack }) => (
     <div className="chat-input-bar">
       <Plus size={24} color="#8E8E93" style={{cursor: 'pointer'}} />
       <input className="chat-input" placeholder="Type a message..." />
-      <button className="send-btn" onClick={() => alert('Message sent!')}><Send size={18} /></button>
+      <button className="send-btn" onClick={() => showToast('Message sent!', 'success')}><Send size={18} /></button>
     </div>
   </div>
 );

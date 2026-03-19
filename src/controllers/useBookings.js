@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { subscribeToBookings, saveBooking, updateBooking } from '../models/bookingModel';
 import { bookSpotAtomically } from '../models/concurrencyModel';
 
-export const useBookings = (user) => {
+export const useBookings = (user, showToast) => {
   const [bookings, setBookings] = useState([]);
   const [viewingReceipt, setViewingReceipt] = useState(null);
   const [bookingDuration, setBookingDuration] = useState(2);
@@ -102,7 +102,7 @@ export const useBookings = (user) => {
           err.code === 'SPOT_UNAVAILABLE' ? "This spot was just taken by another driver. Please choose another." :
           err.code === 'TIME_CONFLICT'    ? "This spot is already booked for that time window. Please adjust your duration." :
                                            "Booking failed. Please try again.";
-        alert(msg);
+        showToast(msg, 'error');
         return false;
       }
     }
@@ -134,7 +134,7 @@ export const useBookings = (user) => {
       }
     }
 
-    alert(`Session extended by ${extensionDuration} hour${extensionDuration > 1 ? 's' : ''}. £${extensionCost.toFixed(2)} charged.`);
+    showToast(`Session extended by ${extensionDuration} hour${extensionDuration > 1 ? 's' : ''}. £${extensionCost.toFixed(2)} charged.`, 'success');
   };
 
   const handleEndSession = () => {

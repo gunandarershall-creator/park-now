@@ -16,12 +16,16 @@ import React, { useState } from 'react';
 import './styles/app.css';
 
 // --- CONTROLLERS ---
-import { useAuth }     from './controllers/useAuth';
-import { useProfile }  from './controllers/useProfile';
-import { useSpots }    from './controllers/useSpots';
-import { useBookings } from './controllers/useBookings';
-import { useHost }     from './controllers/useHost';
+import { useToast }        from './controllers/useToast';
+import { useAuth }         from './controllers/useAuth';
+import { useProfile }      from './controllers/useProfile';
+import { useSpots }        from './controllers/useSpots';
+import { useBookings }     from './controllers/useBookings';
+import { useHost }         from './controllers/useHost';
 import { useSessionTimer } from './controllers/useSessionTimer';
+
+// --- VIEWS: Shared ---
+import Toast from './views/shared/Toast';
 
 // --- VIEWS: Auth ---
 import LoginView         from './views/auth/LoginView';
@@ -66,13 +70,16 @@ function App() {
   const [notifPromo, setNotifPromo] = useState(false);
   const [rating, setRating] = useState(0);
 
+  // --- TOAST (must come first — passed into all controllers) ---
+  const { toast, showToast } = useToast();
+
   // --- CONTROLLERS ---
-  const auth = useAuth();
-  const profile = useProfile(auth.user);
-  const spots = useSpots(auth.user, currentScreen);
-  const bookings = useBookings(auth.user);
-  const host = useHost(auth.user, spots.spots, spots.setSpots);
-  const session = useSessionTimer(bookings.activeBooking?.endTime ?? null);
+  const auth     = useAuth(showToast);
+  const profile  = useProfile(auth.user, showToast);
+  const spots    = useSpots(auth.user, currentScreen, showToast);
+  const bookings = useBookings(auth.user, showToast);
+  const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast);
+  const session  = useSessionTimer(bookings.activeBooking?.endTime ?? null);
 
   // --- NAVIGATION HELPERS ---
   const navigate = (screen) => setCurrentScreen(screen);
@@ -124,7 +131,7 @@ function App() {
 
   const handleSubmitReview = (e) => {
     e.preventDefault();
-    alert(`Thank you! Your ${rating}-star review for ${spots.selectedSpot.address} has been saved.`);
+    showToast(`Thank you! Your ${rating}-star review has been saved.`, 'success');
     setRating(0);
     spots.setSelectedSpot(null);
     spots.setDriverLocation(null);
@@ -157,6 +164,9 @@ function App() {
 
   return (
     <div className="app-frame">
+
+      {/* GLOBAL IN-APP TOAST — replaces all browser alert() popups */}
+      <Toast toast={toast} />
 
       {/* AUTH SCREENS */}
       {currentScreen === 'login' && (
@@ -269,6 +279,7 @@ function App() {
         <PastBookingDetailView
           viewingReceipt={bookings.viewingReceipt}
           onBack={() => navigate('driverDashboard')}
+          showToast={showToast}
         />
       )}
 
@@ -348,7 +359,7 @@ function App() {
       )}
 
       {currentScreen === 'addCard' && (
-        <AddCardView onBack={() => navigate('paymentMethods')} />
+        <AddCardView onBack={() => navigate('paymentMethods')} showToast={showToast} />
       )}
 
       {currentScreen === 'notifications' && (
@@ -365,6 +376,7 @@ function App() {
           chatContext={chatContext}
           userMode={profile.userMode}
           onBack={() => navigate(chatContext.returnScreen)}
+          showToast={showToast}
         />
       )}
 
@@ -372,6 +384,7 @@ function App() {
         <HelpCenterView
           onBack={() => navigate('profile')}
           onContactSupport={() => openChat('Support Agent', 'helpCenter')}
+          showToast={showToast}
         />
       )}
 

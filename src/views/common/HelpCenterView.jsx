@@ -6,7 +6,15 @@
 import React from 'react';
 import { ArrowLeft, HelpCircle, ChevronRight } from 'lucide-react';
 
-const HelpCenterView = ({ onBack, onContactSupport }) => (
+const FAQS = [
+  { q: 'How do I book a parking spot?', a: 'Tap a price marker on the map, review the spot details, and tap "Book Now" to proceed to checkout.' },
+  { q: 'How do I list my driveway?', a: 'Go to your profile, tap "Switch to Host Dashboard", then tap the + icon to add your spot.' },
+  { q: 'Can I extend my booking?', a: 'Yes — from the Active Session screen, use the duration dropdown and tap "Extend & Pay".' },
+  { q: 'What if someone is in my spot?', a: 'Use the "Contact Host" button on your active ticket to resolve it directly, or contact support for a full refund.' },
+  { q: 'How do host payouts work?', a: 'Payouts are processed automatically to your default payment method at the end of each month.' },
+];
+
+const HelpCenterView = ({ onBack, onContactSupport, showToast }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -20,26 +28,12 @@ const HelpCenterView = ({ onBack, onContactSupport }) => (
 
     <div className="settings-section-title">Frequently Asked Questions</div>
     <div className="ios-input-group">
-      <div className="settings-row" onClick={() => alert('To book a spot, simply tap a pin on the map and proceed to checkout!')}>
-        <span style={{fontWeight: 500}}>How do I book a parking spot?</span>
-        <ChevronRight size={20} color="#C7C7CC" />
-      </div>
-      <div className="settings-row" onClick={() => alert('Go to your profile, tap "Switch to Host Dashboard", and click the + icon.')}>
-        <span style={{fontWeight: 500}}>How do I list my driveway?</span>
-        <ChevronRight size={20} color="#C7C7CC" />
-      </div>
-      <div className="settings-row" onClick={() => alert('You can extend your time directly from the Active Session ticket using the dropdown.')}>
-        <span style={{fontWeight: 500}}>Can I extend my booking?</span>
-        <ChevronRight size={20} color="#C7C7CC" />
-      </div>
-      <div className="settings-row" onClick={() => alert('Use the Contact Host button on your active ticket to resolve the issue directly, or contact support for a full refund.')}>
-        <span style={{fontWeight: 500}}>What if someone is in my spot?</span>
-        <ChevronRight size={20} color="#C7C7CC" />
-      </div>
-      <div className="settings-row" onClick={() => alert('Payouts are processed automatically to your default payment method at the end of each month.')}>
-        <span style={{fontWeight: 500}}>How do host payouts work?</span>
-        <ChevronRight size={20} color="#C7C7CC" />
-      </div>
+      {FAQS.map(({ q, a }) => (
+        <div key={q} className="settings-row" onClick={() => showToast(a, 'info')}>
+          <span style={{fontWeight: 500}}>{q}</span>
+          <ChevronRight size={20} color="#C7C7CC" />
+        </div>
+      ))}
     </div>
 
     <button

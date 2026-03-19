@@ -6,7 +6,7 @@
 import React from 'react';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
-const PastBookingDetailView = ({ viewingReceipt, onBack }) => (
+const PastBookingDetailView = ({ viewingReceipt, onBack, showToast }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -43,7 +43,7 @@ const PastBookingDetailView = ({ viewingReceipt, onBack }) => (
 
     <button
       className="primary-btn"
-      onClick={() => alert('Receipt has been emailed to you.')}
+      onClick={() => showToast('Receipt has been emailed to you.', 'success')}
       style={{marginTop: 'auto', marginBottom: 10}}
     >
       Email Receipt

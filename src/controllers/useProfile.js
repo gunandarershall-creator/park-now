@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import { subscribeToUser, saveUser } from '../models/userModel';
 
-export const useProfile = (user) => {
+export const useProfile = (user, showToast) => {
   const [regName, setRegName] = useState('');
   const [regPlate, setRegPlate] = useState('');
   const [userMode, setUserMode] = useState('driver');
@@ -29,26 +29,26 @@ export const useProfile = (user) => {
 
   const handleUpdateProfile = async (e, emailValue) => {
     e.preventDefault();
-    if (!user) return alert("Must be logged in to update profile.");
+    if (!user) { showToast('Must be logged in to update profile.', 'error'); return false; }
     try {
       await saveUser(user.uid, { name: regName, email: emailValue }, true);
-      alert('Information saved successfully to Firebase!');
+      showToast('Profile saved successfully!', 'success');
       return true;
     } catch (err) {
-      alert("Failed to save changes: " + err.message);
+      showToast('Failed to save changes: ' + err.message, 'error');
       return false;
     }
   };
 
   const handleUpdateVehicle = async (e) => {
     e.preventDefault();
-    if (!user) return alert("Must be logged in to update vehicle.");
+    if (!user) { showToast('Must be logged in to update vehicle.', 'error'); return false; }
     try {
       await saveUser(user.uid, { plate: regPlate.toUpperCase() }, true);
-      alert('Vehicle successfully saved to Firebase!');
+      showToast('Vehicle saved successfully!', 'success');
       return true;
     } catch (err) {
-      alert("Failed to update vehicle: " + err.message);
+      showToast('Failed to update vehicle: ' + err.message, 'error');
       return false;
     }
   };

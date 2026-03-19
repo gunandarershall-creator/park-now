@@ -12,7 +12,7 @@ import {
 import { auth, googleProvider } from '../models/firebase';
 import { saveUser } from '../models/userModel';
 
-export const useAuth = () => {
+export const useAuth = (showToast) => {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,15 +27,15 @@ export const useAuth = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) return alert('Please enter an email and password');
+    if (!email || !password) { showToast('Please enter an email and password', 'error'); return false; }
     try {
       await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        alert("Incorrect email or password. Please try again.");
+        showToast('Incorrect email or password. Please try again.', 'error');
       } else {
-        alert("Login failed: " + error.message);
+        showToast('Login failed: ' + error.message, 'error');
       }
       return false;
     }
@@ -43,7 +43,7 @@ export const useAuth = () => {
 
   const handleRegister = async (e, regName, regPlate) => {
     e.preventDefault();
-    if (!email || !password || !regName || !regPlate) return alert('Please fill out all fields to register.');
+    if (!email || !password || !regName || !regPlate) { showToast('Please fill out all fields to register.', 'error'); return false; }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       try {
@@ -62,15 +62,15 @@ export const useAuth = () => {
       } catch (err) {
         console.warn("Could not save user details to Firestore.", err);
       }
-      alert(`Account created successfully for ${regName}!`);
+      showToast(`Account created successfully for ${regName}!`, 'success');
       return true;
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
-        alert('This email is already registered. Please try logging in instead.');
+        showToast('This email is already registered. Please try logging in instead.', 'error');
       } else if (error.code === 'auth/weak-password') {
-        alert('Your password is too weak. Please use at least 6 characters.');
+        showToast('Your password is too weak. Please use at least 6 characters.', 'error');
       } else {
-        alert("Registration failed: " + error.message);
+        showToast('Registration failed: ' + error.message, 'error');
       }
       return false;
     }
@@ -92,23 +92,23 @@ export const useAuth = () => {
       }
       return true;
     } catch (error) {
-      alert("Google Sign-In failed: " + error.message);
+      showToast('Google Sign-In failed: ' + error.message, 'error');
       return false;
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!email) return alert('Please enter your email address to receive a reset link.');
+    if (!email) { showToast('Please enter your email address to receive a reset link.', 'error'); return false; }
     try {
       await sendPasswordResetEmail(auth, email);
-      alert(`A password reset link has been sent to ${email}`);
+      showToast(`Password reset link sent to ${email}`, 'success');
       return true;
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        alert("No account found with this email address.");
+        showToast('No account found with this email address.', 'error');
       } else {
-        alert("Failed to send reset link: " + error.message);
+        showToast('Failed to send reset link: ' + error.message, 'error');
       }
       return false;
     }

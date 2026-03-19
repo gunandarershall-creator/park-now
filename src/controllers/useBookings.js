@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { subscribeToBookings, saveBooking } from '../models/bookingModel';
+import { subscribeToBookings, saveBooking, updateBooking } from '../models/bookingModel';
 import { bookSpotAtomically } from '../models/concurrencyModel';
 
 export const useBookings = (user) => {
@@ -111,11 +111,30 @@ export const useBookings = (user) => {
     return true;
   };
 
-  const handleExtendSession = (selectedSpot) => {
-    if (selectedSpot) {
-      const extensionCost = selectedSpot.price * extensionDuration;
-      alert(`Session successfully extended by ${extensionDuration} Hour${extensionDuration > 1 ? 's' : ''}.\n\nYour default payment method has been charged £${extensionCost.toFixed(2)}.`);
+  const handleExtendSession = async (selectedSpot) => {
+    if (!selectedSpot || !activeBooking) return;
+
+    const extensionCost = +(selectedSpot.price * extensionDuration).toFixed(2);
+
+    // Push endTime forward by extensionDuration hours
+    const currentEnd = new Date(activeBooking.endTime);
+    const newEnd = new Date(currentEnd.getTime() + extensionDuration * 3600000);
+    const newEndIso = newEnd.toISOString();
+
+    // Update local state — timer re-reads endTime and resets automatically
+    setActiveBooking(prev => ({ ...prev, endTime: newEndIso }));
+
+    // Persist to Firestore if it's a real booking (not a demo ID)
+    const isDemoBooking = ['1', '2', '3'].includes(selectedSpot.id);
+    if (!isDemoBooking) {
+      try {
+        await updateBooking(activeBooking.id, { endTime: newEndIso });
+      } catch (e) {
+        console.warn("Could not persist extension to Firestore:", e);
+      }
     }
+
+    alert(`Session extended by ${extensionDuration} hour${extensionDuration > 1 ? 's' : ''}. £${extensionCost.toFixed(2)} charged.`);
   };
 
   const handleEndSession = () => {

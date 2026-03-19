@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { subscribeToSpots } from '../models/spotModel';
+import { sortSpotsByProximity } from '../models/geoModel';
 
 const DEFAULT_SPOTS = [
   { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
@@ -42,18 +43,27 @@ export const useSpots = (user, currentScreen) => {
       );
 
   // Sync live spots from Firestore + merge with defaults
+  // If driver location is already known, enrich with real distances immediately
   useEffect(() => {
     setSpots(DEFAULT_SPOTS);
     if (!user) return;
     try {
       const unsubscribe = subscribeToSpots((cloudDocs) => {
-        setSpots([...DEFAULT_SPOTS, ...cloudDocs]);
+        const merged = [...DEFAULT_SPOTS, ...cloudDocs];
+        setDriverLocation(prev => {
+          if (prev) {
+            setSpots(sortSpotsByProximity(merged, prev));
+          } else {
+            setSpots(merged);
+          }
+          return prev;
+        });
       }, (err) => console.error("Spots sync error:", err));
       return () => unsubscribe();
     } catch (e) {
       console.error("Firestore Spots Error:", e);
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Leaflet map lifecycle
   useEffect(() => {
@@ -173,17 +183,34 @@ export const useSpots = (user, currentScreen) => {
 
   const findClosestSpot = () => {
     if (!("geolocation" in navigator)) return alert("Geolocation is not supported by your browser");
+
+    const applyProximity = (loc) => {
+      setDriverLocation(loc);
+
+      // Haversine sort: enrich all spots with real distances, nearest first
+      const sorted = sortSpotsByProximity(spots, loc);
+      setSpots(sorted);
+
+      if (window.mapInstance) {
+        // Fly to driver first, then pan to closest spot
+        window.mapInstance.flyTo([loc.lat, loc.lng], 15, { duration: 1.2 });
+        const closest = sorted[0];
+        if (closest) {
+          setTimeout(() => {
+            setSelectedSpot(closest);
+            window.mapInstance.flyTo([closest.lat, closest.lng], 16, { duration: 0.8 });
+          }, 1400);
+        }
+      }
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
-        setDriverLocation(loc);
-        if (window.mapInstance) window.mapInstance.flyTo([loc.lat, loc.lng], 15, { duration: 1.5 });
+        applyProximity({ lat: position.coords.latitude, lng: position.coords.longitude });
       },
       () => {
-        alert("Location access denied. Simulating location in Kingston.");
-        const simGPS = { lat: 51.4055, lng: -0.3030 };
-        setDriverLocation(simGPS);
-        if (window.mapInstance) window.mapInstance.flyTo([simGPS.lat, simGPS.lng], 15);
+        // Fallback: simulate driver location at Kingston University
+        applyProximity({ lat: 51.4055, lng: -0.3030 });
       }
     );
   };

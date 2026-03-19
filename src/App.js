@@ -21,6 +21,7 @@ import { useProfile }  from './controllers/useProfile';
 import { useSpots }    from './controllers/useSpots';
 import { useBookings } from './controllers/useBookings';
 import { useHost }     from './controllers/useHost';
+import { useSessionTimer } from './controllers/useSessionTimer';
 
 // --- VIEWS: Auth ---
 import LoginView         from './views/auth/LoginView';
@@ -70,6 +71,7 @@ function App() {
   const spots = useSpots(auth.user, currentScreen);
   const bookings = useBookings(auth.user);
   const host = useHost(auth.user, spots.spots, spots.setSpots);
+  const session = useSessionTimer(bookings.activeBooking?.endTime ?? null);
 
   // --- NAVIGATION HELPERS ---
   const navigate = (screen) => setCurrentScreen(screen);
@@ -235,6 +237,10 @@ function App() {
           extensionDuration={bookings.extensionDuration} setExtensionDuration={bookings.setExtensionDuration}
           onExtend={() => bookings.handleExtendSession(spots.selectedSpot)}
           onEndSession={handleEndSession}
+          timeDisplay={session.timeDisplay}
+          isWarning={session.isWarning}
+          isExpired={session.isExpired}
+          bookingId={bookings.activeBooking?.id ?? null}
           onReturnToMap={() => navigate('map')}
           onMessageHost={() => openChat(`Host (${spots.selectedSpot.address})`, 'activeBooking')}
         />

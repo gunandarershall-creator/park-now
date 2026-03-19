@@ -14,6 +14,10 @@ const ActiveBookingView = ({
   onEndSession,
   onReturnToMap,
   onMessageHost,
+  timeDisplay,
+  isWarning,
+  isExpired,
+  bookingId,
 }) => (
   <div className="screen" style={{paddingBottom: 20, overflowY: 'auto'}}>
     <div className="checkout-header" style={{borderBottom: 'none', justifyContent: 'center'}}>
@@ -22,9 +26,14 @@ const ActiveBookingView = ({
 
     <div className="ticket-card">
       <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.9}}>
-        <Timer size={20} /><span>Time Remaining</span>
+        <Timer size={20} /><span>{isExpired ? 'Session Expired' : 'Time Remaining'}</span>
       </div>
-      <div className="timer-display">01:59:59</div>
+      <div
+        className="timer-display"
+        style={isExpired ? { color: '#FF3B30' } : isWarning ? { color: '#FF9500' } : {}}
+      >
+        {timeDisplay || '00:00:00'}
+      </div>
       <div className="qr-box"><QrCode size={100} color="#0056D2" /></div>
       <p style={{fontSize: 14, opacity: 0.9, margin: 0}}>
         Scan this QR code at the barrier to enter and exit <b>{selectedSpot.address}</b>.
@@ -38,7 +47,9 @@ const ActiveBookingView = ({
     </div>
 
     <div style={{marginTop: 20, marginBottom: 20, textAlign: 'center'}}>
-      <p style={{color: '#8E8E93', fontSize: 14}}>Booking ID: #PN-894A2B</p>
+      <p style={{color: '#8E8E93', fontSize: 14}}>
+        Booking ID: #{bookingId ? bookingId.slice(-8).toUpperCase() : 'PN-000000'}
+      </p>
     </div>
 
     <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10}}>

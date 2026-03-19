@@ -15,6 +15,7 @@ export const useBookings = (user) => {
   const [extensionDuration, setExtensionDuration] = useState(1);
   const [hasInsurance, setHasInsurance] = useState(true);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [activeBooking, setActiveBooking] = useState(null);
 
   // Sync live bookings from Firestore
   useEffect(() => {
@@ -49,6 +50,9 @@ export const useBookings = (user) => {
       // ── Demo spots: simple optimistic update (not in Firestore) ──────────────
       const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
       const amountToCharge = +(selectedSpot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
+      const bookingId = Date.now().toString();
+      const startTime = new Date().toISOString();
+      const endTime   = new Date(Date.now() + bookingDuration * 3600000).toISOString();
 
       setSpots(prev =>
         updatedSpotsLeft <= 0
@@ -58,7 +62,7 @@ export const useBookings = (user) => {
 
       if (user) {
         await saveBooking({
-          id: Date.now().toString(),
+          id: bookingId,
           driverId:    user.uid,
           hostId:      selectedSpot.hostId || 'unknown',
           spotId:      selectedSpot.id,
@@ -66,16 +70,18 @@ export const useBookings = (user) => {
           duration:    bookingDuration,
           totalPaid:   amountToCharge,
           hasInsurance,
-          timestamp:   new Date().toISOString(),
-          startTime:   new Date().toISOString(),
-          endTime:     new Date(Date.now() + bookingDuration * 3600000).toISOString(),
+          timestamp:   startTime,
+          startTime,
+          endTime,
           status:      'confirmed',
         });
       }
+
+      setActiveBooking({ id: bookingId, endTime, totalPaid: amountToCharge });
     } else {
       // ── Real spots: Hybrid OCC transaction (concurrency-safe) ────────────────
       try {
-        const { newSpotsLeft, amountToCharge } = await bookSpotAtomically({
+        const { bookingId, newSpotsLeft, amountToCharge, endTime } = await bookSpotAtomically({
           spot: selectedSpot,
           user,
           bookingDuration,
@@ -88,6 +94,8 @@ export const useBookings = (user) => {
             ? prev.filter(s => s.id !== selectedSpot.id)
             : prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: newSpotsLeft } : s)
         );
+
+        setActiveBooking({ id: bookingId, endTime: endTime.toISOString(), totalPaid: amountToCharge });
       } catch (err) {
         const msg =
           err.code === 'SPOT_NOT_FOUND'   ? "This spot no longer exists — it may have been removed by the host." :
@@ -122,6 +130,7 @@ export const useBookings = (user) => {
     extensionDuration, setExtensionDuration,
     hasInsurance, setHasInsurance,
     isSessionActive, setIsSessionActive,
+    activeBooking, setActiveBooking,
     myDriverBookings,
     myHostEarnings,
     handlePayment,

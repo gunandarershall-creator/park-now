@@ -31,8 +31,9 @@ import ForgotPasswordView from './views/auth/ForgotPasswordView';
 // --- VIEWS: Driver ---
 import DriverDashboardView  from './views/driver/DriverDashboardView';
 import MapView              from './views/driver/MapView';
-import CheckoutView         from './views/driver/CheckoutView';
-import ActiveBookingView    from './views/driver/ActiveBookingView';
+import CheckoutView              from './views/driver/CheckoutView';
+import BookingConfirmationView   from './views/driver/BookingConfirmationView';
+import ActiveBookingView         from './views/driver/ActiveBookingView';
 import ReviewView           from './views/driver/ReviewView';
 import PastBookingDetailView from './views/driver/PastBookingDetailView';
 
@@ -113,7 +114,7 @@ function App() {
 
   const handlePayment = async () => {
     const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
-    if (success) navigate('activeBooking');
+    if (success) navigate('confirmation');
   };
 
   const handleEndSession = () => {
@@ -227,6 +228,16 @@ function App() {
           onBack={() => navigate('map')}
           onPayment={handlePayment}
           onChangePaymentMethod={() => { setPaymentReturnScreen('checkout'); navigate('paymentMethods'); }}
+        />
+      )}
+
+      {currentScreen === 'confirmation' && spots.selectedSpot && (
+        <BookingConfirmationView
+          selectedSpot={spots.selectedSpot}
+          activeBooking={bookings.activeBooking}
+          hasInsurance={bookings.hasInsurance}
+          bookingDuration={bookings.bookingDuration}
+          onStartSession={() => navigate('activeBooking')}
         />
       )}
 

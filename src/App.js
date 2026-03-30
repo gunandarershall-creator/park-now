@@ -12,7 +12,7 @@
  * Views   → src/views/          (Pure presentational React components)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './styles/app.css';
 
 // --- CONTROLLERS ---
@@ -68,8 +68,6 @@ function App() {
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
-  const [notifBooking, setNotifBooking] = useState(true);
-  const [notifPromo, setNotifPromo] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
@@ -183,6 +181,23 @@ function App() {
   const handlePublishSpot = (e) => {
     host.handlePublishSpot(e, navigate, spots.setSearchQuery);
   };
+
+  // Auto-navigate when Firebase restores a saved session
+  useEffect(() => {
+    if (!auth.authLoading && auth.user && currentScreen === 'login') {
+      navigate(profile.userMode === 'host' ? 'hostDashboard' : 'map');
+    }
+  }, [auth.authLoading, auth.user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show splash while Firebase checks for a saved session
+  if (auth.authLoading) {
+    return (
+      <div className="app-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: '#0056D2' }}>Park Now</div>
+        <div style={{ width: 32, height: 32, border: '3px solid #E5E5EA', borderTopColor: '#0056D2', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-frame">
@@ -409,8 +424,10 @@ function App() {
 
       {currentScreen === 'notifications' && (
         <NotificationsView
-          notifBooking={notifBooking} setNotifBooking={setNotifBooking}
-          notifPromo={notifPromo} setNotifPromo={setNotifPromo}
+          notifBooking={profile.notifBooking}
+          setNotifBooking={(v) => profile.handleToggleNotif('booking', v)}
+          notifPromo={profile.notifPromo}
+          setNotifPromo={(v) => profile.handleToggleNotif('promo', v)}
           onBack={() => navigate('profile')}
         />
       )}

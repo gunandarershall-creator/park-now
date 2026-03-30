@@ -11,6 +11,8 @@ export const useProfile = (user, showToast) => {
   const [regName, setRegName] = useState('');
   const [regPlate, setRegPlate] = useState('');
   const [userMode, setUserMode] = useState('driver');
+  const [notifBooking, setNotifBooking] = useState(true);
+  const [notifPromo, setNotifPromo] = useState(false);
 
   // Sync user profile from Firestore in real-time
   useEffect(() => {
@@ -21,6 +23,8 @@ export const useProfile = (user, showToast) => {
         setRegName(data.name || '');
         setRegPlate(data.plate || '');
         if (data.role) setUserMode(data.role);
+        if (data.notifBooking !== undefined) setNotifBooking(data.notifBooking);
+        if (data.notifPromo !== undefined) setNotifPromo(data.notifPromo);
       },
       (err) => console.warn("Failed to fetch user profile:", err)
     );
@@ -53,6 +57,16 @@ export const useProfile = (user, showToast) => {
     }
   };
 
+  const handleToggleNotif = async (key, value) => {
+    if (key === 'booking') {
+      setNotifBooking(value);
+      if (user) await saveUser(user.uid, { notifBooking: value }, true).catch(() => {});
+    } else if (key === 'promo') {
+      setNotifPromo(value);
+      if (user) await saveUser(user.uid, { notifPromo: value }, true).catch(() => {});
+    }
+  };
+
   const handleSwitchMode = async (newMode) => {
     setUserMode(newMode);
     if (user) {
@@ -69,6 +83,9 @@ export const useProfile = (user, showToast) => {
     regName, setRegName,
     regPlate, setRegPlate,
     userMode, setUserMode,
+    notifBooking,
+    notifPromo,
+    handleToggleNotif,
     handleUpdateProfile,
     handleUpdateVehicle,
     handleSwitchMode,

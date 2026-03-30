@@ -14,13 +14,15 @@ import { saveUser } from '../models/userModel';
 
 export const useAuth = (showToast) => {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
-    if (!auth) return;
+    if (!auth) { setAuthLoading(false); return; }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -126,6 +128,7 @@ export const useAuth = (showToast) => {
 
   return {
     user,
+    authLoading,
     email, setEmail,
     password, setPassword,
     handleLogin,

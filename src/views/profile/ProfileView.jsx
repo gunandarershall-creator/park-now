@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { User, Car, CreditCard, Bell, HelpCircle, FileText, Home, LogOut, ChevronRight } from 'lucide-react';
+import { User, Car, CreditCard, Bell, HelpCircle, FileText, Home, LogOut, ChevronRight, Flag } from 'lucide-react';
 import DriverNav from '../shared/DriverNav';
 import HostNav from '../shared/HostNav';
 
@@ -13,6 +13,7 @@ const ProfileView = ({
   currentScreen,
   onNavigate,
   onSwitchMode,
+  onReport,
   onLogout,
 }) => (
   <div className="screen" style={{paddingBottom: 90, overflowY: 'auto'}}>
@@ -79,6 +80,13 @@ const ProfileView = ({
         <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
           <HelpCircle size={20} color="#0056D2" />
           <span style={{fontWeight: 500}}>Help Center</span>
+        </div>
+        <ChevronRight size={20} color="#C7C7CC" />
+      </div>
+      <div className="settings-row" onClick={onReport}>
+        <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+          <Flag size={20} color="#FF3B30" />
+          <span style={{fontWeight: 500, color: '#FF3B30'}}>Report an Issue</span>
         </div>
         <ChevronRight size={20} color="#C7C7CC" />
       </div>

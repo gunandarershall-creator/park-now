@@ -329,6 +329,12 @@ function App() {
         <PastBookingDetailView
           viewingReceipt={bookings.viewingReceipt}
           onBack={() => navigate('driverDashboard')}
+          onReport={() => openReport(
+            'driver',
+            'pastBookingDetail',
+            bookings.viewingReceipt?.id,
+            bookings.viewingReceipt?.address
+          )}
           showToast={showToast}
         />
       )}
@@ -344,6 +350,11 @@ function App() {
             b.status === 'confirmed' &&
             new Date(b.endTime) > new Date()
           )}
+          pastHostBookings={bookings.bookings.filter(b =>
+            b.hostId === auth.user?.uid &&
+            (b.status === 'reviewed' || b.status === 'completed' ||
+              (b.status === 'confirmed' && new Date(b.endTime) <= new Date()))
+          ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))}
           currentScreen={currentScreen}
           onNavigate={navigate}
           onToggleListing={host.toggleHostListing}
@@ -390,6 +401,7 @@ function App() {
           currentScreen={currentScreen}
           onNavigate={navigate}
           onSwitchMode={handleSwitchMode}
+          onReport={() => openReport(profile.userMode, 'profile')}
           onLogout={handleLogout}
         />
       )}

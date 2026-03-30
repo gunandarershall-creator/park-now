@@ -12,6 +12,7 @@ const HostDashboardView = ({
   hostListings,
   allBookings,
   activeHostBookings,
+  pastHostBookings,
   currentScreen,
   onNavigate,
   onToggleListing,
@@ -60,6 +61,35 @@ const HostDashboardView = ({
           </div>
         );
       })
+    )}
+
+    <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Past Bookings</h3>
+    {pastHostBookings.length === 0 ? (
+      <div style={{color: '#8E8E93', fontSize: 14, textAlign: 'center', padding: '20px 0'}}>No past bookings yet.</div>
+    ) : (
+      pastHostBookings.slice(0, 5).map(booking => (
+        <div key={booking.id} className="booking-card" style={{borderLeft: '4px solid #E5E5EA', cursor: 'default'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+            <div style={{flex: 1}}>
+              <div style={{fontWeight: 700, fontSize: 15}}>{booking.address}</div>
+              <div style={{color: '#8E8E93', fontSize: 13, marginTop: 3}}>
+                {new Date(booking.timestamp).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'})}
+                {' · '}{booking.duration} hr{booking.duration > 1 ? 's' : ''}
+              </div>
+              <div style={{color: '#34C759', fontWeight: 600, fontSize: 14, marginTop: 4}}>
+                £{(booking.totalPaid || 0).toFixed(2)} earned
+              </div>
+            </div>
+            <button
+              className="secondary-btn"
+              style={{background: '#FFEBEA', color: '#FF3B30', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, padding: '8px 12px', marginTop: 0, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', width: 'auto'}}
+              onClick={() => onReport(booking)}
+            >
+              <Flag size={14}/> Report
+            </button>
+          </div>
+        </div>
+      ))
     )}
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>

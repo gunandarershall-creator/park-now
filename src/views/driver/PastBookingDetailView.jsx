@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Flag } from 'lucide-react';
 
-const PastBookingDetailView = ({ viewingReceipt, onBack, showToast }) => (
+const PastBookingDetailView = ({ viewingReceipt, onBack, onReport, showToast }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -47,6 +47,14 @@ const PastBookingDetailView = ({ viewingReceipt, onBack, showToast }) => (
       style={{marginTop: 'auto', marginBottom: 10}}
     >
       Email Receipt
+    </button>
+
+    <button
+      className="secondary-btn"
+      style={{color: '#FF3B30', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20}}
+      onClick={onReport}
+    >
+      <Flag size={16} /> Report an Issue with This Booking
     </button>
   </div>
 );

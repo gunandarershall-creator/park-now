@@ -7,7 +7,7 @@ import React from 'react';
 import { ArrowLeft, CreditCard, Plus } from 'lucide-react';
 
 const PaymentMethodsView = ({ onBack, onAddCard }) => (
-  <div className="screen" style={{overflowY: 'auto'}}>
+  <div className="screen" style={{overflowY: 'auto', paddingBottom: 40}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
       <h2 className="checkout-title">Payment Methods</h2>

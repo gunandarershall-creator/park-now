@@ -18,7 +18,8 @@ const HostDashboardView = ({
   onEditSpot,
   onMessageDriver,
 }) => (
-  <div className="screen" style={{paddingBottom: 90, overflowY: 'auto'}}>
+  <div className="screen" style={{padding: 0}}>
+    <div style={{flex: 1, overflowY: 'auto', padding: '20px 20px 0 20px'}}>
     <div className="host-header">
       <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Host Dashboard</h2>
     </div>
@@ -126,6 +127,7 @@ const HostDashboardView = ({
       );
     })}
 
+    </div>
     <HostNav currentScreen={currentScreen} onNavigate={onNavigate} />
   </div>
 );

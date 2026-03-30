@@ -13,7 +13,14 @@ const CheckoutView = ({
   onBack,
   onPayment,
   onChangePaymentMethod,
-}) => (
+}) => {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const startStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const end = new Date(now.getTime() + bookingDuration * 60 * 60 * 1000);
+  const endStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+  return (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header">
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -23,7 +30,7 @@ const CheckoutView = ({
     <div className="receipt-box">
       <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
       <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
-      <div className="receipt-row"><span style={{color: '#8E8E93'}}>Time</span><span>14:00 - {14 + bookingDuration}:00</span></div>
+      <div className="receipt-row"><span style={{color: '#8E8E93'}}>Time</span><span>{startStr} – {endStr}</span></div>
 
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Duration</span>
@@ -78,6 +85,7 @@ const CheckoutView = ({
 
     <button className="apple-pay-btn" onClick={onPayment}>Pay & Confirm</button>
   </div>
-);
+  );
+};
 
 export default CheckoutView;

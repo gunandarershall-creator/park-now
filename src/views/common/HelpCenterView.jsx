@@ -3,7 +3,7 @@
  * FAQ screen with a live support chat link.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, ChevronRight } from 'lucide-react';
 
 const FAQS = [
@@ -14,7 +14,14 @@ const FAQS = [
   { q: 'How do host payouts work?', a: 'Payouts are processed automatically to your default payment method at the end of each month.' },
 ];
 
-const HelpCenterView = ({ onBack, onContactSupport, showToast }) => (
+const HelpCenterView = ({ onBack, onContactSupport, showToast }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const filtered = FAQS.filter(({ q, a }) =>
+    q.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -23,17 +30,26 @@ const HelpCenterView = ({ onBack, onContactSupport, showToast }) => (
 
     <div className="ios-input-group" style={{background: '#E5E5EA', padding: '12px 15px', borderRadius: 12, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10}}>
       <HelpCircle size={18} color="#8E8E93"/>
-      <input style={{border: 'none', background: 'transparent', outline: 'none', fontSize: 16, flex: 1}} placeholder="Search for help..." />
+      <input
+        style={{border: 'none', background: 'transparent', outline: 'none', fontSize: 16, flex: 1}}
+        placeholder="Search for help..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
     </div>
 
-    <div className="settings-section-title">Frequently Asked Questions</div>
+    <div className="settings-section-title">
+      {searchQuery ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : 'Frequently Asked Questions'}
+    </div>
     <div className="ios-input-group">
-      {FAQS.map(({ q, a }) => (
+      {filtered.length > 0 ? filtered.map(({ q, a }) => (
         <div key={q} className="settings-row" onClick={() => showToast(a, 'info')}>
           <span style={{fontWeight: 500}}>{q}</span>
           <ChevronRight size={20} color="#C7C7CC" />
         </div>
-      ))}
+      )) : (
+        <div style={{padding: '20px', textAlign: 'center', color: '#8E8E93'}}>No results for "{searchQuery}"</div>
+      )}
     </div>
 
     <button
@@ -44,6 +60,7 @@ const HelpCenterView = ({ onBack, onContactSupport, showToast }) => (
       Contact Live Support
     </button>
   </div>
-);
+  );
+};
 
 export default HelpCenterView;

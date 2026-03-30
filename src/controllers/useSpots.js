@@ -49,7 +49,7 @@ export const useSpots = (user, currentScreen, showToast) => {
     if (!user) return;
     try {
       const unsubscribe = subscribeToSpots((cloudDocs) => {
-        const merged = [...DEFAULT_SPOTS, ...cloudDocs];
+        const merged = [...DEFAULT_SPOTS, ...cloudDocs.filter(s => s.isActive !== false)];
         setDriverLocation(prev => {
           if (prev) {
             setSpots(sortSpotsByProximity(merged, prev));

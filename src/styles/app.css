@@ -2,7 +2,7 @@
 body { margin: 0; padding: 0; background: #000; overflow-x: hidden; }
 * { box-sizing: border-box; }
 
-/* On real mobile — go full screen, no phone frame */
+/* On real mobile — full screen, respects Dynamic Island & home indicator */
 @media (max-width: 480px) {
   body { background: #fff; }
   .app-frame {
@@ -13,6 +13,17 @@ body { margin: 0; padding: 0; background: #000; overflow-x: hidden; }
     margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
+    padding-top: env(safe-area-inset-top) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    padding-left: env(safe-area-inset-left) !important;
+    padding-right: env(safe-area-inset-right) !important;
+  }
+  .screen {
+    padding: 16px !important;
+  }
+  .nav-bar-bottom {
+    border-radius: 0 !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, ChevronRight } from 'lucide-react';
+import { ArrowLeft, HelpCircle, ChevronRight, Mail } from 'lucide-react';
 
 const FAQS = [
   { q: 'How do I book a parking spot?', a: 'Tap a price marker on the map, review the spot details, and tap "Book Now" to proceed to checkout.' },
@@ -52,13 +52,12 @@ const HelpCenterView = ({ onBack, onContactSupport, showToast }) => {
       )}
     </div>
 
-    <button
-      className="secondary-btn"
-      style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: 'auto'}}
-      onClick={onContactSupport}
+    <a
+      href="mailto:k2339894@kingston.ac.uk?subject=Park Now Support"
+      style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: 'auto', textDecoration: 'none', fontSize: 16}}
     >
-      Contact Live Support
-    </button>
+      <Mail size={20} /> Contact Support
+    </a>
   </div>
   );
 };

@@ -3,20 +3,25 @@
  * Google Maps integration with spot markers, search, and booking sheet.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
-import { MapPin, X, Star, Navigation, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, X, Star, Navigation, ChevronRight } from 'lucide-react';
+import { GOOGLE_MAPS_LIBRARIES } from '../../controllers/useSpots';
 import DriverNav from '../shared/DriverNav';
 
 const MAP_OPTIONS = {
   disableDefaultUI: true,
   gestureHandling: 'greedy',
   clickableIcons: false,
+  mapId: undefined,
   styles: [
     { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   ],
 };
+
+// Stable reference — prevents GoogleMap from remounting on re-renders
+const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 
 const MapView = ({
   onMapLoad,
@@ -27,6 +32,7 @@ const MapView = ({
   searchQuery, setSearchQuery,
   isSearchFocused, setIsSearchFocused,
   searchSuggestions,
+  selectSuggestion,
   liveToastMessage,
   selectedSpot, setSelectedSpot,
   driverLocation,
@@ -36,6 +42,7 @@ const MapView = ({
   onLocate,
   onBookSpot,
   onViewActiveBooking,
+  isLocating,
   onViewFullImage,
   currentScreen,
   onNavigate,
@@ -43,6 +50,7 @@ const MapView = ({
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const spotReviews = selectedSpot
@@ -83,20 +91,18 @@ const MapView = ({
           {isSearchFocused && searchSuggestions.length > 0 && (
             <div className="search-dropdown">
               <div className="dropdown-header">
-                {searchQuery.trim() === '' ? 'Recent Searches' : 'Suggestions'}
+                {searchQuery.trim() === '' ? (searchSuggestions.length > 0 ? 'Recent Searches' : 'No recent searches') : 'Results'}
               </div>
               {searchSuggestions.map((item, idx) => (
                 <div
                   key={idx}
                   className="search-suggestion"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setSearchQuery(item.title);
-                    setIsSearchFocused(false);
-                    if (panTo) panTo(item.lat, item.lng, 14);
-                  }}
+                  onClick={() => selectSuggestion && selectSuggestion(item)}
                 >
-                  <div className="suggestion-icon"><MapPin size={16} color="#8E8E93" /></div>
+                  <div className="suggestion-icon">
+                    {item.lat ? <Clock size={16} color="#8E8E93" /> : <MapPin size={16} color="#0056D2" />}
+                  </div>
                   <div>
                     <div className="suggestion-text">{item.title}</div>
                     <div className="suggestion-subtext">{item.subtext}</div>
@@ -123,25 +129,23 @@ const MapView = ({
       <div id="real-map" style={{ width: '100%', height: '100%' }}>
         {isLoaded ? (
           <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '100%' }}
+            mapContainerStyle={MAP_CONTAINER_STYLE}
             center={mapCenter}
             zoom={mapZoom}
             options={MAP_OPTIONS}
             onLoad={onMapLoad}
           >
-            {/* Spot price markers */}
+            {/* Spot price markers — OverlayView kept for styled HTML bubbles */}
             {spots.filter(s => s.spotsLeft > 0).map(spot => (
               <OverlayView
                 key={spot.id}
                 position={{ lat: spot.lat, lng: spot.lng }}
                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h - 4 })}
               >
                 <div
                   className={`price-marker ${selectedSpot?.id === spot.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedSpot(spot);
-                    if (panTo) panTo(spot.lat, spot.lng, 16);
-                  }}
+                  onClick={() => { setSelectedSpot(spot); panTo && panTo(spot.lat, spot.lng, 16); }}
                 >
                   £{spot.price.toFixed(2)}
                 </div>
@@ -153,8 +157,9 @@ const MapView = ({
               <OverlayView
                 position={{ lat: driverLocation.lat, lng: driverLocation.lng }}
                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -(h / 2) })}
               >
-                <div className="driver-dot"></div>
+                <div className="driver-dot" />
               </OverlayView>
             )}
           </GoogleMap>
@@ -167,8 +172,11 @@ const MapView = ({
 
       {/* Locate button */}
       {!selectedSpot && (
-        <div className="locate-btn" onClick={onLocate}>
-          <Navigation size={22} color="#0056D2" fill="#0056D2" />
+        <div className={`locate-btn ${isLocating ? 'locating' : ''}`} onClick={onLocate}>
+          {isLocating
+            ? <div className="locate-spinner" />
+            : <Navigation size={20} color="white" fill="white" />
+          }
         </div>
       )}
 

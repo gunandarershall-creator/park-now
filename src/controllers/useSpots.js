@@ -9,23 +9,28 @@ import { subscribeToSpots } from '../models/spotModel';
 import { subscribeToBookings } from '../models/bookingModel';
 import { sortSpotsByProximity } from '../models/geoModel';
 
+// Stable libraries array — must not be inline to avoid Google Maps reload warnings
+export const GOOGLE_MAPS_LIBRARIES = ['places'];
+
 const DEFAULT_SPOTS = [
   { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
   { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: 'Surbiton, Surrey', spotsLeft: 1, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
   { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: 'Kingston City Centre', spotsLeft: 8, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
 ];
 
-const ALL_SUGGESTIONS = [
-  { title: 'Surbiton Station', subtext: 'Victoria Rd, Surbiton', lat: 51.3943, lng: -0.3023, isRecent: true },
-  { title: 'KT1 2EE', subtext: 'Kingston upon Thames', lat: 51.4111, lng: -0.3005, isRecent: true },
-  { title: 'Richmond Park', subtext: 'Richmond, London', lat: 51.4427, lng: -0.2719, isRecent: true },
-  { title: 'St Albans', subtext: 'Hertfordshire', lat: 51.7520, lng: -0.3394, isRecent: false },
-  { title: 'Albert Bridge', subtext: 'London', lat: 51.4822, lng: -0.1681, isRecent: false },
-  { title: 'Albany Park', subtext: 'Bexley, London', lat: 51.4355, lng: 0.1247, isRecent: false },
-  { title: 'SW19 5AG', subtext: 'Wimbledon, London', lat: 51.4255, lng: -0.2078, isRecent: false },
-  { title: 'Wimbledon Center', subtext: 'Wimbledon, London', lat: 51.4214, lng: -0.2074, isRecent: false },
-  { title: 'Jakarta', subtext: 'Indonesia', lat: -6.2088, lng: 106.8456, isRecent: false },
-];
+const getRecentSearches = () => {
+  try { return JSON.parse(localStorage.getItem('parkNowRecents') || '[]'); }
+  catch { return []; }
+};
+
+const saveRecentSearch = (item) => {
+  try {
+    const recents = getRecentSearches();
+    const filtered = recents.filter(r => r.title !== item.title);
+    const updated = [{ title: item.title, subtext: item.subtext, lat: item.lat, lng: item.lng }, ...filtered].slice(0, 5);
+    localStorage.setItem('parkNowRecents', JSON.stringify(updated));
+  } catch {}
+};
 
 export const useSpots = (user, currentScreen, showToast) => {
   const [spots, setSpots] = useState(DEFAULT_SPOTS);
@@ -36,24 +41,34 @@ export const useSpots = (user, currentScreen, showToast) => {
   const [liveToastMessage, setLiveToastMessage] = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 51.4060, lng: -0.3040 });
   const [mapZoom, setMapZoom] = useState(15);
+  const [searchSuggestions, setSearchSuggestions] = useState(getRecentSearches);
+  const [isLocating, setIsLocating] = useState(false);
   const mapRef = useRef(null);
+  const autocompleteServiceRef = useRef(null);
+  const geocoderRef = useRef(null);
 
-  const searchSuggestions = searchQuery.trim() === ''
-    ? ALL_SUGGESTIONS.filter(i => i.isRecent)
-    : ALL_SUGGESTIONS.filter(i =>
-        i.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        i.subtext.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  // Ensure geocoder is always available once Google Maps loads
+  const ensureGeocoderReady = () => {
+    if (!geocoderRef.current && window.google?.maps) {
+      geocoderRef.current = new window.google.maps.Geocoder();
+    }
+    if (!autocompleteServiceRef.current && window.google?.maps?.places) {
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+    }
+  };
 
   // Called when Google Map instance is ready
   const onMapLoad = useCallback((map) => {
     mapRef.current = map;
-  }, []);
+    ensureGeocoderReady();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pan/zoom the Google Map
-  const panTo = useCallback((lat, lng, zoom = 16) => {
+  // Navigate the Google Map — update both React state and imperative API
+  const panTo = useCallback((lat, lng, zoom = 14) => {
+    setMapCenter({ lat, lng });
+    setMapZoom(zoom);
     if (mapRef.current) {
-      mapRef.current.panTo({ lat, lng });
+      mapRef.current.setCenter({ lat, lng });
       mapRef.current.setZoom(zoom);
     }
   }, []);
@@ -106,27 +121,114 @@ export const useSpots = (user, currentScreen, showToast) => {
     return () => unsubscribe();
   }, [currentScreen]);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery) return;
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        setIsSearchFocused(false);
-        panTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
-      } else {
-        showToast(`Could not find: ${searchQuery}`, 'error');
+  // Fetch real Google Places predictions as user types
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchSuggestions(getRecentSearches());
+      return;
+    }
+
+    ensureGeocoderReady();
+    if (!autocompleteServiceRef.current) return;
+
+    const timer = setTimeout(() => {
+      autocompleteServiceRef.current.getPlacePredictions(
+        { input: searchQuery },
+        (predictions, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchSuggestions(predictions.map(p => ({
+              title: p.structured_formatting.main_text,
+              subtext: p.structured_formatting.secondary_text || '',
+              placeId: p.place_id,
+            })));
+          } else {
+            setSearchSuggestions([]);
+          }
+        }
+      );
+    }, 200); // debounce 200ms
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Navigate to a selected suggestion by placeId or lat/lng
+  const selectSuggestion = useCallback(async (item) => {
+    setSearchQuery(item.title);
+    setIsSearchFocused(false);
+
+    // Recent search — has lat/lng already
+    if (item.lat && item.lng) {
+      panTo(item.lat, item.lng, 14);
+      saveRecentSearch(item);
+      return;
+    }
+
+    // Places suggestion — geocode via REST using placeId
+    if (item.placeId) {
+      const key = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${item.placeId}&key=${key}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === 'OK' && data.results[0]) {
+          const loc = data.results[0].geometry.location;
+          panTo(loc.lat, loc.lng, 14);
+          saveRecentSearch({ title: item.title, subtext: item.subtext, lat: loc.lat, lng: loc.lng });
+        }
+      } catch (err) {
+        console.error('Geocode error:', err);
       }
-    } catch (error) {
-      showToast('Error connecting to the geocoding service.', 'error');
+    }
+  }, [panTo]);
+
+  const geocodeAddress = async (address) => {
+    const key = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${key}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.status === 'OK' && data.results[0]) {
+      const loc = data.results[0].geometry.location;
+      return {
+        lat: loc.lat,
+        lng: loc.lng,
+        title: data.results[0].address_components[0]?.long_name || address,
+        subtext: data.results[0].formatted_address,
+      };
+    }
+    return null;
+  };
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearchFocused(false);
+
+    // Use first Places suggestion if available (click-selected)
+    if (searchSuggestions.length > 0 && searchSuggestions[0].placeId) {
+      selectSuggestion(searchSuggestions[0]);
+      return;
+    }
+
+    // Direct REST geocode — works regardless of window.google timing
+    const result = await geocodeAddress(searchQuery);
+    if (result) {
+      panTo(result.lat, result.lng, 13);
+      saveRecentSearch(result);
+    } else {
+      showToast(`Could not find: ${searchQuery}`, 'error');
     }
   };
 
   const findClosestSpot = () => {
-    if (!("geolocation" in navigator)) { showToast('Geolocation is not supported by your browser', 'error'); return; }
+    if (!("geolocation" in navigator)) {
+      showToast('Geolocation is not supported by your browser', 'error');
+      return;
+    }
+
+    setIsLocating(true);
 
     const applyProximity = (loc) => {
+      setIsLocating(false);
       setDriverLocation(loc);
       const sorted = sortSpotsByProximity(spots, loc);
       setSpots(sorted);
@@ -136,17 +238,27 @@ export const useSpots = (user, currentScreen, showToast) => {
         setTimeout(() => {
           setSelectedSpot(closest);
           panTo(closest.lat, closest.lng, 16);
-        }, 1400);
+        }, 1000);
       }
     };
 
+    // Phase 1: fast network/WiFi location (instant)
     navigator.geolocation.getCurrentPosition(
       (position) => {
         applyProximity({ lat: position.coords.latitude, lng: position.coords.longitude });
+        // Phase 2: silently refine with GPS in background
+        navigator.geolocation.getCurrentPosition(
+          (precise) => applyProximity({ lat: precise.coords.latitude, lng: precise.coords.longitude }),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
       },
       () => {
+        setIsLocating(false);
+        showToast('Could not get your location — showing nearest Kingston spots', 'info');
         applyProximity({ lat: 51.4055, lng: -0.3030 });
-      }
+      },
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: 30000 }
     );
   };
 
@@ -164,6 +276,8 @@ export const useSpots = (user, currentScreen, showToast) => {
     mapZoom,
     panTo,
     handleSearch,
+    selectSuggestion,
     findClosestSpot,
+    isLocating,
   };
 };

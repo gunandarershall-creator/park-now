@@ -243,6 +243,7 @@ function App() {
           searchQuery={spots.searchQuery} setSearchQuery={spots.setSearchQuery}
           isSearchFocused={spots.isSearchFocused} setIsSearchFocused={spots.setIsSearchFocused}
           searchSuggestions={spots.searchSuggestions}
+          selectSuggestion={spots.selectSuggestion}
           liveToastMessage={spots.liveToastMessage}
           selectedSpot={spots.selectedSpot} setSelectedSpot={spots.setSelectedSpot}
           driverLocation={spots.driverLocation}
@@ -250,6 +251,7 @@ function App() {
           allBookings={bookings.bookings}
           onSearch={spots.handleSearch}
           onLocate={spots.findClosestSpot}
+          isLocating={spots.isLocating}
           onBookSpot={() => navigate('checkout')}
           onViewActiveBooking={() => navigate('activeBooking')}
           onViewFullImage={(url) => setFullScreenImage(url)}

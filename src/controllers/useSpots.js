@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { subscribeToSpots } from '../models/spotModel';
+import { subscribeToBookings } from '../models/bookingModel';
 import { sortSpotsByProximity } from '../models/geoModel';
 
 const DEFAULT_SPOTS = [
@@ -149,18 +150,33 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   }, [spots, selectedSpot, driverLocation, currentScreen]);
 
-  // Live toast notification simulation
+  // Live toast — fires when a real booking lands in Firestore from another driver
   useEffect(() => {
-    let timeoutId;
-    if (currentScreen === 'map' && spots.length >= 3) {
-      timeoutId = setTimeout(() => {
-        if (selectedSpot && selectedSpot.id === '2') setSelectedSpot(null);
-        setLiveToastMessage("Someone just booked Penrhyn Road");
-        setTimeout(() => setLiveToastMessage(null), 4000);
-      }, 8000);
-    }
-    return () => clearTimeout(timeoutId);
-  }, [currentScreen, spots.length, selectedSpot]);
+    const seenIds = new Set();
+    let initialised = false;
+
+    const unsubscribe = subscribeToBookings((docs) => {
+      if (!initialised) {
+        // Seed seen IDs on first snapshot so we don't toast old bookings
+        docs.forEach(d => seenIds.add(d.id));
+        initialised = true;
+        return;
+      }
+      docs.forEach(booking => {
+        if (!seenIds.has(booking.id)) {
+          seenIds.add(booking.id);
+          // Only show on the map screen and for bookings in the last 30 seconds
+          const age = Date.now() - new Date(booking.timestamp).getTime();
+          if (currentScreen === 'map' && age < 30000) {
+            setLiveToastMessage(`Someone just booked ${booking.address}`);
+            setTimeout(() => setLiveToastMessage(null), 4000);
+          }
+        }
+      });
+    }, (err) => console.warn('Live booking listener error:', err));
+
+    return () => unsubscribe();
+  }, [currentScreen]);
 
   const handleSearch = async (e) => {
     e.preventDefault();

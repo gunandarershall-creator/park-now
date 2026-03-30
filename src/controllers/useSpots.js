@@ -1,10 +1,10 @@
 /**
  * CONTROLLER: useSpots.js
- * Manages parking spots state, Leaflet map lifecycle, search, and geolocation.
- * Depends on: SpotModel, user from useAuth
+ * Manages parking spots state, Google Maps lifecycle, search, and geolocation.
+ * Depends on: SpotModel, GeoModel, user from useAuth
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { subscribeToSpots } from '../models/spotModel';
 import { subscribeToBookings } from '../models/bookingModel';
 import { sortSpotsByProximity } from '../models/geoModel';
@@ -34,7 +34,9 @@ export const useSpots = (user, currentScreen, showToast) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [liveToastMessage, setLiveToastMessage] = useState(null);
-  const mapContainerRef = useRef(null);
+  const [mapCenter, setMapCenter] = useState({ lat: 51.4060, lng: -0.3040 });
+  const [mapZoom, setMapZoom] = useState(15);
+  const mapRef = useRef(null);
 
   const searchSuggestions = searchQuery.trim() === ''
     ? ALL_SUGGESTIONS.filter(i => i.isRecent)
@@ -43,8 +45,20 @@ export const useSpots = (user, currentScreen, showToast) => {
         i.subtext.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
+  // Called when Google Map instance is ready
+  const onMapLoad = useCallback((map) => {
+    mapRef.current = map;
+  }, []);
+
+  // Pan/zoom the Google Map
+  const panTo = useCallback((lat, lng, zoom = 16) => {
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+      mapRef.current.setZoom(zoom);
+    }
+  }, []);
+
   // Sync live spots from Firestore + merge with defaults
-  // If driver location is already known, enrich with real distances immediately
   useEffect(() => {
     setSpots(DEFAULT_SPOTS);
     if (!user) return;
@@ -66,98 +80,13 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Leaflet map lifecycle
-  useEffect(() => {
-    if (currentScreen !== 'map') return;
-
-    const initLeafletMap = () => {
-      if (!mapContainerRef.current) return;
-      if (window.mapInstance) {
-        window.mapInstance.remove();
-        window.mapInstance = null;
-      }
-      window.mapInstance = window.L.map(mapContainerRef.current, { zoomControl: false })
-        .setView([51.4060, -0.3040], 15);
-      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(window.mapInstance);
-      setSpots(prev => [...prev]);
-    };
-
-    if (!window.L) {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
-      if (!document.getElementById('leaflet-script')) {
-        const script = document.createElement('script');
-        script.id = 'leaflet-script';
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.async = true;
-        script.crossOrigin = "anonymous";
-        script.onload = initLeafletMap;
-        document.head.appendChild(script);
-      } else {
-        document.getElementById('leaflet-script').addEventListener('load', initLeafletMap);
-      }
-    } else {
-      initLeafletMap();
-    }
-
-    return () => {
-      if (window.mapInstance) {
-        window.mapInstance.remove();
-        window.mapInstance = null;
-        window.markerLayer = null;
-      }
-    };
-  }, [currentScreen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Update map markers when spots/selection change
-  useEffect(() => {
-    if (!window.mapInstance || !window.L || currentScreen !== 'map') return;
-    if (window.markerLayer) window.mapInstance.removeLayer(window.markerLayer);
-
-    const newLayer = window.L.layerGroup().addTo(window.mapInstance);
-    window.markerLayer = newLayer;
-
-    spots.filter(s => s.spotsLeft > 0).forEach(spot => {
-      const isSelected = selectedSpot?.id === spot.id;
-      const icon = window.L.divIcon({
-        className: 'custom-leaflet-icon',
-        html: `<div class="price-marker ${isSelected ? 'active' : ''}">£${spot.price.toFixed(2)}</div>`,
-        iconSize: [60, 30],
-        iconAnchor: [30, 30]
-      });
-      const marker = window.L.marker([spot.lat, spot.lng], { icon }).addTo(newLayer);
-      marker.on('click', () => {
-        setSelectedSpot(spot);
-        window.mapInstance.flyTo([spot.lat, spot.lng], 16, { duration: 0.5 });
-      });
-    });
-
-    if (driverLocation) {
-      const dIcon = window.L.divIcon({
-        className: 'custom-leaflet-icon',
-        html: `<div class="driver-dot"></div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11]
-      });
-      window.L.marker([driverLocation.lat, driverLocation.lng], { icon: dIcon }).addTo(newLayer);
-    }
-  }, [spots, selectedSpot, driverLocation, currentScreen]);
-
-  // Live toast — fires when a real booking lands in Firestore from another driver
+  // Live toast — fires when a real booking lands in Firestore
   useEffect(() => {
     const seenIds = new Set();
     let initialised = false;
 
     const unsubscribe = subscribeToBookings((docs) => {
       if (!initialised) {
-        // Seed seen IDs on first snapshot so we don't toast old bookings
         docs.forEach(d => seenIds.add(d.id));
         initialised = true;
         return;
@@ -165,7 +94,6 @@ export const useSpots = (user, currentScreen, showToast) => {
       docs.forEach(booking => {
         if (!seenIds.has(booking.id)) {
           seenIds.add(booking.id);
-          // Only show on the map screen and for bookings in the last 30 seconds
           const age = Date.now() - new Date(booking.timestamp).getTime();
           if (currentScreen === 'map' && age < 30000) {
             setLiveToastMessage(`Someone just booked ${booking.address}`);
@@ -186,9 +114,7 @@ export const useSpots = (user, currentScreen, showToast) => {
       const data = await res.json();
       if (data && data.length > 0) {
         setIsSearchFocused(false);
-        if (window.mapInstance) {
-          window.mapInstance.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 13, { duration: 1.5 });
-        }
+        panTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
       } else {
         showToast(`Could not find: ${searchQuery}`, 'error');
       }
@@ -202,21 +128,15 @@ export const useSpots = (user, currentScreen, showToast) => {
 
     const applyProximity = (loc) => {
       setDriverLocation(loc);
-
-      // Haversine sort: enrich all spots with real distances, nearest first
       const sorted = sortSpotsByProximity(spots, loc);
       setSpots(sorted);
-
-      if (window.mapInstance) {
-        // Fly to driver first, then pan to closest spot
-        window.mapInstance.flyTo([loc.lat, loc.lng], 15, { duration: 1.2 });
-        const closest = sorted[0];
-        if (closest) {
-          setTimeout(() => {
-            setSelectedSpot(closest);
-            window.mapInstance.flyTo([closest.lat, closest.lng], 16, { duration: 0.8 });
-          }, 1400);
-        }
+      panTo(loc.lat, loc.lng, 15);
+      const closest = sorted[0];
+      if (closest) {
+        setTimeout(() => {
+          setSelectedSpot(closest);
+          panTo(closest.lat, closest.lng, 16);
+        }, 1400);
       }
     };
 
@@ -225,7 +145,6 @@ export const useSpots = (user, currentScreen, showToast) => {
         applyProximity({ lat: position.coords.latitude, lng: position.coords.longitude });
       },
       () => {
-        // Fallback: simulate driver location at Kingston University
         applyProximity({ lat: 51.4055, lng: -0.3030 });
       }
     );
@@ -239,7 +158,11 @@ export const useSpots = (user, currentScreen, showToast) => {
     isSearchFocused, setIsSearchFocused,
     searchSuggestions,
     liveToastMessage,
-    mapContainerRef,
+    mapRef,
+    onMapLoad,
+    mapCenter,
+    mapZoom,
+    panTo,
     handleSearch,
     findClosestSpot,
   };

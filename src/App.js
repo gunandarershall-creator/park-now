@@ -235,12 +235,17 @@ function App() {
 
       {currentScreen === 'map' && (
         <MapView
-          mapContainerRef={spots.mapContainerRef}
+          onMapLoad={spots.onMapLoad}
+          mapCenter={spots.mapCenter}
+          mapZoom={spots.mapZoom}
+          panTo={spots.panTo}
+          spots={spots.spots}
           searchQuery={spots.searchQuery} setSearchQuery={spots.setSearchQuery}
           isSearchFocused={spots.isSearchFocused} setIsSearchFocused={spots.setIsSearchFocused}
           searchSuggestions={spots.searchSuggestions}
           liveToastMessage={spots.liveToastMessage}
           selectedSpot={spots.selectedSpot} setSelectedSpot={spots.setSelectedSpot}
+          driverLocation={spots.driverLocation}
           isSessionActive={bookings.isSessionActive}
           allBookings={bookings.bookings}
           onSearch={spots.handleSearch}

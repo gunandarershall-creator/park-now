@@ -3,7 +3,7 @@
  * Google Maps integration with spot markers, search, and booking sheet.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import { MapPin, Clock, X, Star, Navigation, ChevronRight } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from '../../controllers/useSpots';

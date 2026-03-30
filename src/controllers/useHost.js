@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 import { saveSpot, updateSpot } from '../models/spotModel';
 
 
-export const useHost = (user, spots, setSpots, showToast) => {
+export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const [hostListings, setHostListings] = useState([]);
   const [newAddress, setNewAddress] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -16,10 +16,10 @@ export const useHost = (user, spots, setSpots, showToast) => {
   const [editingSpotId, setEditingSpotId] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Derive host listings from spots whenever spots change
+  // Derive host listings from spots — only the user's own spots
   useEffect(() => {
     const listings = spots
-      .filter(s => s.hostId === user?.uid || s.hostId === 'system')
+      .filter(s => s.hostId === user?.uid)
       .map(s => ({
         id: s.id,
         address: s.address,
@@ -127,7 +127,7 @@ export const useHost = (user, spots, setSpots, showToast) => {
         setCurrentScreen('map');
         setSearchQuery(newAddress);
         setTimeout(() => {
-          if (window.mapInstance) window.mapInstance.flyTo([actualLat, actualLng], 15, { duration: 1.5 });
+          if (panTo) panTo(actualLat, actualLng, 15);
         }, 300);
       } else {
         showToast('Could not find this address. Try being more specific.', 'error');

@@ -81,7 +81,7 @@ function App() {
   const profile  = useProfile(auth.user, showToast);
   const spots    = useSpots(auth.user, currentScreen, showToast);
   const bookings = useBookings(auth.user, showToast);
-  const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast);
+  const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast, spots.panTo);
   const session  = useSessionTimer(bookings.activeBooking?.endTime ?? null);
   const chat     = useChat(chatContext.chatId, auth.user?.uid);
 

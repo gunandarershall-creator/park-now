@@ -1,29 +1,85 @@
-/* Reset default browser margins */
-html, body { margin: 0; padding: 0; overflow-x: hidden; }
-html { height: 100%; height: -webkit-fill-available; }
-body { background: #F2F2F7; height: 100%; min-height: -webkit-fill-available; }
-#root { height: 100%; min-height: -webkit-fill-available; display: flex; flex-direction: column; }
+/* ── GLOBAL RESET ── */
 * { box-sizing: border-box; }
 
-/* ============================================================
-   MOBILE: fills full screen on any real phone / PWA.
-   iPhone 16 = 393pt wide, Dynamic Island top, home bar bottom.
-   Tested: Safari standalone (Add to Home Screen).
-   ============================================================ */
+/* ── 4. SAFE AREA + SCROLL FOUNDATION ──────────────────────────────────
+   html/body are fixed in place — they NEVER scroll themselves.
+   This kills the "rubber-band" bounce on the page background.
+   Individual scrollable containers get overflow-y:auto + the touch flag.
+   ────────────────────────────────────────────────────────────────────── */
+html {
+  height: 100%;
+  /* Block background bounce on iOS */
+  overflow: hidden;
+  /* Respect the notch / Dynamic Island in all four corners */
+  padding: env(safe-area-inset-top, 0px)
+           env(safe-area-inset-right, 0px)
+           env(safe-area-inset-bottom, 0px)
+           env(safe-area-inset-left, 0px);
+}
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #E8E8ED;
+  /* Prevent the body itself from scrolling / bouncing */
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  /* Prevent iOS font-size inflation */
+  -webkit-text-size-adjust: 100%;
+}
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+/* Any element that needs smooth scroll gets this utility */
+.scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scroll on iOS */
+  overscroll-behavior-y: contain;    /* no scroll chaining to parent */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP / BROWSER PREVIEW
+   Shows as a clean centred phone-sized panel — no fake chrome.
+   Max-width 430px so you can preview on any desktop browser.
+   ══════════════════════════════════════════════════════════════ */
+.app-frame {
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  background: #F2F2F7;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  /* Subtle shadow so it's visible against the desktop background */
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 8px 40px rgba(0,0,0,0.12);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE PWA  (iPhone 16, any Android — Added to Home Screen)
+   Fills the ENTIRE screen, nav bar locked to the bottom edge.
+   ══════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   html, body { background: #F2F2F7; overflow: hidden; height: 100%; }
+  #root { align-items: stretch; }
 
-  /* Full-screen PWA frame — no desktop phone chrome */
   .app-frame {
     max-width: 100% !important;
     width: 100% !important;
-    /* Fill the ENTIRE screen including safe areas */
     height: 100% !important;
-    min-height: -webkit-fill-available !important;
     margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
-    /* Push content below Dynamic Island */
+    box-shadow: none !important;
+    /* Push content below Dynamic Island / status bar */
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: 0 !important;
     padding-left: env(safe-area-inset-left, 0px) !important;
@@ -31,49 +87,58 @@ body { background: #F2F2F7; height: 100%; min-height: -webkit-fill-available; }
     overflow: hidden !important;
   }
 
-  .screen { padding: 16px !important; }
+  /* 3. ADAPTIVE SCROLLING ─────────────────────────────────────────
+     Every screen / inner scrollable div gets smooth momentum scroll
+     and is blocked from chaining bounce up to the app background.  */
+  .screen {
+    padding: 16px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+  }
 
-  /* ── Nav bar: FIXED to the bottom of the viewport on mobile ──
-     position:fixed means it's ALWAYS at the phone's bottom edge,
-     regardless of scroll position or parent container.           */
+  /* Inner scrollable divs (dashboards, profile) */
+  .screen > div[style*="overflow"],
+  .screen > div[style*="overflowY"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* ── Nav bar: position:fixed locks it to the viewport bottom ──
+     It will NEVER scroll or float — always glued to the bottom.  */
   .nav-bar-bottom {
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     border-radius: 0 !important;
-    /* Push nav items above the home indicator */
-    padding-bottom: env(safe-area-inset-bottom, 8px) !important;
+    /* Extend background into home-indicator safe area */
+    padding-bottom: env(safe-area-inset-bottom, 10px) !important;
     z-index: 9999 !important;
   }
 
-  /* Search bar on map: keep just below Dynamic Island */
+  /* Search bar: sits just below the Dynamic Island */
   .search-header { top: 12px !important; }
-
-  /* Active session banner sits just below search bar */
   .active-session-banner { top: 74px !important; }
 
-  /* Shrink header margins on small screens */
+  /* Compact spacing */
   .checkout-header { margin-top: 12px !important; }
   .login-header { margin-top: 30px !important; margin-bottom: 24px !important; }
 
-  /* Compact typography */
-  .timer-display  { font-size: 42px !important; letter-spacing: 1px !important; }
+  /* Compact type */
+  .timer-display   { font-size: 42px !important; letter-spacing: 1px !important; }
   .earnings-amount { font-size: 28px !important; }
-  .sheet-title { font-size: 18px !important; }
+  .sheet-title     { font-size: 18px !important; }
 
-  /* 16px prevents iOS auto-zoom on input focus */
+  /* 16px stops iOS zooming on input focus */
   .ios-input, .map-search-field { font-size: 16px !important; }
 
-  /* Locate button above fixed nav bar (nav ~55px + home ~34px = ~90px) */
+  /* Locate button clears the fixed nav bar */
   .locate-btn { bottom: 90px !important; }
 
-  /* Bottom sheet must clear the fixed nav bar */
+  /* Bottom sheet clears the fixed nav bar */
   .bottom-sheet { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important; }
 }
-
-/* The Main App Container - Simulates an iPhone 14 Pro dimensions */
-.app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; z-index: 1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
 /* Suppress ALL Google Maps API elements injected at body level (outside app frame).
    These appear as a dark circle / error overlay when billing isn't fully active.   */
 body > .gm-err-container,

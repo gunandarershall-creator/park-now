@@ -1,45 +1,57 @@
 /* Reset default browser margins */
 html, body { margin: 0; padding: 0; overflow-x: hidden; }
-html { height: -webkit-fill-available; height: 100dvh; }
-body { background: #F2F2F7; min-height: 100dvh; min-height: -webkit-fill-available; }
-#root { height: 100dvh; min-height: -webkit-fill-available; display: flex; flex-direction: column; }
+html { height: 100%; height: -webkit-fill-available; }
+body { background: #F2F2F7; height: 100%; min-height: -webkit-fill-available; }
+#root { height: 100%; min-height: -webkit-fill-available; display: flex; flex-direction: column; }
 * { box-sizing: border-box; }
 
 /* ============================================================
-   MOBILE: fills full screen on any real phone.
+   MOBILE: fills full screen on any real phone / PWA.
    iPhone 16 = 393pt wide, Dynamic Island top, home bar bottom.
+   Tested: Safari standalone (Add to Home Screen).
    ============================================================ */
 @media (max-width: 480px) {
-  html, body { background: #F2F2F7; overflow: hidden; }
+  html, body { background: #F2F2F7; overflow: hidden; height: 100%; }
 
   /* Full-screen PWA frame — no desktop phone chrome */
   .app-frame {
     max-width: 100% !important;
     width: 100% !important;
-    height: 100dvh !important;
-    height: -webkit-fill-available !important;
+    /* Fill the ENTIRE screen including safe areas */
+    height: 100% !important;
+    min-height: -webkit-fill-available !important;
     margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
+    /* Push content below Dynamic Island */
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: 0 !important;
     padding-left: env(safe-area-inset-left, 0px) !important;
     padding-right: env(safe-area-inset-right, 0px) !important;
+    overflow: hidden !important;
   }
 
   .screen { padding: 16px !important; }
 
-  /* Nav bar: tight home-indicator clearance only */
+  /* ── Nav bar: FIXED to the bottom of the viewport on mobile ──
+     position:fixed means it's ALWAYS at the phone's bottom edge,
+     regardless of scroll position or parent container.           */
   .nav-bar-bottom {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     border-radius: 0 !important;
+    /* Push nav items above the home indicator */
     padding-bottom: env(safe-area-inset-bottom, 8px) !important;
+    z-index: 9999 !important;
   }
 
-  /* Search bar on map: keep 15px gap below Dynamic Island */
-  .search-header { top: 15px !important; }
+  /* Search bar on map: keep just below Dynamic Island */
+  .search-header { top: 12px !important; }
 
   /* Active session banner sits just below search bar */
-  .active-session-banner { top: 75px !important; }
+  .active-session-banner { top: 74px !important; }
 
   /* Shrink header margins on small screens */
   .checkout-header { margin-top: 12px !important; }
@@ -53,16 +65,25 @@ body { background: #F2F2F7; min-height: 100dvh; min-height: -webkit-fill-availab
   /* 16px prevents iOS auto-zoom on input focus */
   .ios-input, .map-search-field { font-size: 16px !important; }
 
-  /* Locate button above nav bar */
-  .locate-btn { bottom: 85px !important; }
+  /* Locate button above fixed nav bar (nav ~55px + home ~34px = ~90px) */
+  .locate-btn { bottom: 90px !important; }
+
+  /* Bottom sheet must clear the fixed nav bar */
+  .bottom-sheet { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 /* The Main App Container - Simulates an iPhone 14 Pro dimensions */
 .app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; z-index: 1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
-/* Suppress Google Maps API elements injected at body level (outside app frame) */
+/* Suppress ALL Google Maps API elements injected at body level (outside app frame).
+   These appear as a dark circle / error overlay when billing isn't fully active.   */
 body > .gm-err-container,
+body > .gm-err-content,
+body > .gm-err-autocomplete,
+body > div[class^="gm-"],
+body > div[class*=" gm-"],
 body > div[style*="z-index: 1000000"],
-body > div[style*="z-index: 1000001"] { display: none !important; }
+body > div[style*="z-index: 1000001"],
+body > div[style*="z-index: 2147483647"] { display: none !important; }
 
 /* The Content Screen inside the phone */
 .screen { height: 100%; display: flex; flex-direction: column; background: #F2F2F7; padding: 20px; box-sizing: border-box; position: relative; flex: 1; overflow: hidden; }

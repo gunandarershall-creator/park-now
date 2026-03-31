@@ -1,6 +1,8 @@
 /* Reset default browser margins */
-html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden; }
-body { background: #F2F2F7; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
+html { height: -webkit-fill-available; height: 100dvh; }
+body { background: #F2F2F7; min-height: 100dvh; min-height: -webkit-fill-available; }
+#root { height: 100dvh; min-height: -webkit-fill-available; display: flex; flex-direction: column; }
 * { box-sizing: border-box; }
 
 /* ============================================================
@@ -10,32 +12,36 @@ body { background: #F2F2F7; }
 @media (max-width: 480px) {
   html, body { background: #F2F2F7; overflow: hidden; }
 
+  /* Full-screen PWA frame — no desktop phone chrome */
   .app-frame {
     max-width: 100% !important;
     width: 100% !important;
-    /* dvh = dynamic viewport height — stable in installed PWA */
     height: 100dvh !important;
+    height: -webkit-fill-available !important;
     margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
-    /* Push content below Dynamic Island / status bar */
     padding-top: env(safe-area-inset-top, 0px) !important;
-    /* NO padding-bottom — the nav bar handles home indicator spacing */
     padding-bottom: 0 !important;
     padding-left: env(safe-area-inset-left, 0px) !important;
     padding-right: env(safe-area-inset-right, 0px) !important;
   }
 
-  /* Compact side padding on narrow phones */
   .screen { padding: 16px !important; }
 
-  /* Nav sits flush at bottom; adds its own home-indicator clearance */
+  /* Nav bar: tight home-indicator clearance only */
   .nav-bar-bottom {
     border-radius: 0 !important;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 8px) !important;
   }
 
-  /* Shrink large margins on small screens */
+  /* Search bar on map: keep 15px gap below Dynamic Island */
+  .search-header { top: 15px !important; }
+
+  /* Active session banner sits just below search bar */
+  .active-session-banner { top: 75px !important; }
+
+  /* Shrink header margins on small screens */
   .checkout-header { margin-top: 12px !important; }
   .login-header { margin-top: 30px !important; margin-bottom: 24px !important; }
 
@@ -47,8 +53,8 @@ body { background: #F2F2F7; }
   /* 16px prevents iOS auto-zoom on input focus */
   .ios-input, .map-search-field { font-size: 16px !important; }
 
-  /* Locate button clears the nav bar */
-  .locate-btn { bottom: 90px !important; }
+  /* Locate button above nav bar */
+  .locate-btn { bottom: 85px !important; }
 }
 
 /* The Main App Container - Simulates an iPhone 14 Pro dimensions */
@@ -116,15 +122,15 @@ body { background: #F2F2F7; }
 /* Airbnb-style Price Marker overrides for Leaflet */
 .custom-leaflet-icon { background: transparent; border: none; display: flex; justify-content: center; align-items: flex-end; }
 .price-marker {
-  background: #003399;
+  background: #0056D2;
   color: #fff;
-  border-radius: 22px;
-  padding: 10px 16px;
+  border-radius: 24px;
+  padding: 10px 18px;
   font-weight: 800;
-  font-size: 15px;
-  letter-spacing: -0.2px;
+  font-size: 16px;
+  letter-spacing: -0.3px;
   border: none;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,86,210,0.45);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -133,12 +139,13 @@ body { background: #F2F2F7; }
   position: relative;
   white-space: nowrap;
   user-select: none;
-  min-width: 60px;
+  min-width: 68px;
+  height: 40px;
 }
-.price-marker:hover { transform: scale(1.08); box-shadow: 0 5px 15px rgba(0,0,0,0.35); }
-.price-marker.active { transform: scale(1.18); background: #001f6b; box-shadow: 0 6px 18px rgba(0,0,0,0.4); z-index: 20; }
-.price-marker::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); border-width: 8px 6px 0; border-style: solid; border-color: #003399 transparent transparent transparent; }
-.price-marker.active::after { border-color: #001f6b transparent transparent transparent; }
+.price-marker:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(0,86,210,0.55); }
+.price-marker.active { transform: scale(1.18); background: #003b9e; box-shadow: 0 6px 20px rgba(0,59,158,0.5); z-index: 20; }
+.price-marker::after { content: ''; position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); border-width: 9px 7px 0; border-style: solid; border-color: #0056D2 transparent transparent transparent; }
+.price-marker.active::after { border-color: #003b9e transparent transparent transparent; }
 .price-marker::before { display: none; }
 
 /* --- BOTTOM SHEET STYLES --- */

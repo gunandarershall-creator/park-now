@@ -136,21 +136,25 @@ const MapView = ({
             onLoad={onMapLoad}
           >
             {/* Spot price markers — OverlayView kept for styled HTML bubbles */}
-            {spots.filter(s => s.spotsLeft > 0).map(spot => (
-              <OverlayView
-                key={spot.id}
-                position={{ lat: spot.lat, lng: spot.lng }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h - 4 })}
-              >
-                <div
-                  className={`price-marker ${selectedSpot?.id === spot.id ? 'active' : ''}`}
-                  onClick={() => { setSelectedSpot(spot); panTo && panTo(spot.lat, spot.lng, 16); }}
+            {spots.filter(s => s.spotsLeft > 0).map(spot => {
+              const isActive = selectedSpot?.id === spot.id;
+              return (
+                <OverlayView
+                  key={spot.id}
+                  position={{ lat: spot.lat, lng: spot.lng }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h - 4 })}
+                  zIndex={isActive ? 999 : 1}
                 >
-                  £{spot.price.toFixed(2)}
-                </div>
-              </OverlayView>
-            ))}
+                  <div
+                    className={`price-marker ${isActive ? 'active' : ''}`}
+                    onClick={() => { setSelectedSpot(spot); panTo && panTo(spot.lat, spot.lng, 16); }}
+                  >
+                    £{spot.price.toFixed(2)}
+                  </div>
+                </OverlayView>
+              );
+            })}
 
             {/* Driver location dot */}
             {driverLocation && (

@@ -58,7 +58,11 @@ body { background: #F2F2F7; min-height: 100dvh; min-height: -webkit-fill-availab
 }
 
 /* The Main App Container - Simulates an iPhone 14 Pro dimensions */
-.app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+.app-frame { max-width: 420px; height: 95vh; margin: 2vh auto; background: #ffffff; border-radius: 40px; border: 12px solid #1a1a1a; overflow: hidden; position: relative; z-index: 1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+/* Suppress Google Maps API elements injected at body level (outside app frame) */
+body > .gm-err-container,
+body > div[style*="z-index: 1000000"],
+body > div[style*="z-index: 1000001"] { display: none !important; }
 
 /* The Content Screen inside the phone */
 .screen { height: 100%; display: flex; flex-direction: column; background: #F2F2F7; padding: 20px; box-sizing: border-box; position: relative; flex: 1; overflow: hidden; }

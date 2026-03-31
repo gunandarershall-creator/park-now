@@ -61,6 +61,7 @@ import ChatView           from './views/common/ChatView';
 import HelpCenterView     from './views/common/HelpCenterView';
 import TermsPrivacyView   from './views/common/TermsPrivacyView';
 import FullScreenImageView from './views/common/FullScreenImageView';
+import ReportView         from './views/common/ReportView';
 
 function App() {
   // --- NAVIGATION STATE ---
@@ -68,6 +69,7 @@ function App() {
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
+  const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map' });
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
@@ -89,6 +91,30 @@ function App() {
   const openChat = (recipientName, returnScreen, chatId = null) => {
     setChatContext({ name: recipientName, returnScreen, chatId });
     navigate('chat');
+  };
+
+  const openReport = (userType, returnScreen, relatedId = null, relatedAddress = null) => {
+    setReportContext({ userType, returnScreen, relatedId, relatedAddress });
+    navigate('report');
+  };
+
+  const handleSubmitReport = async ({ category, description }) => {
+    try {
+      const { submitReport } = await import('./models/reportModel');
+      await submitReport({
+        userId: auth.user?.uid,
+        userType: reportContext.userType,
+        category,
+        description,
+        relatedId: reportContext.relatedId,
+        relatedAddress: reportContext.relatedAddress,
+      });
+      showToast('Report submitted. Our team will review it within 24 hours.', 'success');
+    } catch (err) {
+      console.error('Report error:', err);
+      showToast('Could not submit report. Please try again.', 'error');
+    }
+    navigate(reportContext.returnScreen);
   };
 
   const handleLoginSuccess = async (e) => {
@@ -468,6 +494,16 @@ function App() {
 
       {currentScreen === 'termsPrivacy' && (
         <TermsPrivacyView onBack={() => navigate('profile')} />
+      )}
+
+      {/* REPORT SCREEN */}
+      {currentScreen === 'report' && (
+        <ReportView
+          reportContext={reportContext}
+          userId={auth.user?.uid}
+          onSubmit={handleSubmitReport}
+          onBack={() => navigate(reportContext.returnScreen)}
+        />
       )}
 
       {/* FULLSCREEN IMAGE OVERLAY */}

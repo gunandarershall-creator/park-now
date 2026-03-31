@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, MessageCircle, Star } from 'lucide-react';
+import { Pencil, MessageCircle, Star, Flag } from 'lucide-react';
 import HostNav from '../shared/HostNav';
 
 const HostDashboardView = ({
@@ -18,6 +18,7 @@ const HostDashboardView = ({
   onToggleListing,
   onEditSpot,
   onMessageDriver,
+  onReport,
 }) => (
   <div className="screen" style={{padding: 0}}>
     <div style={{flex: 1, overflowY: 'auto', padding: '20px 20px 0 20px'}}>

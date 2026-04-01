@@ -1,11 +1,11 @@
 /**
  * VIEW: MapView.jsx
- * Google Maps integration with spot markers, search, and booking sheet.
+ * Google Maps integration with spot markers, search, booking sheet, and filters.
  */
 
 import React, { useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
-import { MapPin, Clock, X, Star, Navigation, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, X, Star, Navigation, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from '../../controllers/useSpots';
 import DriverNav from '../shared/DriverNav';
 
@@ -14,7 +14,6 @@ const MAP_OPTIONS = {
   gestureHandling: 'greedy',
   clickableIcons: false,
   mapId: undefined,
-  // Prevent zooming out to world view — keeps map within city-level bounds
   minZoom: 10,
   styles: [
     { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
@@ -22,8 +21,58 @@ const MAP_OPTIONS = {
   ],
 };
 
-// Stable reference — prevents GoogleMap from remounting on re-renders
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
+
+// Haversine distance in km between two lat/lng points
+const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const PRICE_OPTIONS = [
+  { label: 'Any', max: Infinity },
+  { label: 'Under £3', max: 3 },
+  { label: '£3 – £6', max: 6, min: 3 },
+  { label: '£6+', min: 6 },
+];
+
+const RATING_OPTIONS = [
+  { label: 'Any', min: 0 },
+  { label: '3★+', min: 3 },
+  { label: '4★+', min: 4 },
+  { label: '5★', min: 5 },
+];
+
+const DISTANCE_OPTIONS = [
+  { label: 'Any', max: Infinity },
+  { label: '<0.5 km', max: 0.5 },
+  { label: '<1 km', max: 1 },
+  { label: '<2 km', max: 2 },
+];
+
+const FilterChip = ({ label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      padding: '7px 14px',
+      borderRadius: 20,
+      border: active ? 'none' : '1.5px solid #E5E5EA',
+      background: active ? '#0056D2' : '#fff',
+      color: active ? '#fff' : '#1C1C1E',
+      fontSize: 14,
+      fontWeight: active ? 700 : 500,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    }}
+  >
+    {label}
+  </button>
+);
 
 const MapView = ({
   onMapLoad,
@@ -55,19 +104,57 @@ const MapView = ({
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
-  // Track zoom level so markers scale down when zoomed out
   const [currentZoom, setCurrentZoom] = useState(mapZoom);
   const mapRef = React.useRef(null);
-  const handleMapLoad = useCallback((map) => {
-    mapRef.current = map;
-    onMapLoad(map);
-  }, [onMapLoad]);
-  const handleZoomChanged = useCallback(() => {
-    if (mapRef.current) setCurrentZoom(mapRef.current.getZoom());
-  }, []);
-
-  // Marker scale: full size at zoom ≥14, shrinks as you zoom out
+  const handleMapLoad = useCallback((map) => { mapRef.current = map; onMapLoad(map); }, [onMapLoad]);
+  const handleZoomChanged = useCallback(() => { if (mapRef.current) setCurrentZoom(mapRef.current.getZoom()); }, []);
   const markerScale = currentZoom >= 14 ? 1 : currentZoom >= 12 ? 0.82 : 0.65;
+
+  // --- FILTER STATE ---
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceIdx, setPriceIdx] = useState(0);
+  const [ratingIdx, setRatingIdx] = useState(0);
+  const [distanceIdx, setDistanceIdx] = useState(0);
+
+  const activeFilterCount = (priceIdx > 0 ? 1 : 0) + (ratingIdx > 0 ? 1 : 0) + (distanceIdx > 0 ? 1 : 0);
+
+  const clearFilters = () => { setPriceIdx(0); setRatingIdx(0); setDistanceIdx(0); };
+
+  // Compute per-spot ratings from allBookings
+  const getSpotRating = (spotId) => {
+    const reviews = (allBookings || []).filter(b => b.spotId === spotId && b.review);
+    if (reviews.length === 0) return null;
+    return reviews.reduce((sum, b) => sum + b.review.rating, 0) / reviews.length;
+  };
+
+  // Apply filters to spots
+  const filteredSpots = spots.filter(s => {
+    if (s.spotsLeft <= 0) return false;
+
+    // Price filter
+    const p = PRICE_OPTIONS[priceIdx];
+    if (p.min !== undefined && s.price < p.min) return false;
+    if (p.max !== undefined && p.max !== Infinity && s.price > p.max) return false;
+
+    // Rating filter
+    const r = RATING_OPTIONS[ratingIdx];
+    if (r.min > 0) {
+      const rating = getSpotRating(s.id) ?? s.rating ?? 0;
+      if (rating < r.min) return false;
+    }
+
+    // Distance filter
+    const d = DISTANCE_OPTIONS[distanceIdx];
+    if (d.max !== Infinity) {
+      const centre = mapRef.current
+        ? { lat: mapRef.current.getCenter().lat(), lng: mapRef.current.getCenter().lng() }
+        : mapCenter;
+      const km = getDistanceKm(centre.lat, centre.lng, s.lat, s.lng);
+      if (km > d.max) return false;
+    }
+
+    return true;
+  });
 
   const spotReviews = selectedSpot
     ? (allBookings || []).filter(b => b.spotId === selectedSpot.id && b.review)
@@ -86,10 +173,10 @@ const MapView = ({
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Search Bar + Filter Button */}
       <div className="search-header">
-        <div className="search-container">
-          <form className="search-input" onSubmit={onSearch}>
+        <div className="search-container" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <form className="search-input" style={{ flex: 1 }} onSubmit={onSearch}>
             <MapPin size={20} color="#0056D2" />
             <input
               className="map-search-field"
@@ -104,10 +191,32 @@ const MapView = ({
             )}
           </form>
 
+          {/* Filter toggle button */}
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            style={{
+              flexShrink: 0,
+              background: activeFilterCount > 0 ? '#0056D2' : '#fff',
+              border: activeFilterCount > 0 ? 'none' : '1.5px solid #E5E5EA',
+              borderRadius: 12,
+              padding: '10px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              color: activeFilterCount > 0 ? '#fff' : '#1C1C1E',
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            <SlidersHorizontal size={17} />
+            {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+          </button>
+
           {isSearchFocused && searchSuggestions.length > 0 && (
-            <div className="search-dropdown">
+            <div className="search-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100 }}>
               <div className="dropdown-header">
-                {searchQuery.trim() === '' ? (searchSuggestions.length > 0 ? 'Recent Searches' : 'No recent searches') : 'Results'}
+                {searchQuery.trim() === '' ? 'Recent Searches' : 'Results'}
               </div>
               {searchSuggestions.map((item, idx) => (
                 <div
@@ -129,6 +238,55 @@ const MapView = ({
           )}
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div style={{
+          position: 'absolute', top: 72, left: 0, right: 0, zIndex: 200,
+          background: '#fff', borderRadius: '0 0 20px 20px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: '16px 20px 20px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Filters</span>
+            {activeFilterCount > 0 && (
+              <button onClick={clearFilters} style={{ background: 'none', border: 'none', color: '#0056D2', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                Clear All
+              </button>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Price</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {PRICE_OPTIONS.map((o, i) => (
+                <FilterChip key={i} label={o.label} active={priceIdx === i} onClick={() => setPriceIdx(i)} />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Rating</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {RATING_OPTIONS.map((o, i) => (
+                <FilterChip key={i} label={o.label} active={ratingIdx === i} onClick={() => setRatingIdx(i)} />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance from centre</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {DISTANCE_OPTIONS.map((o, i) => (
+                <FilterChip key={i} label={o.label} active={distanceIdx === i} onClick={() => setDistanceIdx(i)} />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 16, background: '#F2F2F7', borderRadius: 10, padding: '8px 14px', textAlign: 'center', fontSize: 14, color: '#3A3A3C', fontWeight: 500 }}>
+            {filteredSpots.length} spot{filteredSpots.length !== 1 ? 's' : ''} match your filters
+          </div>
+        </div>
+      )}
 
       {/* Active session banner */}
       {isSessionActive && (
@@ -152,8 +310,7 @@ const MapView = ({
             onLoad={handleMapLoad}
             onZoomChanged={handleZoomChanged}
           >
-            {/* Spot price markers — OverlayView kept for styled HTML bubbles */}
-            {spots.filter(s => s.spotsLeft > 0).map(spot => {
+            {filteredSpots.map(spot => {
               const isActive = selectedSpot?.id === spot.id;
               return (
                 <OverlayView
@@ -174,7 +331,6 @@ const MapView = ({
               );
             })}
 
-            {/* Driver location dot */}
             {driverLocation && (
               <OverlayView
                 position={{ lat: driverLocation.lat, lng: driverLocation.lng }}

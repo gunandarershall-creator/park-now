@@ -396,6 +396,7 @@ function App() {
       {currentScreen === 'addSpot' && (
         <AddSpotView
           newAddress={host.newAddress} setNewAddress={host.setNewAddress}
+          setNewCoords={host.setNewCoords}
           newPrice={host.newPrice} setNewPrice={host.setNewPrice}
           newImage={host.newImage}
           fileInputRef={host.fileInputRef}

@@ -11,6 +11,7 @@ import { saveSpot, updateSpot } from '../models/spotModel';
 export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const [hostListings, setHostListings] = useState([]);
   const [newAddress, setNewAddress] = useState('');
+  const [newCoords, setNewCoords] = useState(null); // { lat, lng } resolved by Places selection
   const [newPrice, setNewPrice] = useState('');
   const [newImage, setNewImage] = useState(null);
   const [editingSpotId, setEditingSpotId] = useState(null);
@@ -92,53 +93,68 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const handlePublishSpot = async (e, setCurrentScreen, setSearchQuery) => {
     e.preventDefault();
     if (!newAddress || !newPrice) { showToast('Please enter an address and a price.', 'error'); return; }
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(newAddress)}`);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const actualLat = parseFloat(data[0].lat);
-        const actualLng = parseFloat(data[0].lon);
-        const newSpotData = {
-          id: Date.now().toString(),
-          lat: actualLat,
-          lng: actualLng,
-          price: parseFloat(newPrice),
-          address: newAddress,
-          rating: 5.0,
-          distance: 'Local Neighbourhood',
-          spotsLeft: 1,
-          hostId: user ? user.uid : 'system',
-          imageUrl: newImage
-        };
-        setSpots(prev => [...prev, newSpotData]);
-        setHostListings(prev => [...prev, {
-          id: newSpotData.id,
-          address: newAddress,
-          details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
-          isActive: true
-        }]);
-        try {
-          await saveSpot(newSpotData);
-        } catch (err) {
-          console.error("Failed to push to Firebase.", err);
+
+    let actualLat, actualLng;
+
+    if (newCoords) {
+      // Coords already resolved by Places selection — no geocoding needed
+      actualLat = newCoords.lat;
+      actualLng = newCoords.lng;
+    } else {
+      // Fallback: geocode via Google Geocoding API
+      try {
+        const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(newAddress)}&region=gb&key=${apiKey}`);
+        const data = await res.json();
+        if (data.status === 'OK' && data.results.length > 0) {
+          actualLat = data.results[0].geometry.location.lat;
+          actualLng = data.results[0].geometry.location.lng;
+        } else {
+          showToast('Could not find this address. Try selecting from the suggestions.', 'error');
+          return;
         }
-        setNewAddress(''); setNewPrice(''); setNewImage(null);
-        showToast('Spot listed successfully!', 'success');
-        setCurrentScreen('map');
-        setSearchQuery(newAddress);
-        setTimeout(() => {
-          if (panTo) panTo(actualLat, actualLng, 15);
-        }, 300);
-      } else {
-        showToast('Could not find this address. Try being more specific.', 'error');
+      } catch (error) {
+        showToast('Error connecting to the geocoding service.', 'error');
+        return;
       }
-    } catch (error) {
-      showToast('Error connecting to the geocoding service.', 'error');
     }
+
+    const newSpotData = {
+      id: Date.now().toString(),
+      lat: actualLat,
+      lng: actualLng,
+      price: parseFloat(newPrice),
+      address: newAddress,
+      rating: 5.0,
+      distance: 'Local Neighbourhood',
+      spotsLeft: 1,
+      hostId: user ? user.uid : 'system',
+      imageUrl: newImage
+    };
+    setSpots(prev => [...prev, newSpotData]);
+    setHostListings(prev => [...prev, {
+      id: newSpotData.id,
+      address: newAddress,
+      details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
+      isActive: true
+    }]);
+    try {
+      await saveSpot(newSpotData);
+    } catch (err) {
+      console.error("Failed to push to Firebase.", err);
+    }
+    setNewAddress(''); setNewPrice(''); setNewImage(null); setNewCoords(null);
+    showToast('Spot listed successfully!', 'success');
+    setCurrentScreen('map');
+    setSearchQuery(newAddress);
+    setTimeout(() => {
+      if (panTo) panTo(actualLat, actualLng, 15);
+    }, 300);
   };
 
   const resetSpotForm = () => {
     setNewAddress('');
+    setNewCoords(null);
     setNewPrice('');
     setNewImage(null);
     setEditingSpotId(null);
@@ -147,6 +163,7 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   return {
     hostListings, setHostListings,
     newAddress, setNewAddress,
+    newCoords, setNewCoords,
     newPrice, setNewPrice,
     newImage, setNewImage,
     editingSpotId,

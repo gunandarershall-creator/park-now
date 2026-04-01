@@ -7,6 +7,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = typeof window !== 'undefined' && window.__firebase_config
   ? JSON.parse(window.__firebase_config)
@@ -23,18 +24,19 @@ export const rawAppId = typeof window !== 'undefined' && window.__app_id
   ? window.__app_id
   : 'default-app-id';
 
-let app, db, auth;
+let app, db, auth, messaging;
 export const googleProvider = new GoogleAuthProvider();
 
 try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
+  messaging = getMessaging(app);
 } catch (e) {
   console.warn("Firebase initialization bypassed.");
 }
 
-export { db, auth };
+export { db, auth, messaging };
 
 // Collection reference helpers — resolves correct path based on environment
 export const getSpotsRef = () =>

@@ -19,6 +19,7 @@ const HostDashboardView = ({
   onEditSpot,
   onMessageDriver,
   onReport,
+  onRequestPayout,
 }) => (
   <div className="screen" style={{padding: 0}}>
     <div style={{flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '20px 20px 100px 20px'}}>
@@ -29,7 +30,12 @@ const HostDashboardView = ({
     <div className="earnings-card">
       <p className="earnings-title">Total Earnings</p>
       <p className="earnings-amount">£{myHostEarnings.toFixed(2)}</p>
-      <p style={{margin: '10px 0 0 0', fontSize: 14, opacity: 0.9}}>Ready for payout</p>
+      <button
+        onClick={onRequestPayout}
+        style={{marginTop: 12, background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.6)', color: 'white', borderRadius: 10, padding: '8px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer'}}
+      >
+        Request Payout
+      </button>
     </div>
 
     <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Active Guests</h3>

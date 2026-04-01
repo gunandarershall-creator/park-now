@@ -23,8 +23,10 @@ import { useSpots }        from './controllers/useSpots';
 import { useBookings }     from './controllers/useBookings';
 import { useHost }         from './controllers/useHost';
 import { useSessionTimer } from './controllers/useSessionTimer';
-import { useChat }         from './controllers/useChat';
-import { getChatId }       from './models/chatModel';
+import { useChat }          from './controllers/useChat';
+import { useNotifications } from './controllers/useNotifications';
+import { usePayout }        from './controllers/usePayout';
+import { getChatId }        from './models/chatModel';
 
 // --- VIEWS: Shared ---
 import Toast from './views/shared/Toast';
@@ -47,6 +49,7 @@ import PastBookingDetailView from './views/driver/PastBookingDetailView';
 import HostDashboardView from './views/host/HostDashboardView';
 import AddSpotView       from './views/host/AddSpotView';
 import EditSpotView      from './views/host/EditSpotView';
+import PayoutView        from './views/host/PayoutView';
 
 // --- VIEWS: Profile ---
 import ProfileView        from './views/profile/ProfileView';
@@ -82,8 +85,10 @@ function App() {
   const spots    = useSpots(auth.user, currentScreen, showToast);
   const bookings = useBookings(auth.user, showToast);
   const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast, spots.panTo);
-  const session  = useSessionTimer(bookings.activeBooking?.endTime ?? null);
-  const chat     = useChat(chatContext.chatId, auth.user?.uid);
+  const session       = useSessionTimer(bookings.activeBooking?.endTime ?? null);
+  const chat          = useChat(chatContext.chatId, auth.user?.uid);
+  const notifications = useNotifications(auth.user);
+  const payout        = usePayout(auth.user, bookings.myHostEarnings);
 
   // --- NAVIGATION HELPERS ---
   const navigate = (screen) => setCurrentScreen(screen);
@@ -149,7 +154,10 @@ function App() {
 
   const handlePayment = async () => {
     const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
-    if (success) navigate('confirmation');
+    if (success) {
+      navigate('confirmation');
+      notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
+    }
   };
 
   const handleEndSession = () => {
@@ -207,6 +215,20 @@ function App() {
   const handlePublishSpot = (e) => {
     host.handlePublishSpot(e, navigate, spots.setSearchQuery);
   };
+
+  // Notify driver when session is about to expire (fires once when warning trips)
+  useEffect(() => {
+    if (session.isWarning && bookings.activeBooking) {
+      notifications.notifyExpiryWarning(spots.selectedSpot?.address, 15);
+    }
+  }, [session.isWarning]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Notify host when a new booking comes in for their spot
+  const hostBookingCount = bookings.bookings.filter(b => b.hostId === auth.user?.uid && b.status === 'confirmed').length;
+  useEffect(() => {
+    if (!auth.user || hostBookingCount === 0) return;
+    notifications.notifyNewBooking();
+  }, [hostBookingCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-navigate when Firebase restores a saved session
   useEffect(() => {
@@ -391,6 +413,8 @@ function App() {
             'hostDashboard',
             getChatId(booking.driverId, booking.hostId, booking.spotId)
           )}
+          onReport={(booking) => openReport('host', 'hostDashboard', booking?.id, booking?.address)}
+          onRequestPayout={() => navigate('payout')}
         />
       )}
 
@@ -416,6 +440,15 @@ function App() {
           onImageUpload={host.handleImageUpload}
           onSubmit={handleUpdateSpot}
           onBack={() => { host.resetSpotForm(); navigate('hostDashboard'); }}
+        />
+      )}
+
+      {currentScreen === 'payout' && (
+        <PayoutView
+          earnings={bookings.myHostEarnings}
+          payouts={payout.payouts}
+          onRequestPayout={() => payout.handleRequestPayout(showToast)}
+          onBack={() => navigate('hostDashboard')}
         />
       )}
 

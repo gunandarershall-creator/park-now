@@ -15,7 +15,11 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const LoginView = ({ email, setEmail, password, setPassword, onLogin, onGoogleSignIn, onForgotPassword, onRegister }) => (
+const Spinner = ({ light }) => (
+  <div style={{ width: 18, height: 18, border: `2.5px solid ${light ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.15)'}`, borderTopColor: light ? '#fff' : '#1C1C1E', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
+const LoginView = ({ email, setEmail, password, setPassword, onLogin, onGoogleSignIn, onForgotPassword, onRegister, isLoading }) => (
   <div className="screen">
     <div className="login-header">
       <div className="app-logo"><MapPin size={40} color="white" /></div>
@@ -35,10 +39,12 @@ const LoginView = ({ email, setEmail, password, setPassword, onLogin, onGoogleSi
         </div>
       </div>
 
-      <button className="primary-btn" type="submit">Sign In</button>
+      <button className="primary-btn" type="submit" disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {isLoading ? <><Spinner light /> Signing in…</> : 'Sign In'}
+      </button>
       <div className="divider">or</div>
-      <button type="button" className="google-btn" onClick={onGoogleSignIn}>
-        <GoogleIcon /> Continue with Google
+      <button type="button" className="google-btn" onClick={onGoogleSignIn} disabled={isLoading} style={{ opacity: isLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {isLoading ? <><Spinner /> Please wait…</> : <><GoogleIcon /> Continue with Google</>}
       </button>
       <button type="button" className="secondary-btn" onClick={onForgotPassword}>Forgot Password?</button>
     </form>

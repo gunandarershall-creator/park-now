@@ -7,6 +7,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Camera, MapPin } from 'lucide-react';
 
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
 const AddSpotView = ({
   newAddress, setNewAddress,
   setNewCoords,
@@ -16,6 +20,7 @@ const AddSpotView = ({
   onImageUpload,
   onSubmit,
   onBack,
+  isLoading,
 }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -156,7 +161,9 @@ const AddSpotView = ({
           </div>
         </div>
 
-        <button className="primary-btn" type="submit" style={{ marginTop: '40px' }}>Publish Listing</button>
+        <button className="primary-btn" type="submit" disabled={isLoading} style={{ marginTop: '40px', opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          {isLoading ? <><Spinner /> Publishing…</> : 'Publish Listing'}
+        </button>
       </form>
     </div>
   );

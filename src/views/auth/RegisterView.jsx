@@ -15,7 +15,11 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const RegisterView = ({ email, setEmail, password, setPassword, regName, setRegName, regPlate, setRegPlate, onRegister, onGoogleSignIn, onBack }) => (
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
+const RegisterView = ({ email, setEmail, password, setPassword, regName, setRegName, regPlate, setRegPlate, onRegister, onGoogleSignIn, onBack, isLoading }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -47,10 +51,12 @@ const RegisterView = ({ email, setEmail, password, setPassword, regName, setRegN
         </div>
       </div>
 
-      <button className="primary-btn" type="submit" style={{marginTop: 20}}>Register & Continue</button>
+      <button className="primary-btn" type="submit" disabled={isLoading} style={{ marginTop: 20, opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {isLoading ? <><Spinner /> Creating account…</> : 'Register & Continue'}
+      </button>
       <div className="divider">or</div>
-      <button type="button" className="google-btn" onClick={onGoogleSignIn}>
-        <GoogleIcon /> Continue with Google
+      <button type="button" className="google-btn" onClick={onGoogleSignIn} disabled={isLoading} style={{ opacity: isLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {isLoading ? 'Please wait…' : <><GoogleIcon /> Continue with Google</>}
       </button>
     </form>
   </div>

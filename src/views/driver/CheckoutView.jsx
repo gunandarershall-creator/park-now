@@ -6,6 +6,10 @@
 import React from 'react';
 import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight } from 'lucide-react';
 
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
 const CheckoutView = ({
   selectedSpot,
   bookingDuration, setBookingDuration,
@@ -13,6 +17,7 @@ const CheckoutView = ({
   onBack,
   onPayment,
   onChangePaymentMethod,
+  isLoading,
 }) => {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
@@ -83,7 +88,9 @@ const CheckoutView = ({
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 
-    <button className="apple-pay-btn" onClick={onPayment}>Pay & Confirm</button>
+    <button className="apple-pay-btn" onClick={onPayment} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+      {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
+    </button>
   </div>
   );
 };

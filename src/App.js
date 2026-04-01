@@ -75,6 +75,9 @@ function App() {
   const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map' });
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [isPublishLoading, setIsPublishLoading] = useState(false);
 
   // --- TOAST (must come first — passed into all controllers) ---
   const { toast, showToast } = useToast();
@@ -123,18 +126,23 @@ function App() {
   };
 
   const handleLoginSuccess = async (e) => {
+    setIsAuthLoading(true);
     const success = await auth.handleLogin(e);
+    setIsAuthLoading(false);
     if (success) navigate('map');
   };
 
   const handleRegisterSuccess = async (e, regName, regPlate) => {
+    setIsAuthLoading(true);
     const success = await auth.handleRegister(e, regName, regPlate);
+    setIsAuthLoading(false);
     if (success) navigate('map');
   };
 
   const handleGoogleSuccess = async () => {
-    const success = await auth.handleGoogleSignIn();
-    if (success) navigate('map');
+    setIsAuthLoading(true);
+    await auth.handleGoogleSignIn();
+    setIsAuthLoading(false);
   };
 
   const handleResetSuccess = async (e) => {
@@ -153,7 +161,9 @@ function App() {
   };
 
   const handlePayment = async () => {
+    setIsPaymentLoading(true);
     const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
+    setIsPaymentLoading(false);
     if (success) {
       navigate('confirmation');
       notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
@@ -228,8 +238,10 @@ function App() {
     if (ok) navigate('hostDashboard');
   };
 
-  const handlePublishSpot = (e) => {
-    host.handlePublishSpot(e, navigate, spots.setSearchQuery);
+  const handlePublishSpot = async (e) => {
+    setIsPublishLoading(true);
+    await host.handlePublishSpot(e, navigate, spots.setSearchQuery);
+    setIsPublishLoading(false);
   };
 
   // Notify driver when session is about to expire (fires once when warning trips)
@@ -278,6 +290,7 @@ function App() {
           onGoogleSignIn={handleGoogleSuccess}
           onForgotPassword={() => navigate('forgotPassword')}
           onRegister={() => navigate('register')}
+          isLoading={isAuthLoading}
         />
       )}
 
@@ -290,6 +303,7 @@ function App() {
           onRegister={handleRegisterSuccess}
           onGoogleSignIn={handleGoogleSuccess}
           onBack={() => navigate('login')}
+          isLoading={isAuthLoading}
         />
       )}
 
@@ -346,6 +360,7 @@ function App() {
           hasInsurance={bookings.hasInsurance} setHasInsurance={bookings.setHasInsurance}
           onBack={() => navigate('map')}
           onPayment={handlePayment}
+          isLoading={isPaymentLoading}
           onChangePaymentMethod={() => { setPaymentReturnScreen('checkout'); navigate('paymentMethods'); }}
         />
       )}
@@ -444,6 +459,7 @@ function App() {
           fileInputRef={host.fileInputRef}
           onImageUpload={host.handleImageUpload}
           onSubmit={handlePublishSpot}
+          isLoading={isPublishLoading}
           onBack={() => { host.resetSpotForm(); navigate('hostDashboard'); }}
         />
       )}

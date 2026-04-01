@@ -99,16 +99,17 @@ body {
     overscroll-behavior-y: contain;
   }
 
-  /* ── Nav bar: position:fixed locks it to the viewport bottom ──
-     It will NEVER scroll or float — always glued to the bottom.  */
+  /* ── Nav bar: fixed to bottom, icons sit at top like native iOS apps ── */
   .nav-bar-bottom {
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     border-radius: 0 !important;
-    /* Extend background into home-indicator safe area */
-    padding-bottom: env(safe-area-inset-bottom, 10px) !important;
+    /* Icons at top of bar — safe area fills the space below them */
+    align-items: flex-start !important;
+    padding-top: 10px !important;
+    padding-bottom: env(safe-area-inset-bottom, 20px) !important;
     z-index: 9999 !important;
   }
 

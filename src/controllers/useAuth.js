@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, updateProfile, signInWithPopup, sendPasswordResetEmail
+  signOut, updateProfile, signInWithRedirect, getRedirectResult, sendPasswordResetEmail
 } from "firebase/auth";
 import { auth, googleProvider } from '../models/firebase';
 import { saveUser } from '../models/userModel';
@@ -20,6 +20,26 @@ export const useAuth = (showToast) => {
 
   useEffect(() => {
     if (!auth) { setAuthLoading(false); return; }
+
+    // Handle redirect result when user returns from Google sign-in
+    getRedirectResult(auth).then(async (result) => {
+      if (result?.user) {
+        try {
+          await saveUser(result.user.uid, {
+            name: result.user.displayName || 'Google User',
+            email: result.user.email,
+            role: 'driver',
+            plate: 'PENDING',
+            createdAt: new Date().toISOString()
+          }, true);
+        } catch (err) {
+          console.warn("Could not merge Google Auth details into Firestore.", err);
+        }
+      }
+    }).catch((err) => {
+      console.warn("Redirect result error:", err);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
@@ -80,18 +100,7 @@ export const useAuth = (showToast) => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      try {
-        await saveUser(result.user.uid, {
-          name: result.user.displayName || 'Google User',
-          email: result.user.email,
-          role: 'driver',
-          plate: 'PENDING',
-          createdAt: new Date().toISOString()
-        }, true);
-      } catch (err) {
-        console.warn("Could not merge Google Auth details into Firestore.", err);
-      }
+      await signInWithRedirect(auth, googleProvider);
       return true;
     } catch (error) {
       showToast('Google Sign-In failed: ' + error.message, 'error');

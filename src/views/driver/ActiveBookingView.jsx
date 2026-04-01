@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation } from 'lucide-react';
+import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation, Flag } from 'lucide-react';
 
 const ActiveBookingView = ({
   selectedSpot,
@@ -14,6 +14,7 @@ const ActiveBookingView = ({
   onEndSession,
   onReturnToMap,
   onMessageHost,
+  onReport,
   timeDisplay,
   isWarning,
   isExpired,
@@ -92,6 +93,12 @@ const ActiveBookingView = ({
 
       <button className="primary-btn" style={{background: '#000'}} onClick={onReturnToMap}>Done (Return to Map)</button>
       <button className="danger-btn" onClick={onEndSession}>End Session Early</button>
+      <button
+        onClick={onReport}
+        style={{background: 'none', border: 'none', color: '#8E8E93', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', padding: '4px 0'}}
+      >
+        <Flag size={13} /> Report an issue
+      </button>
     </div>
   </div>
 );

@@ -52,13 +52,22 @@ const HostDashboardView = ({
               </div>
               <div className="live-indicator" style={{position: 'static'}}></div>
             </div>
-            <button
-              className="secondary-btn"
-              style={{background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}}
-              onClick={() => onMessageDriver(booking)}
-            >
-              <MessageCircle size={18}/> Message Driver
-            </button>
+            <div style={{display: 'flex', gap: 8}}>
+              <button
+                className="secondary-btn"
+                style={{flex: 1, background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}}
+                onClick={() => onMessageDriver(booking)}
+              >
+                <MessageCircle size={18}/> Message Driver
+              </button>
+              <button
+                className="secondary-btn"
+                style={{background: '#FFEBEA', color: '#FF3B30', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 10, padding: '12px 14px', fontWeight: 600, fontSize: 13}}
+                onClick={() => onReport(booking)}
+              >
+                <Flag size={16}/> Report
+              </button>
+            </div>
           </div>
         );
       })

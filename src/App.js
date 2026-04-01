@@ -339,6 +339,7 @@ function App() {
             'activeBooking',
             getChatId(auth.user?.uid, spots.selectedSpot?.hostId, spots.selectedSpot?.id)
           )}
+          onReport={() => openReport('driver', 'activeBooking', spots.selectedSpot?.id, spots.selectedSpot?.address)}
         />
       )}
 

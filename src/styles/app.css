@@ -8,24 +8,18 @@
    ────────────────────────────────────────────────────────────────────── */
 html {
   height: 100%;
-  /* Block background bounce on iOS */
   overflow: hidden;
-  /* Respect the notch / Dynamic Island in all four corners */
-  padding: env(safe-area-inset-top, 0px)
-           env(safe-area-inset-right, 0px)
-           env(safe-area-inset-bottom, 0px)
-           env(safe-area-inset-left, 0px);
+  /* NO padding here — safe areas are handled per-component below */
 }
 body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #E8E8ED;
-  /* Prevent the body itself from scrolling / bouncing */
+  /* Match the app background so no colour bleeds into safe area gaps */
+  background: #F2F2F7;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: auto;
-  /* Prevent iOS font-size inflation */
   -webkit-text-size-adjust: 100%;
 }
 #root {

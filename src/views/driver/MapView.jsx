@@ -206,7 +206,7 @@ const MapView = ({
       {selectedSpot && !isSessionActive && (
         <div className="bottom-sheet" style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' }}>
           <div className="sheet-header">
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h3 className="sheet-title">{selectedSpot.address}</h3>
               <p className="sheet-subtitle">
                 <Star size={16} fill="#FFCC00" color="#FFCC00" />
@@ -215,6 +215,14 @@ const MapView = ({
                   : ' No reviews yet'}
                 {selectedSpot.distance && <span style={{ marginLeft: 8 }}>• {selectedSpot.distance}</span>}
               </p>
+              <a
+                href={`https://maps.google.com/maps?q=${selectedSpot.lat},${selectedSpot.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#0056D2', fontWeight: 600, marginTop: 4, textDecoration: 'none' }}
+              >
+                <Navigation size={13} /> Open in Maps
+              </a>
             </div>
             <button className="close-btn" onClick={() => setSelectedSpot(null)}>
               <X size={18} color="#000" />

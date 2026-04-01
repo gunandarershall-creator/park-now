@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Timer, QrCode, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation } from 'lucide-react';
 
 const ActiveBookingView = ({
   selectedSpot,
@@ -71,6 +71,16 @@ const ActiveBookingView = ({
           Pay & Extend (£{(selectedSpot.price * extensionDuration).toFixed(2)})
         </button>
       </div>
+
+      <a
+        href={`https://maps.google.com/maps?q=${selectedSpot.lat},${selectedSpot.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="secondary-btn"
+        style={{background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', marginTop: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none'}}
+      >
+        <Navigation size={20} /> Navigate There
+      </a>
 
       <button
         className="secondary-btn"

@@ -62,7 +62,8 @@ body {
    Fills the ENTIRE screen, nav bar locked to the bottom edge.
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
-  html, body { background: #F2F2F7; overflow: hidden; height: 100%; }
+  /* White body so the nav bar's home-indicator padding blends seamlessly */
+  html, body { background: #ffffff; overflow: hidden; height: 100%; }
   #root { align-items: stretch; }
 
   .app-frame {
@@ -119,6 +120,12 @@ body {
   .checkout-header { margin-top: 12px !important; }
   .login-header { margin-top: 30px !important; margin-bottom: 24px !important; }
 
+  /* Reduce host-header top padding — closes the gap below Dynamic Island */
+  .host-header { padding-top: 6px !important; padding-bottom: 6px !important; }
+
+  /* Profile card — tighter so avatar isn't pushed too far down */
+  .profile-header-card { margin-top: 4px !important; margin-bottom: 16px !important; }
+
   /* Compact type */
   .timer-display   { font-size: 42px !important; letter-spacing: 1px !important; }
   .earnings-amount { font-size: 28px !important; }
@@ -133,16 +140,23 @@ body {
   /* Bottom sheet clears the fixed nav bar */
   .bottom-sheet { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important; }
 }
-/* Suppress ALL Google Maps API elements injected at body level (outside app frame).
-   These appear as a dark circle / error overlay when billing isn't fully active.   */
+/* ── GOOGLE MAPS BLEED FIX ─────────────────────────────────────────────
+   The Maps JS SDK injects elements (bundled controls, error overlays)
+   that persist in the DOM even after MapView unmounts. They appear as a
+   dark circle floating over every other screen. Hide them everywhere
+   except inside the actual #real-map container.
+   ──────────────────────────────────────────────────────────────────── */
+/* Any gm-* element NOT inside #real-map is hidden */
+[class*="gm-"]:not(#real-map [class*="gm-"]) { display: none !important; }
+/* Specifically target the bundled controls (circle button) */
+.gm-bundled-control,
+.gm-bundled-control-on-bottom { display: none !important; }
+#real-map .gm-bundled-control,
+#real-map .gm-bundled-control-on-bottom { display: block !important; }
+/* Body-level injected error containers */
 body > .gm-err-container,
-body > .gm-err-content,
-body > .gm-err-autocomplete,
 body > div[class^="gm-"],
-body > div[class*=" gm-"],
-body > div[style*="z-index: 1000000"],
-body > div[style*="z-index: 1000001"],
-body > div[style*="z-index: 2147483647"] { display: none !important; }
+body > div[class*=" gm-"] { display: none !important; }
 
 /* The Content Screen inside the phone */
 .screen { height: 100%; display: flex; flex-direction: column; background: #F2F2F7; padding: 20px; box-sizing: border-box; position: relative; flex: 1; overflow: hidden; }

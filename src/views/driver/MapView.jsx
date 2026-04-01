@@ -3,7 +3,7 @@
  * Google Maps integration with spot markers, search, and booking sheet.
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import { MapPin, Clock, X, Star, Navigation, ChevronRight } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from '../../controllers/useSpots';
@@ -14,6 +14,8 @@ const MAP_OPTIONS = {
   gestureHandling: 'greedy',
   clickableIcons: false,
   mapId: undefined,
+  // Prevent zooming out to world view — keeps map within city-level bounds
+  minZoom: 10,
   styles: [
     { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
@@ -53,6 +55,20 @@ const MapView = ({
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
+  // Track zoom level so markers scale down when zoomed out
+  const [currentZoom, setCurrentZoom] = useState(mapZoom);
+  const mapRef = React.useRef(null);
+  const handleMapLoad = useCallback((map) => {
+    mapRef.current = map;
+    onMapLoad(map);
+  }, [onMapLoad]);
+  const handleZoomChanged = useCallback(() => {
+    if (mapRef.current) setCurrentZoom(mapRef.current.getZoom());
+  }, []);
+
+  // Marker scale: full size at zoom ≥14, shrinks as you zoom out
+  const markerScale = currentZoom >= 14 ? 1 : currentZoom >= 12 ? 0.82 : 0.65;
+
   const spotReviews = selectedSpot
     ? (allBookings || []).filter(b => b.spotId === selectedSpot.id && b.review)
     : [];
@@ -61,7 +77,7 @@ const MapView = ({
     : selectedSpot?.rating ?? null;
 
   return (
-    <div className="screen" style={{ padding: 0, position: 'relative' }}>
+    <div className="screen" style={{ padding: 0, position: 'relative', paddingBottom: 0 }}>
 
       {liveToastMessage && (
         <div className="live-toast">
@@ -133,7 +149,8 @@ const MapView = ({
             center={mapCenter}
             zoom={mapZoom}
             options={MAP_OPTIONS}
-            onLoad={onMapLoad}
+            onLoad={handleMapLoad}
+            onZoomChanged={handleZoomChanged}
           >
             {/* Spot price markers — OverlayView kept for styled HTML bubbles */}
             {spots.filter(s => s.spotsLeft > 0).map(spot => {
@@ -149,6 +166,7 @@ const MapView = ({
                   <div
                     className={`price-marker ${isActive ? 'active' : ''}`}
                     onClick={() => { setSelectedSpot(spot); panTo && panTo(spot.lat, spot.lng, 16); }}
+                    style={{ transform: `scale(${markerScale})`, transformOrigin: 'bottom center' }}
                   >
                     £{spot.price.toFixed(2)}
                   </div>

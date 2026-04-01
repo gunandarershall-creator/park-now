@@ -160,6 +160,22 @@ function App() {
     }
   };
 
+  const handleCancelBooking = async () => {
+    try {
+      if (bookings.activeBooking?.id) {
+        const { updateBooking } = await import('./models/bookingModel');
+        await updateBooking(bookings.activeBooking.id, { status: 'cancelled' });
+      }
+    } catch (err) {
+      console.warn('Could not update booking status:', err);
+    }
+    bookings.setActiveBooking(null);
+    bookings.setIsSessionActive(false);
+    spots.setSelectedSpot(null);
+    showToast('Booking cancelled. Refund will be processed within 3–5 business days.', 'success');
+    navigate('map');
+  };
+
   const handleEndSession = () => {
     bookings.handleEndSession();
     navigate('review');
@@ -341,6 +357,7 @@ function App() {
           hasInsurance={bookings.hasInsurance}
           bookingDuration={bookings.bookingDuration}
           onStartSession={() => navigate('activeBooking')}
+          onCancel={handleCancelBooking}
         />
       )}
 

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard } from 'lucide-react';
+import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle } from 'lucide-react';
 
 const fmt = (isoString) => {
   if (!isoString) return '--:--';
@@ -24,6 +24,7 @@ const BookingConfirmationView = ({
   hasInsurance,
   bookingDuration,
   onStartSession,
+  onCancel,
 }) => {
   const parkingCost  = selectedSpot ? +(selectedSpot.price * bookingDuration).toFixed(2) : 0;
   const insuranceCost = hasInsurance ? 1.50 : 0;
@@ -127,6 +128,17 @@ const BookingConfirmationView = ({
       <div style={{ padding: '0 16px' }}>
         <button className="primary-btn" onClick={onStartSession}>
           Start Parking Session
+        </button>
+        <button
+          onClick={onCancel}
+          style={{
+            width: '100%', background: 'none', border: 'none',
+            color: '#FF3B30', fontSize: 14, fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 6, marginTop: 14, cursor: 'pointer', padding: '4px 0',
+          }}
+        >
+          <XCircle size={16} /> Cancel Booking & Request Refund
         </button>
       </div>
     </div>

@@ -13,6 +13,7 @@ export const useProfile = (user, showToast) => {
   const [userMode, setUserMode] = useState('driver');
   const [notifBooking, setNotifBooking] = useState(true);
   const [notifPromo, setNotifPromo] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
 
   // Sync user profile from Firestore in real-time
   useEffect(() => {
@@ -25,6 +26,7 @@ export const useProfile = (user, showToast) => {
         if (data.role) setUserMode(data.role);
         if (data.notifBooking !== undefined) setNotifBooking(data.notifBooking);
         if (data.notifPromo !== undefined) setNotifPromo(data.notifPromo);
+        if (data.photoUrl !== undefined) setPhotoUrl(data.photoUrl);
       },
       (err) => console.warn("Failed to fetch user profile:", err)
     );
@@ -57,6 +59,32 @@ export const useProfile = (user, showToast) => {
     }
   };
 
+  const handleUpdatePhoto = async (file) => {
+    if (!file || !user) return;
+    // Resize to 150×150 using canvas before saving to Firestore
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 150; canvas.height = 150;
+      const ctx = canvas.getContext('2d');
+      // Crop to square from centre
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 150, 150);
+      const base64 = canvas.toDataURL('image/jpeg', 0.8);
+      URL.revokeObjectURL(objectUrl);
+      setPhotoUrl(base64);
+      try {
+        await saveUser(user.uid, { photoUrl: base64 }, true);
+      } catch (err) {
+        console.warn('Could not save photo:', err);
+      }
+    };
+    img.src = objectUrl;
+  };
+
   const handleToggleNotif = async (key, value) => {
     if (key === 'booking') {
       setNotifBooking(value);
@@ -85,9 +113,11 @@ export const useProfile = (user, showToast) => {
     userMode, setUserMode,
     notifBooking,
     notifPromo,
+    photoUrl,
     handleToggleNotif,
     handleUpdateProfile,
     handleUpdateVehicle,
+    handleUpdatePhoto,
     handleSwitchMode,
   };
 };

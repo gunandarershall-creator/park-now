@@ -3,19 +3,22 @@
  * Main profile/settings screen — account info, preferences, support, and mode switching.
  */
 
-import React from 'react';
-import { User, Car, CreditCard, Bell, HelpCircle, FileText, Home, LogOut, ChevronRight, Flag } from 'lucide-react';
+import React, { useRef } from 'react';
+import { User, Car, CreditCard, Bell, HelpCircle, FileText, Home, LogOut, ChevronRight, Flag, Camera } from 'lucide-react';
 import DriverNav from '../shared/DriverNav';
 import HostNav from '../shared/HostNav';
 
 const ProfileView = ({
   regName, email, regPlate, userMode,
+  photoUrl, onUpdatePhoto,
   currentScreen,
   onNavigate,
   onSwitchMode,
   onReport,
   onLogout,
-}) => (
+}) => {
+  const photoInputRef = useRef(null);
+  return (
   <div className="screen" style={{padding: 0}}>
     {/* Scrollable content — padded at bottom to clear the fixed nav bar */}
     <div style={{flex: 1, overflowY: 'auto', padding: '20px 20px 100px 20px'}}>
@@ -25,8 +28,34 @@ const ProfileView = ({
       </div>
 
       <div className="profile-header-card">
-        <div className="avatar-circle">
-          {regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}
+        <input
+          type="file" accept="image/*" ref={photoInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => e.target.files[0] && onUpdatePhoto(e.target.files[0])}
+        />
+        <div
+          onClick={() => photoInputRef.current.click()}
+          style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
+        >
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt="Profile"
+              style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div className="avatar-circle">
+              {regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, right: 0,
+            background: '#0056D2', borderRadius: '50%',
+            width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '2px solid #fff',
+          }}>
+            <Camera size={10} color="#fff" />
+          </div>
         </div>
         <div>
           <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>{userMode === 'driver' ? 'Driver Account' : 'Host Account'}</h3>
@@ -137,6 +166,7 @@ const ProfileView = ({
       : <HostNav currentScreen={currentScreen} onNavigate={onNavigate} />
     }
   </div>
-);
+  );
+};
 
 export default ProfileView;

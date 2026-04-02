@@ -492,6 +492,8 @@ function App() {
           email={auth.email}
           regPlate={profile.regPlate}
           userMode={profile.userMode}
+          photoUrl={profile.photoUrl}
+          onUpdatePhoto={profile.handleUpdatePhoto}
           currentScreen={currentScreen}
           onNavigate={navigate}
           onSwitchMode={handleSwitchMode}

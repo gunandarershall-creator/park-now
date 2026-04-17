@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ArrowLeft, Bell, ShieldCheck, Clock, Star } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Star } from 'lucide-react';
 
 const TYPE_ICON = {
   booking: <Bell size={18} color="#0056D2" />,

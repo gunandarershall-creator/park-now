@@ -544,6 +544,8 @@ function App() {
           setNotifBooking={(v) => profile.handleToggleNotif('booking', v)}
           notifPromo={profile.notifPromo}
           setNotifPromo={(v) => profile.handleToggleNotif('promo', v)}
+          notifHistory={notifications.notifHistory}
+          onClearHistory={notifications.clearHistory}
           onBack={() => navigate('profile')}
         />
       )}

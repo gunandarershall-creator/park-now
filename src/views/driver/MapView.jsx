@@ -108,7 +108,8 @@ const MapView = ({
   const mapRef = React.useRef(null);
   const handleMapLoad = useCallback((map) => { mapRef.current = map; onMapLoad(map); }, [onMapLoad]);
   const handleZoomChanged = useCallback(() => { if (mapRef.current) setCurrentZoom(mapRef.current.getZoom()); }, []);
-  const markerScale = currentZoom >= 14 ? 1 : currentZoom >= 12 ? 0.82 : 0.65;
+  // Smooth continuous scale: full size at zoom ≥15, shrinks down to 40% at zoom 10 and below
+  const markerScale = Math.min(1, Math.max(0.4, (currentZoom - 9) / 6));
 
   // --- FILTER STATE ---
   const [showFilters, setShowFilters] = useState(false);

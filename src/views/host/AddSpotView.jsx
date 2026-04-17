@@ -11,6 +11,15 @@ const Spinner = () => (
   <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
 );
 
+// Format 24h "HH:MM" → "H:MM AM/PM"
+const formatTime12 = (t) => {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hr = h % 12 || 12;
+  return `${hr}:${m.toString().padStart(2, '0')} ${ampm}`;
+};
+
 const AddSpotView = ({
   newAddress, setNewAddress,
   setNewCoords,
@@ -21,7 +30,20 @@ const AddSpotView = ({
   onSubmit,
   onBack,
   isLoading,
+  availFrom, setAvailFrom,
+  availTo, setAvailTo,
 }) => {
+  const allDay = availFrom === '00:00' && availTo === '23:59';
+
+  const toggleAllDay = () => {
+    if (allDay) {
+      setAvailFrom('08:00');
+      setAvailTo('20:00');
+    } else {
+      setAvailFrom('00:00');
+      setAvailTo('23:59');
+    }
+  };
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const debounceRef = useRef(null);
@@ -159,6 +181,68 @@ const AddSpotView = ({
               <input className="ios-input" type="number" step="0.10" placeholder="5.00" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required />
             </div>
           </div>
+        </div>
+
+        <div className="form-section">
+          <div className="input-label">Availability Hours</div>
+          <div className="ios-input-group" style={{ marginBottom: 0 }}>
+            {/* All day toggle row */}
+            <div className="ios-input-row" style={{ justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 16, color: '#1C1C1E' }}>All day</span>
+              <div
+                onClick={toggleAllDay}
+                style={{
+                  width: 50, height: 30,
+                  background: allDay ? '#34C759' : '#E5E5EA',
+                  borderRadius: 30, position: 'relative', cursor: 'pointer', transition: '0.3s',
+                }}
+              >
+                <div style={{
+                  width: 26, height: 26, background: '#fff',
+                  borderRadius: '50%', position: 'absolute',
+                  top: 2, transition: '0.3s',
+                  left: allDay ? 22 : 2,
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+            </div>
+
+            {/* Time pickers — shown only when not all day */}
+            {!allDay && (
+              <>
+                <div className="ios-input-row" style={{ justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 15, color: '#3C3C43' }}>From</span>
+                  <input
+                    type="time"
+                    value={availFrom}
+                    onChange={(e) => setAvailFrom(e.target.value)}
+                    style={{ border: 'none', outline: 'none', fontSize: 15, color: '#0056D2', fontWeight: 600, background: 'transparent', cursor: 'pointer' }}
+                  />
+                </div>
+                <div className="ios-input-row" style={{ justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 15, color: '#3C3C43' }}>To</span>
+                  <input
+                    type="time"
+                    value={availTo}
+                    onChange={(e) => setAvailTo(e.target.value)}
+                    style={{ border: 'none', outline: 'none', fontSize: 15, color: '#0056D2', fontWeight: 600, background: 'transparent', cursor: 'pointer' }}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Summary when all day */}
+            {allDay && (
+              <div className="ios-input-row" style={{ color: '#8E8E93', fontSize: 14 }}>
+                Driveway is available 24 hours
+              </div>
+            )}
+          </div>
+          {!allDay && (
+            <p style={{ margin: '6px 0 0 4px', fontSize: 12, color: '#8E8E93' }}>
+              Available {formatTime12(availFrom)} – {formatTime12(availTo)}
+            </p>
+          )}
         </div>
 
         <button className="primary-btn" type="submit" disabled={isLoading} style={{ marginTop: '40px', opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

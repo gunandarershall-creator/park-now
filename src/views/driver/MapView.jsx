@@ -409,6 +409,24 @@ const MapView = ({
             </p>
           </div>
 
+          {/* Availability hours */}
+          {(() => {
+            const from = selectedSpot.availFrom;
+            const to = selectedSpot.availTo;
+            if (!from && !to) return null;
+            const isAllDay = (!from || from === '00:00') && (!to || to === '23:59' || to === '00:00');
+            const fmt = (t) => {
+              const [h, m] = t.split(':').map(Number);
+              return `${h % 12 || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+            };
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#8E8E93', marginBottom: 12 }}>
+                <Clock size={14} />
+                {isAllDay ? 'Available all day' : `Available ${fmt(from)} – ${fmt(to)}`}
+              </div>
+            );
+          })()}
+
           <button className="primary-btn" onClick={onBookSpot}>Book Spot</button>
 
           {spotReviews.length > 0 && (

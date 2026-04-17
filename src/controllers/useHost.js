@@ -14,6 +14,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const [newCoords, setNewCoords] = useState(null); // { lat, lng } resolved by Places selection
   const [newPrice, setNewPrice] = useState('');
   const [newImage, setNewImage] = useState(null);
+  const [availFrom, setAvailFrom] = useState('00:00');
+  const [availTo, setAvailTo] = useState('23:59');
   const [editingSpotId, setEditingSpotId] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -61,6 +63,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     setNewAddress(spot.address);
     setNewPrice(spot.price.toString());
     setNewImage(spot.imageUrl || null);
+    setAvailFrom(spot.availFrom || '00:00');
+    setAvailTo(spot.availTo || '23:59');
     setEditingSpotId(id);
     return true;
   };
@@ -68,7 +72,7 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const handleUpdateSpot = async (e) => {
     e.preventDefault();
     if (!newAddress || !newPrice) { showToast('Please enter an address and a price.', 'error'); return false; }
-    const updatedFields = { address: newAddress, price: parseFloat(newPrice), imageUrl: newImage };
+    const updatedFields = { address: newAddress, price: parseFloat(newPrice), imageUrl: newImage, availFrom, availTo };
     setSpots(prev => prev.map(s =>
       s.id === editingSpotId ? { ...s, ...updatedFields } : s
     ));
@@ -129,7 +133,9 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
       distance: 'Local Neighbourhood',
       spotsLeft: 1,
       hostId: user ? user.uid : 'system',
-      imageUrl: newImage
+      imageUrl: newImage,
+      availFrom,
+      availTo,
     };
     setSpots(prev => [...prev, newSpotData]);
     setHostListings(prev => [...prev, {
@@ -157,6 +163,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     setNewCoords(null);
     setNewPrice('');
     setNewImage(null);
+    setAvailFrom('00:00');
+    setAvailTo('23:59');
     setEditingSpotId(null);
   };
 
@@ -166,6 +174,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     newCoords, setNewCoords,
     newPrice, setNewPrice,
     newImage, setNewImage,
+    availFrom, setAvailFrom,
+    availTo, setAvailTo,
     editingSpotId,
     fileInputRef,
     toggleHostListing,

@@ -460,6 +460,8 @@ function App() {
           onImageUpload={host.handleImageUpload}
           onSubmit={handlePublishSpot}
           isLoading={isPublishLoading}
+          availFrom={host.availFrom} setAvailFrom={host.setAvailFrom}
+          availTo={host.availTo} setAvailTo={host.setAvailTo}
           onBack={() => { host.resetSpotForm(); navigate('hostDashboard'); }}
         />
       )}

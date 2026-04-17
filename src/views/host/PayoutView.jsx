@@ -6,6 +6,10 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
 const StatusBadge = ({ status }) => {
   const isPending = status === 'pending';
   return (
@@ -23,7 +27,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const PayoutView = ({ earnings, onRequestPayout, payouts, onBack }) => (
+const PayoutView = ({ earnings, onRequestPayout, payouts, onBack, isRequesting }) => (
   <div className="screen" style={{ overflowY: 'auto' }}>
     <div className="checkout-header" style={{ marginTop: 10 }}>
       <button className="close-btn" onClick={onBack}>
@@ -43,10 +47,10 @@ const PayoutView = ({ earnings, onRequestPayout, payouts, onBack }) => (
       <button
         className="primary-btn"
         onClick={onRequestPayout}
-        disabled={!earnings || earnings <= 0}
-        style={{ marginBottom: 32 }}
+        disabled={!earnings || earnings <= 0 || isRequesting}
+        style={{ marginBottom: 32, opacity: isRequesting ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
       >
-        Request Payout
+        {isRequesting ? <><Spinner /> Requesting…</> : 'Request Payout'}
       </button>
 
       {/* Payout history */}

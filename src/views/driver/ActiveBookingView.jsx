@@ -6,11 +6,16 @@
 import React from 'react';
 import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation, Flag, XCircle } from 'lucide-react';
 
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
 const ActiveBookingView = ({
   selectedSpot,
   hasInsurance,
   extensionDuration, setExtensionDuration,
   onExtend,
+  isExtendLoading,
   onEndSession,
   onCancel,
   onReturnToMap,
@@ -69,8 +74,15 @@ const ActiveBookingView = ({
             <option value={4}>+ 4 Hours</option>
           </select>
         </div>
-        <button className="primary-btn" onClick={onExtend}>
-          Pay & Extend (£{(selectedSpot.price * extensionDuration).toFixed(2)})
+        <button
+          className="primary-btn"
+          onClick={onExtend}
+          disabled={isExtendLoading}
+          style={{ opacity: isExtendLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          {isExtendLoading
+            ? <><Spinner /> Processing…</>
+            : `Pay & Extend (£${(selectedSpot.price * extensionDuration).toFixed(2)})`}
         </button>
       </div>
 

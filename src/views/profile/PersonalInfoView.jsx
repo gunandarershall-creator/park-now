@@ -6,7 +6,11 @@
 import React from 'react';
 import { ArrowLeft, User, Mail } from 'lucide-react';
 
-const PersonalInfoView = ({ regName, setRegName, email, setEmail, onSubmit, onBack }) => (
+const Spinner = () => (
+  <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+);
+
+const PersonalInfoView = ({ regName, setRegName, email, setEmail, onSubmit, onBack, isLoading }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
@@ -27,7 +31,14 @@ const PersonalInfoView = ({ regName, setRegName, email, setEmail, onSubmit, onBa
           </div>
         </div>
       </div>
-      <button className="primary-btn" type="submit" style={{marginTop: 20}}>Save Changes</button>
+      <button
+        className="primary-btn"
+        type="submit"
+        disabled={isLoading}
+        style={{ marginTop: 20, opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+      >
+        {isLoading ? <><Spinner /> Saving…</> : 'Save Changes'}
+      </button>
     </form>
   </div>
 );

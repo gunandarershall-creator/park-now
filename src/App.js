@@ -78,6 +78,8 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [isPublishLoading, setIsPublishLoading] = useState(false);
+  const [isExtendLoading, setIsExtendLoading] = useState(false);
+  const [isSaveProfileLoading, setIsSaveProfileLoading] = useState(false);
 
   // --- TOAST (must come first — passed into all controllers) ---
   const { toast, showToast } = useToast();
@@ -381,7 +383,8 @@ function App() {
           selectedSpot={spots.selectedSpot}
           hasInsurance={bookings.hasInsurance}
           extensionDuration={bookings.extensionDuration} setExtensionDuration={bookings.setExtensionDuration}
-          onExtend={() => bookings.handleExtendSession(spots.selectedSpot)}
+          onExtend={async () => { setIsExtendLoading(true); try { await bookings.handleExtendSession(spots.selectedSpot); } finally { setIsExtendLoading(false); } }}
+          isExtendLoading={isExtendLoading}
           onEndSession={handleEndSession}
           onCancel={handleCancelBooking}
           timeDisplay={session.timeDisplay}
@@ -484,6 +487,7 @@ function App() {
           earnings={bookings.myHostEarnings}
           payouts={payout.payouts}
           onRequestPayout={() => payout.handleRequestPayout(showToast)}
+          isRequesting={payout.isRequesting}
           onBack={() => navigate('hostDashboard')}
         />
       )}
@@ -509,7 +513,8 @@ function App() {
         <PersonalInfoView
           regName={profile.regName} setRegName={profile.setRegName}
           email={auth.email} setEmail={auth.setEmail}
-          onSubmit={handleUpdateProfile}
+          onSubmit={async (e) => { setIsSaveProfileLoading(true); try { await handleUpdateProfile(e); } finally { setIsSaveProfileLoading(false); } }}
+          isLoading={isSaveProfileLoading}
           onBack={() => navigate('profile')}
         />
       )}

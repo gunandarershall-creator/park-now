@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, MessageCircle, Star, Flag } from 'lucide-react';
+import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, PlusCircle } from 'lucide-react';
 import HostNav from '../shared/HostNav';
 
 const HostDashboardView = ({
@@ -40,7 +40,21 @@ const HostDashboardView = ({
 
     <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Active Guests</h3>
     {activeHostBookings.length === 0 ? (
-      <div style={{color: '#8E8E93', fontSize: 14, textAlign: 'center', padding: '20px 0'}}>No active guests right now.</div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14, background: '#E6F0FF', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Users size={22} color="#0056D2" />
+        </div>
+        <div>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#1C1C1E' }}>No active guests</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8E8E93' }}>You'll see live sessions here when drivers check in.</p>
+        </div>
+      </div>
     ) : (
       activeHostBookings.map(booking => {
         const endsAt = new Date(booking.endTime);
@@ -81,7 +95,21 @@ const HostDashboardView = ({
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Past Bookings</h3>
     {pastHostBookings.length === 0 ? (
-      <div style={{color: '#8E8E93', fontSize: 14, textAlign: 'center', padding: '20px 0'}}>No past bookings yet.</div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14, background: '#F2F2F7', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <CalendarX size={22} color="#8E8E93" />
+        </div>
+        <div>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#1C1C1E' }}>No bookings yet</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8E8E93' }}>Completed stays will appear here after guests finish their sessions.</p>
+        </div>
+      </div>
     ) : (
       pastHostBookings.slice(0, 5).map(booking => (
         <div key={booking.id} className="booking-card" style={{borderLeft: '4px solid #E5E5EA', cursor: 'default'}}>
@@ -109,6 +137,32 @@ const HostDashboardView = ({
     )}
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>
+
+    {hostListings.length === 0 && (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '32px 20px', background: '#fff', borderRadius: 20,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 12,
+      }}>
+        <div style={{
+          width: 60, height: 60, borderRadius: 18, background: '#E6F0FF',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+        }}>
+          <PlusCircle size={30} color="#0056D2" />
+        </div>
+        <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1C1C1E' }}>No driveways listed</p>
+        <p style={{ margin: '8px 0 20px', fontSize: 14, color: '#8E8E93', textAlign: 'center', lineHeight: 1.5 }}>
+          List your driveway and start earning money from your empty space.
+        </p>
+        <button
+          className="primary-btn"
+          onClick={() => onNavigate('addSpot')}
+          style={{ width: 'auto', padding: '12px 28px', fontSize: 15 }}
+        >
+          List a Driveway
+        </button>
+      </div>
+    )}
 
     {hostListings.map(listing => {
       const listingReviews = (allBookings || []).filter(b => b.spotId === listing.id && b.review);

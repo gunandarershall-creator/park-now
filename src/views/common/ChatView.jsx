@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { ArrowLeft, Phone, Send } from 'lucide-react';
+import { ArrowLeft, Phone, Send, MessageCircle } from 'lucide-react';
 
 const ChatView = ({
   chatContext,
@@ -51,8 +51,20 @@ const ChatView = ({
       {/* Messages */}
       <div className="chat-area" style={{flex: 1, overflowY: 'auto', padding: '16px'}}>
         {messages.length === 0 ? (
-          <div style={{textAlign: 'center', color: '#C7C7CC', fontSize: 14, marginTop: 40}}>
-            No messages yet. Say hello!
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', height: '100%', padding: '40px 32px',
+          }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20, background: '#E6F0FF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+            }}>
+              <MessageCircle size={32} color="#0056D2" />
+            </div>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1C1C1E' }}>No messages yet</p>
+            <p style={{ margin: '8px 0 0', fontSize: 14, color: '#8E8E93', textAlign: 'center', lineHeight: 1.5 }}>
+              Send a message to get the conversation started.
+            </p>
           </div>
         ) : (
           messages.map((msg, i) => {

@@ -283,9 +283,15 @@ const MapView = ({
             </div>
           </div>
 
-          <div style={{ marginTop: 16, background: '#F2F2F7', borderRadius: 10, padding: '8px 14px', textAlign: 'center', fontSize: 14, color: '#3A3A3C', fontWeight: 500 }}>
-            {filteredSpots.length} spot{filteredSpots.length !== 1 ? 's' : ''} match your filters
-          </div>
+          {filteredSpots.length === 0 ? (
+            <div style={{ marginTop: 16, background: '#FFF3E0', borderRadius: 10, padding: '10px 14px', textAlign: 'center', fontSize: 14, color: '#FF9500', fontWeight: 600 }}>
+              No spots match your filters — try widening your search
+            </div>
+          ) : (
+            <div style={{ marginTop: 16, background: '#F2F2F7', borderRadius: 10, padding: '8px 14px', textAlign: 'center', fontSize: 14, color: '#3A3A3C', fontWeight: 500 }}>
+              {filteredSpots.length} spot{filteredSpots.length !== 1 ? 's' : ''} match your filters
+            </div>
+          )}
         </div>
       )}
 

@@ -383,6 +383,7 @@ function App() {
           extensionDuration={bookings.extensionDuration} setExtensionDuration={bookings.setExtensionDuration}
           onExtend={() => bookings.handleExtendSession(spots.selectedSpot)}
           onEndSession={handleEndSession}
+          onCancel={handleCancelBooking}
           timeDisplay={session.timeDisplay}
           isWarning={session.isWarning}
           isExpired={session.isExpired}

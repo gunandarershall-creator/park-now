@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight, XCircle } from 'lucide-react';
 
 const Spinner = () => (
   <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
@@ -90,6 +90,14 @@ const CheckoutView = ({
 
     <button className="apple-pay-btn" onClick={onPayment} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
       {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
+    </button>
+
+    <button
+      onClick={onBack}
+      disabled={isLoading}
+      style={{ width: '100%', background: 'none', border: 'none', color: '#8E8E93', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 12, cursor: 'pointer', padding: '4px 0' }}
+    >
+      <XCircle size={14} /> Cancel
     </button>
   </div>
   );

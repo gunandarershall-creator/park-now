@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation, Flag } from 'lucide-react';
+import { Timer, QrCode, ShieldCheck, MessageCircle, Navigation, Flag, XCircle } from 'lucide-react';
 
 const ActiveBookingView = ({
   selectedSpot,
@@ -12,6 +12,7 @@ const ActiveBookingView = ({
   extensionDuration, setExtensionDuration,
   onExtend,
   onEndSession,
+  onCancel,
   onReturnToMap,
   onMessageHost,
   onReport,
@@ -93,6 +94,12 @@ const ActiveBookingView = ({
 
       <button className="primary-btn" style={{background: '#000'}} onClick={onReturnToMap}>Done (Return to Map)</button>
       <button className="danger-btn" onClick={onEndSession}>End Session Early</button>
+      <button
+        onClick={onCancel}
+        style={{width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', padding: '4px 0'}}
+      >
+        <XCircle size={13} /> Cancel Booking & Request Refund
+      </button>
       <button
         onClick={onReport}
         style={{background: 'none', border: 'none', color: '#8E8E93', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', padding: '4px 0'}}

@@ -115,7 +115,7 @@ body {
 
   /* Search bar: sits just below the Dynamic Island */
   .search-header { top: 12px !important; }
-  .active-session-banner { top: 74px !important; }
+  .active-session-banner { top: 74px !important; z-index: 5000 !important; pointer-events: all !important; }
 
   /* Compact spacing */
   .checkout-header { margin-top: 12px !important; }
@@ -290,7 +290,7 @@ body > div[class*=" gm-"] { display: none !important; }
 .danger-btn { background: #FFEBEA; color: #FF3B30; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 0; margin-bottom: 10px; }
 
 /* Floating active session banner on map */
-.active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 2000 !important; cursor: pointer; }
+.active-session-banner { position: absolute; top: 80px; left: 20px; right: 20px; background: #0056D2; color: white; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,86,210,0.3); z-index: 5000 !important; cursor: pointer; pointer-events: all; }
 
 /* --- HOST DASHBOARD --- */
 .host-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }

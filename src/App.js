@@ -397,7 +397,21 @@ function App() {
           onLocate={spots.findClosestSpot}
           isLocating={spots.isLocating}
           onBookSpot={() => navigate('checkout')}
-          onViewActiveBooking={() => navigate('activeBooking')}
+          onViewActiveBooking={() => {
+            // Restore selectedSpot if missing so activeBooking screen can render
+            if (!spots.selectedSpot && bookings.activeBooking) {
+              const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
+              if (booking) {
+                const spot = spots.spots.find(s => s.id === booking.spotId) || {
+                  id: booking.spotId, address: booking.address,
+                  price: booking.totalPaid / (booking.duration || 1),
+                  lat: 0, lng: 0, spotsLeft: 1,
+                };
+                spots.setSelectedSpot(spot);
+              }
+            }
+            navigate('activeBooking');
+          }}
           onViewFullImage={(url) => setFullScreenImage(url)}
           currentScreen={currentScreen}
           onNavigate={navigate}

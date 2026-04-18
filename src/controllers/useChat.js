@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import { sendMessage, subscribeToMessages } from '../models/chatModel';
 
-export const useChat = (chatId, userId) => {
+export const useChat = (chatId, userId, showToast) => {
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -30,6 +30,7 @@ export const useChat = (chatId, userId) => {
       setMessageText('');
     } catch (err) {
       console.error('Failed to send message:', err);
+      if (showToast) showToast('Could not send message. Check your connection and try again.', 'error');
     } finally {
       setIsSending(false);
     }

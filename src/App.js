@@ -95,7 +95,7 @@ function App() {
   const bookings = useBookings(auth.user, showToast);
   const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast, spots.panTo);
   const session       = useSessionTimer(bookings.activeBooking?.endTime ?? null);
-  const chat          = useChat(chatContext.chatId, auth.user?.uid);
+  const chat          = useChat(chatContext.chatId, auth.user?.uid, showToast);
   const notifications = useNotifications(auth.user);
   const payout        = usePayout(auth.user, bookings.myHostEarnings);
 

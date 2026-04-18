@@ -53,7 +53,20 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setNewImage(reader.result);
+    reader.onloadend = () => {
+      // Compress image to stay well under Firestore's 1MB document limit
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX_WIDTH = 800;
+        const ratio = Math.min(MAX_WIDTH / img.width, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        setNewImage(canvas.toDataURL('image/jpeg', 0.65));
+      };
+      img.src = reader.result;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -144,7 +157,13 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
       await saveSpot(newSpotData);
     } catch (err) {
       console.error("Failed to save spot to Firestore:", err);
-      showToast('Could not save listing — check your internet connection and try again.', 'error');
+      const msg =
+        err?.code === 'permission-denied'
+          ? 'Permission denied — republish your Firestore security rules in Firebase Console.'
+          : err?.message?.toLowerCase().includes('size')
+          ? 'Image is too large. Please choose a smaller photo and try again.'
+          : `Could not save listing (${err?.code || 'unknown error'}). Try again.`;
+      showToast(msg, 'error');
       return;
     }
 

@@ -121,16 +121,32 @@ export const useBookings = (user, showToast) => {
     )
     .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
 
+  // Pending earnings: active or future confirmed bookings not yet credited.
+  // Shown separately so the host can see money that's on its way.
+  const myPendingEarnings = bookings
+    .filter(b =>
+      b.hostId === user?.uid &&
+      b.status === 'confirmed' &&
+      b.endTime &&
+      new Date(b.endTime) > new Date()
+    )
+    .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
+
   const handlePayment = async (selectedSpot, setSpots, bookingStartTime) => {
     if (!selectedSpot) return;
 
-    // Parse user-selected start time (HH:MM) → actual Date for today
-    const parseStartTime = (timeStr) => {
-      const d = new Date();
-      if (timeStr) {
-        const [h, m] = timeStr.split(':').map(Number);
-        d.setHours(h, m, 0, 0);
+    // Parse user-selected start — now "YYYY-MM-DDTHH:MM" (with date) or legacy "HH:MM"
+    const parseStartTime = (startStr) => {
+      if (!startStr) return new Date();
+      // New format: contains a date portion (has a '-')
+      if (startStr.includes('-')) {
+        const d = new Date(startStr);
+        return isNaN(d.getTime()) ? new Date() : d;
       }
+      // Legacy "HH:MM" — assume today
+      const d = new Date();
+      const [h, m] = startStr.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
       return d;
     };
 
@@ -249,6 +265,7 @@ export const useBookings = (user, showToast) => {
     activeBooking, setActiveBooking,
     myDriverBookings,
     myHostEarnings,
+    myPendingEarnings,
     handlePayment,
     handleExtendSession,
     handleEndSession,

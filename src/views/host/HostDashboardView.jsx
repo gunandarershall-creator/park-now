@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, PlusCircle, AlertTriangle } from 'lucide-react';
+import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, CalendarClock, PlusCircle, AlertTriangle } from 'lucide-react';
 import HostNav from '../shared/HostNav';
 
 const fmtDate = (ts) => {
@@ -13,12 +13,22 @@ const fmtDate = (ts) => {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+const fmtDateTime = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    + ' · '
+    + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+};
+
 const HostDashboardView = ({
   myHostEarnings,
   availableBalance,
+  pendingEarnings = 0,
   hostListings,
   allBookings,
   activeHostBookings,
+  upcomingHostBookings = [],
   pastHostBookings,
   hostReports = [],
   currentScreen,
@@ -41,6 +51,11 @@ const HostDashboardView = ({
       {availableBalance !== undefined && myHostEarnings > availableBalance && (
         <p style={{margin: '4px 0 0', fontSize: 13, opacity: 0.8}}>
           Total earned: £{myHostEarnings.toFixed(2)}
+        </p>
+      )}
+      {pendingEarnings > 0 && (
+        <p style={{margin: '4px 0 0', fontSize: 13, opacity: 0.85}}>
+          ⏳ £{pendingEarnings.toFixed(2)} pending from active/upcoming sessions
         </p>
       )}
       <button
@@ -104,6 +119,57 @@ const HostDashboardView = ({
           </div>
         );
       })
+    )}
+
+    {/* ── Upcoming Guests ── */}
+    <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8}}>
+      <CalendarClock size={18} color="#0056D2" /> Upcoming Guests
+    </h3>
+    {upcomingHostBookings.length === 0 ? (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14, background: '#E6F0FF', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <CalendarClock size={22} color="#0056D2" />
+        </div>
+        <div>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#1C1C1E' }}>No upcoming guests</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8E8E93' }}>Future bookings will appear here before they start.</p>
+        </div>
+      </div>
+    ) : (
+      upcomingHostBookings.map(booking => (
+        <div key={booking.id} className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #0056D2'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start'}}>
+            <div style={{flex: 1}}>
+              <div style={{fontWeight: 700, fontSize: 15}}>{booking.address}</div>
+              <div style={{color: '#8E8E93', fontSize: 13, marginTop: 4}}>
+                Arriving {fmtDateTime(booking.startTime)}
+              </div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: '#E6F0FF', borderRadius: 8, padding: '4px 10px',
+                marginTop: 8, fontSize: 12, color: '#0056D2', fontWeight: 600,
+              }}>
+                {booking.duration} hr{booking.duration !== 1 ? 's' : ''} · £{(booking.totalPaid || 0).toFixed(2)} earning
+              </div>
+            </div>
+          </div>
+          <div style={{display: 'flex', gap: 8}}>
+            <button
+              className="secondary-btn"
+              style={{flex: 1, background: '#E6F0FF', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, padding: '12px'}}
+              onClick={() => onMessageDriver(booking)}
+            >
+              <MessageCircle size={18}/> Message Driver
+            </button>
+          </div>
+        </div>
+      ))
     )}
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Past Bookings</h3>

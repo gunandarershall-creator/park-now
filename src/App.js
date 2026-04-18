@@ -171,11 +171,9 @@ function App() {
       if (success) {
         notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
         // Check whether the booking starts now or in the future
-        const isImmediate = !bookingStartTime || (() => {
-          const [h, m] = bookingStartTime.split(':').map(Number);
-          const d = new Date(); d.setHours(h, m, 0, 0);
-          return Date.now() >= d.getTime() - 120000; // 2-min grace window
-        })();
+        // bookingStartTime is now "YYYY-MM-DDTHH:MM" so new Date() parses it directly
+        const isImmediate = !bookingStartTime ||
+          Date.now() >= new Date(bookingStartTime).getTime() - 120000; // 2-min grace
         if (isImmediate) {
           // Start right away — skip confirmation entirely
           navigate('activeBooking');
@@ -551,8 +549,15 @@ function App() {
           activeHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             b.status === 'confirmed' &&
+            b.startTime && new Date(b.startTime) <= new Date() &&
             new Date(b.endTime) > new Date()
           )}
+          upcomingHostBookings={bookings.bookings.filter(b =>
+            b.hostId === auth.user?.uid &&
+            b.status === 'confirmed' &&
+            b.startTime && new Date(b.startTime) > new Date()
+          ).sort((a, b) => new Date(a.startTime) - new Date(b.startTime))}
+          pendingEarnings={bookings.myPendingEarnings}
           pastHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             (b.status === 'reviewed' || b.status === 'completed' ||

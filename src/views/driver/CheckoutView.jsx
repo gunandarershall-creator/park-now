@@ -20,21 +20,33 @@ const CheckoutView = ({
   isLoading,
 }) => {
   const pad = n => String(n).padStart(2, '0');
+  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  // Local start time state — default to right now
-  const [bookingStartTime, setBookingStartTime] = React.useState(() => {
+  // Date + time pickers — default to right now
+  const [bookingDate, setBookingDate] = React.useState(todayStr);
+  const [bookingTime, setBookingTime] = React.useState(() => {
     const now = new Date();
     return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   });
 
-  // Compute end time string dynamically from chosen start + duration
-  const computeEndStr = (startStr, durationHrs) => {
-    const [h, m] = startStr.split(':').map(Number);
-    const endDate = new Date();
-    endDate.setHours(h, m + durationHrs * 60, 0, 0);
-    return `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+  // Combined ISO datetime string passed to onPayment
+  const bookingStart = `${bookingDate}T${bookingTime}`;
+
+  // Human-readable date label
+  const dateLabel = bookingDate === todayStr
+    ? 'Today'
+    : new Date(`${bookingDate}T12:00`).toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      });
+
+  // Compute end time — handles midnight roll-overs
+  const computeEndStr = (dateStr, timeStr, durationHrs) => {
+    const start = new Date(`${dateStr}T${timeStr}`);
+    const end   = new Date(start.getTime() + durationHrs * 3600000);
+    const nextDay = end.toISOString().split('T')[0] !== dateStr;
+    return `${pad(end.getHours())}:${pad(end.getMinutes())}${nextDay ? ' (+1 day)' : ''}`;
   };
-  const endStr = computeEndStr(bookingStartTime, bookingDuration);
+  const endStr = computeEndStr(bookingDate, bookingTime, bookingDuration);
 
   return (
   <div className="screen" style={{overflowY: 'auto'}}>
@@ -45,21 +57,31 @@ const CheckoutView = ({
 
     <div className="receipt-box">
       <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
-      <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
+      {/* Date picker */}
+      <div className="receipt-row" style={{alignItems: 'center'}}>
+        <span style={{color: '#8E8E93'}}>Date</span>
+        <input
+          type="date"
+          value={bookingDate}
+          min={todayStr}
+          onChange={(e) => setBookingDate(e.target.value)}
+          style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+        />
+      </div>
 
       {/* Start time picker */}
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Start Time</span>
         <input
           type="time"
-          value={bookingStartTime}
-          onChange={(e) => setBookingStartTime(e.target.value)}
+          value={bookingTime}
+          onChange={(e) => setBookingTime(e.target.value)}
           style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
         />
       </div>
       <div className="receipt-row">
         <span style={{color: '#8E8E93'}}>End Time</span>
-        <span style={{fontWeight: 600}}>{endStr}</span>
+        <span style={{fontWeight: 600}}>{endStr} · {dateLabel}</span>
       </div>
 
       <div className="receipt-row" style={{alignItems: 'center'}}>
@@ -113,7 +135,7 @@ const CheckoutView = ({
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 
-    <button className="apple-pay-btn" onClick={() => onPayment(bookingStartTime)} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+    <button className="apple-pay-btn" onClick={() => onPayment(bookingStart)} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
       {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
     </button>
 

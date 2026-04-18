@@ -10,7 +10,7 @@ import { getBookingsRef } from "./firebase";
 export const subscribeToBookings = (onData, onError) => {
   const q = query(getBookingsRef());
   return onSnapshot(q, (snap) => {
-    const docs = snap.docs.map(d => d.data());
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     onData(docs);
   }, onError);
 };

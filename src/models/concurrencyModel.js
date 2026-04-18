@@ -35,13 +35,19 @@ export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsur
   const bookingId  = `${Date.now()}-${user.uid.slice(0, 6)}`;
   const bookingRef = doc(getBookingsRef(), bookingId);
 
-  // Use driver-selected start time if provided, otherwise default to now
+  // Use driver-selected start time if provided, otherwise default to now.
+  // bookingStartTime is "YYYY-MM-DDTHH:MM" (new) or legacy "HH:MM" (today only).
   const startTime = (() => {
-    const d = new Date();
-    if (bookingStartTime) {
-      const [h, m] = bookingStartTime.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
+    if (!bookingStartTime) return new Date();
+    if (bookingStartTime.includes('-')) {
+      // New ISO format: "2025-04-20T14:30"
+      const d = new Date(bookingStartTime);
+      return isNaN(d.getTime()) ? new Date() : d;
     }
+    // Legacy "HH:MM" — assume today
+    const d = new Date();
+    const [h, m] = bookingStartTime.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
     return d;
   })();
   const endTime   = new Date(startTime.getTime() + bookingDuration * 3600 * 1000);

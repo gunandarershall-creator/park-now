@@ -84,7 +84,7 @@ const CheckoutView = ({
     <h4 style={{marginBottom: 10, color: '#666'}}>Payment Method</h4>
     <div className="payment-method-row" style={{cursor: 'pointer'}} onClick={onChangePaymentMethod}>
       <CreditCard size={24} color="#0056D2" />
-      <div style={{flex: 1}}><div style={{fontWeight: 600}}>Personal Card</div><div style={{fontSize: 13, color: '#8E8E93'}}>Visa ending in 4242</div></div>
+      <div style={{flex: 1}}><div style={{fontWeight: 600}}>Saved Card</div><div style={{fontSize: 13, color: '#8E8E93'}}>Tap to manage cards</div></div>
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 

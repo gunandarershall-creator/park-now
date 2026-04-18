@@ -234,9 +234,10 @@ export const useSpots = (user, currentScreen, showToast) => {
         }
       } catch (err) {
         console.error('Geocode error:', err);
+        showToast('Could not find that location. Check your internet connection and try again.', 'error');
       }
     }
-  }, [panTo]);
+  }, [panTo, showToast]);
 
   const geocodeAddress = async (address) => {
     const key = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;

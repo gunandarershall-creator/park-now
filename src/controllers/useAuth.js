@@ -29,7 +29,7 @@ export const useAuth = (showToast) => {
             name: result.user.displayName || 'Google User',
             email: result.user.email,
             role: 'driver',
-            plate: 'PENDING',
+            plate: '',
             createdAt: new Date().toISOString()
           }, true);
         } catch (err) {

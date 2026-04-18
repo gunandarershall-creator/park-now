@@ -86,7 +86,7 @@ export const useBookings = (user, showToast) => {
         saveBooking({
           id: bookingId,
           driverId:    user.uid,
-          hostId:      selectedSpot.hostId || 'unknown',
+          hostId:      selectedSpot.hostId === 'system' ? 'demo' : (selectedSpot.hostId || 'unknown'),
           spotId:      selectedSpot.id,
           address:     selectedSpot.address,
           duration:    bookingDuration,

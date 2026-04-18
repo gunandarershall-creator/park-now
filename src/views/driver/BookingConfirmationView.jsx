@@ -120,7 +120,7 @@ const BookingConfirmationView = ({
           color: '#8E8E93', fontSize: 13,
         }}>
           <CreditCard size={16} />
-          <span>Charged to Visa ending in 4242</span>
+          <span>Payment confirmed</span>
         </div>
       </div>
 

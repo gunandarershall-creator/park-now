@@ -35,6 +35,7 @@ import Toast from './views/shared/Toast';
 import LoginView         from './views/auth/LoginView';
 import RegisterView      from './views/auth/RegisterView';
 import ForgotPasswordView from './views/auth/ForgotPasswordView';
+import OnboardingView    from './views/auth/OnboardingView';
 
 // --- VIEWS: Driver ---
 import DriverDashboardView  from './views/driver/DriverDashboardView';
@@ -68,6 +69,7 @@ import ReportView         from './views/common/ReportView';
 
 function App() {
   // --- NAVIGATION STATE ---
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('parkNowOnboarded'));
   const [currentScreen, setCurrentScreen] = useState('login');
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
   const [fullScreenImage, setFullScreenImage] = useState(null);
@@ -247,23 +249,28 @@ function App() {
     setIsPublishLoading(false);
   };
 
-  // Restore selectedSpot from Firestore when an active booking is recovered after refresh
+  // Restore selectedSpot and navigate to active session after refresh
   useEffect(() => {
-    if (!bookings.activeBooking || spots.selectedSpot) return;
+    if (!bookings.activeBooking) return;
     const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
     if (!booking) return;
-    const spot = spots.spots.find(s => s.id === booking.spotId);
-    if (spot) {
-      spots.setSelectedSpot(spot);
-    } else {
-      // Spot may no longer be in the live list — reconstruct a minimal version from the booking
-      spots.setSelectedSpot({
-        id: booking.spotId,
-        address: booking.address,
-        price: booking.totalPaid / (booking.duration || 1),
-        lat: 0, lng: 0,
-        spotsLeft: 1,
-      });
+    if (!spots.selectedSpot) {
+      const spot = spots.spots.find(s => s.id === booking.spotId);
+      if (spot) {
+        spots.setSelectedSpot(spot);
+      } else {
+        spots.setSelectedSpot({
+          id: booking.spotId,
+          address: booking.address,
+          price: booking.totalPaid / (booking.duration || 1),
+          lat: 0, lng: 0,
+          spotsLeft: 1,
+        });
+      }
+    }
+    // Auto-navigate to active session if user is on map or dashboard after a refresh
+    if (currentScreen === 'map' || currentScreen === 'driverDashboard') {
+      navigate('activeBooking');
     }
   }, [bookings.activeBooking]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -294,6 +301,15 @@ function App() {
       <div className="app-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
         <div style={{ fontSize: 28, fontWeight: 900, color: '#0056D2' }}>Park Now</div>
         <div style={{ width: 32, height: 32, border: '3px solid #E5E5EA', borderTopColor: '#0056D2', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
+
+  // Show onboarding slides on first ever launch
+  if (showOnboarding) {
+    return (
+      <div className="app-frame">
+        <OnboardingView onDone={() => { localStorage.setItem('parkNowOnboarded', '1'); setShowOnboarding(false); }} />
       </div>
     );
   }

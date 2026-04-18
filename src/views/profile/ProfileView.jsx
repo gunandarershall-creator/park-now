@@ -59,7 +59,7 @@ const ProfileView = ({
         </div>
         <div>
           <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>{userMode === 'driver' ? 'Driver Account' : 'Host Account'}</h3>
-          <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || 'test@parknow.com'}</p>
+          <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || ''}</p>
           {regPlate && userMode === 'driver' && (
             <p style={{margin: '4px 0 0 0', color: '#0056D2', fontSize: 12, fontWeight: 700}}>Vehicle: {regPlate.toUpperCase()}</p>
           )}

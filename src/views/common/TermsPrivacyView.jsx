@@ -35,7 +35,7 @@ const TermsPrivacyView = ({ onBack }) => (
       <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>7. Community Safety</h3>
       <p>We maintain a strict code of conduct. All drivers must be respectful and park within the designated lines of the host's property. Any reports of inappropriate behaviour will result in an immediate account review.</p>
 
-      <p style={{color: '#8E8E93', marginTop: 30, fontSize: 12, textAlign: 'center'}}>Last updated: October 2025</p>
+      <p style={{color: '#8E8E93', marginTop: 30, fontSize: 12, textAlign: 'center'}}>Last updated: April 2026</p>
     </div>
   </div>
 );

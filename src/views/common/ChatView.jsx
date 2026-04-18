@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { ArrowLeft, Phone, Send, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle } from 'lucide-react';
 
 const ChatView = ({
   chatContext,
@@ -43,9 +43,6 @@ const ChatView = ({
       <div className="checkout-header" style={{padding: '20px', margin: 0, background: '#fff', zIndex: 10, borderBottom: '1px solid #F2F2F7'}}>
         <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
         <h2 className="checkout-title" style={{paddingRight: 0}}>{chatContext.name}</h2>
-        <button className="close-btn" style={{background: 'transparent'}} onClick={() => showToast('Calling feature coming soon.', 'info')}>
-          <Phone size={20} color="#0056D2" />
-        </button>
       </div>
 
       {/* Messages */}

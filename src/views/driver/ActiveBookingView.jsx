@@ -105,7 +105,11 @@ const ActiveBookingView = ({
       </button>
 
       <button className="primary-btn" style={{background: '#000'}} onClick={onReturnToMap}>Done (Return to Map)</button>
-      <button className="danger-btn" onClick={onEndSession}>End Session Early</button>
+      <button className="danger-btn" onClick={() => {
+        if (window.confirm('End your parking session early? Your booking will be marked as complete.')) {
+          onEndSession();
+        }
+      }}>End Session Early</button>
       <button
         onClick={onCancel}
         style={{width: '100%', background: 'none', border: 'none', color: '#FF3B30', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', padding: '4px 0'}}

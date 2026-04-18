@@ -99,29 +99,48 @@ export const useAuth = (showToast) => {
   };
 
   const handleGoogleSignIn = async () => {
-    // Use redirect only in PWA standalone mode (popups blocked there).
-    // In a regular browser tab (Vercel web), popup is more reliable.
+    // Use redirect only in PWA standalone mode (popups are blocked there).
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
                || window.navigator.standalone === true;
     try {
       if (isPWA) {
         await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
+        return true;
       }
-      return true;
-    } catch (error) {
-      if (error.code === 'auth/popup-blocked') {
-        // Fallback: popup was blocked — switch to redirect
+
+      // Popup flow — resolves immediately when user finishes signing in
+      const result = await signInWithPopup(auth, googleProvider);
+
+      // Save / merge user profile into Firestore
+      if (result?.user) {
         try {
-          await signInWithRedirect(auth, googleProvider);
-          return true;
-        } catch (e2) {
-          showToast('Google Sign-In failed: ' + e2.message, 'error');
-          return false;
+          await saveUser(result.user.uid, {
+            name: result.user.displayName || 'Google User',
+            email: result.user.email,
+            role: 'driver',
+            plate: '',
+            createdAt: new Date().toISOString(),
+          }, true);
+        } catch (err) {
+          console.warn('Could not save Google user to Firestore:', err);
         }
       }
-      showToast('Google Sign-In failed: ' + error.message, 'error');
+      return true;
+
+    } catch (error) {
+      if (error.code === 'auth/popup-blocked') {
+        // Browser blocked popup — fall back to redirect
+        try { await signInWithRedirect(auth, googleProvider); return true; } catch (e2) { /* ignore */ }
+      }
+      if (error.code === 'auth/unauthorized-domain') {
+        showToast('This domain is not authorised. Add it to Firebase → Authentication → Authorized Domains.', 'error');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        showToast('Google Sign-In is not enabled. Turn it on in Firebase → Authentication → Sign-in method.', 'error');
+      } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+        // User closed the popup — not an error
+      } else {
+        showToast('Google Sign-In failed: ' + error.message, 'error');
+      }
       return false;
     }
   };

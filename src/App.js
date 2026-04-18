@@ -164,11 +164,17 @@ function App() {
 
   const handlePayment = async () => {
     setIsPaymentLoading(true);
-    const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
-    setIsPaymentLoading(false);
-    if (success) {
-      navigate('confirmation');
-      notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
+    try {
+      const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
+      if (success) {
+        navigate('confirmation');
+        notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      showToast('Payment failed. Please try again.', 'error');
+    } finally {
+      setIsPaymentLoading(false);
     }
   };
 

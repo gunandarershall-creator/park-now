@@ -61,7 +61,8 @@ export const useBookings = (user, showToast) => {
       );
 
       if (user) {
-        await saveBooking({
+        // Non-blocking — Firestore failure must not freeze the payment spinner
+        saveBooking({
           id: bookingId,
           driverId:    user.uid,
           hostId:      selectedSpot.hostId || 'unknown',
@@ -74,7 +75,7 @@ export const useBookings = (user, showToast) => {
           startTime,
           endTime,
           status:      'confirmed',
-        });
+        }).catch(err => console.warn('Could not persist booking to Firestore:', err));
       }
 
       setActiveBooking({ id: bookingId, endTime, totalPaid: amountToCharge });

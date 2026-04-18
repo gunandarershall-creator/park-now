@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, updateProfile, signInWithRedirect, getRedirectResult, sendPasswordResetEmail
+  signOut, updateProfile, signInWithPopup, signInWithRedirect, getRedirectResult, sendPasswordResetEmail
 } from "firebase/auth";
 import { auth, googleProvider } from '../models/firebase';
 import { saveUser } from '../models/userModel';
@@ -99,10 +99,28 @@ export const useAuth = (showToast) => {
   };
 
   const handleGoogleSignIn = async () => {
+    // Use redirect only in PWA standalone mode (popups blocked there).
+    // In a regular browser tab (Vercel web), popup is more reliable.
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches
+               || window.navigator.standalone === true;
     try {
-      await signInWithRedirect(auth, googleProvider);
+      if (isPWA) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
       return true;
     } catch (error) {
+      if (error.code === 'auth/popup-blocked') {
+        // Fallback: popup was blocked — switch to redirect
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return true;
+        } catch (e2) {
+          showToast('Google Sign-In failed: ' + e2.message, 'error');
+          return false;
+        }
+      }
       showToast('Google Sign-In failed: ' + error.message, 'error');
       return false;
     }

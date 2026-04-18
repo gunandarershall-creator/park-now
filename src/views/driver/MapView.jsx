@@ -434,7 +434,18 @@ const MapView = ({
             );
           })()}
 
-          <button className="primary-btn" onClick={onBookSpot}>Book Spot</button>
+          <button
+            className="primary-btn"
+            onClick={onBookSpot}
+            style={{
+              position: 'sticky', bottom: 0, zIndex: 10,
+              boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
+              margin: '0 -20px', width: 'calc(100% + 40px)',
+              borderRadius: 0, paddingLeft: 20, paddingRight: 20,
+            }}
+          >
+            Book Spot
+          </button>
 
           {spotReviews.length > 0 && (
             <div style={{ marginTop: 16, borderTop: '1px solid #F2F2F7', paddingTop: 16 }}>

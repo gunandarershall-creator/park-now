@@ -167,8 +167,15 @@ function App() {
     try {
       const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots, bookingStartTime);
       if (success) {
-        navigate('confirmation');
         notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
+        // If the booking starts now (or within the past minute), skip confirmation
+        // and go straight to the active session screen.
+        const isImmediate = !bookingStartTime || (() => {
+          const [h, m] = bookingStartTime.split(':').map(Number);
+          const d = new Date(); d.setHours(h, m, 0, 0);
+          return Date.now() >= d.getTime() - 60000; // 1-min grace
+        })();
+        navigate(isImmediate ? 'activeBooking' : 'confirmation');
       }
     } catch (err) {
       console.error('Payment error:', err);
@@ -252,32 +259,39 @@ function App() {
     setIsPublishLoading(false);
   };
 
-  // Restore selectedSpot and navigate to active session after refresh
+  // Restore selectedSpot when activeBooking changes (e.g. after page refresh)
   useEffect(() => {
-    if (!bookings.activeBooking) return;
+    if (!bookings.activeBooking || spots.selectedSpot) return;
     const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
     if (!booking) return;
-    if (!spots.selectedSpot) {
-      const spot = spots.spots.find(s => s.id === booking.spotId);
-      if (spot) {
-        spots.setSelectedSpot(spot);
-      } else {
-        spots.setSelectedSpot({
-          id: booking.spotId,
-          address: booking.address,
-          price: booking.totalPaid / (booking.duration || 1),
-          lat: 0, lng: 0,
-          spotsLeft: 1,
-        });
-      }
-    }
-    // Auto-navigate to active session only once the booking's start time has arrived
-    if (currentScreen === 'map' || currentScreen === 'driverDashboard') {
-      const startTime = bookings.activeBooking?.startTime;
-      const hasStarted = !startTime || new Date() >= new Date(startTime);
-      if (hasStarted) navigate('activeBooking');
-    }
-  }, [bookings.activeBooking]); // eslint-disable-line react-hooks/exhaustive-deps
+    const spot = spots.spots.find(s => s.id === booking.spotId) || {
+      id: booking.spotId,
+      address: booking.address,
+      price: booking.totalPaid / (booking.duration || 1),
+      lat: 0, lng: 0,
+      spotsLeft: 1,
+    };
+    spots.setSelectedSpot(spot);
+  }, [bookings.activeBooking?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-navigate to active session when session is restored on app load
+  useEffect(() => {
+    if (!bookings.isSessionActive || !bookings.activeBooking) return;
+    if (!['map', 'driverDashboard'].includes(currentScreen)) return;
+    const startTime = bookings.activeBooking?.startTime;
+    const hasStarted = !startTime || new Date() >= new Date(startTime);
+    if (hasStarted) navigate('activeBooking');
+  }, [bookings.isSessionActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Timer: auto-navigate to active session when a future booking's start time arrives
+  useEffect(() => {
+    const startTime = bookings.activeBooking?.startTime;
+    if (!startTime) return;
+    const delay = new Date(startTime).getTime() - Date.now();
+    if (delay <= 0) return; // already started — handled by handlePayment
+    const timer = setTimeout(() => navigate('activeBooking'), delay);
+    return () => clearTimeout(timer);
+  }, [bookings.activeBooking?.startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Notify driver when session is about to expire (fires once when warning trips)
   useEffect(() => {
@@ -374,6 +388,10 @@ function App() {
           currentScreen={currentScreen}
           onNavigate={navigate}
           onViewReceipt={(b) => { bookings.setViewingReceipt(b); navigate('pastBookingDetail'); }}
+          upcomingBookings={bookings.myDriverBookings.filter(b =>
+            b.startTime && new Date(b.startTime).getTime() > Date.now()
+          )}
+          onViewUpcoming={() => navigate('confirmation')}
         />
       )}
 
@@ -438,6 +456,7 @@ function App() {
           bookingDuration={bookings.bookingDuration}
           onStartSession={() => navigate('activeBooking')}
           onCancel={handleCancelBooking}
+          onBack={() => navigate('driverDashboard')}
         />
       )}
 

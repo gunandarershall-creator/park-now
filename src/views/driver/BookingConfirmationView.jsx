@@ -1,16 +1,15 @@
 /**
  * VIEW: BookingConfirmationView.jsx
- * Shown immediately after a successful payment.
- * Displays a full receipt breakdown before entering the active session.
+ * Shown immediately after a successful payment for a FUTURE booking.
+ * (Immediate bookings skip this screen and go straight to ActiveBookingView.)
  */
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle, Timer } from 'lucide-react';
+import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle, Timer, ArrowLeft } from 'lucide-react';
 
 const fmt = (isoString) => {
   if (!isoString) return '--:--';
-  const d = new Date(isoString);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const fmtDate = (isoString) => {
@@ -25,13 +24,13 @@ const BookingConfirmationView = ({
   bookingDuration,
   onStartSession,
   onCancel,
+  onBack,
 }) => {
-  const parkingCost  = selectedSpot ? +(selectedSpot.price * bookingDuration).toFixed(2) : 0;
+  const parkingCost   = selectedSpot ? +(selectedSpot.price * bookingDuration).toFixed(2) : 0;
   const insuranceCost = hasInsurance ? 1.50 : 0;
-  const total        = activeBooking?.totalPaid ?? (parkingCost + insuranceCost);
-  const bookingRef   = activeBooking?.id ? activeBooking.id.slice(-8).toUpperCase() : 'PN-000000';
+  const total         = activeBooking?.totalPaid ?? (parkingCost + insuranceCost);
+  const bookingRef    = activeBooking?.id ? activeBooking.id.slice(-8).toUpperCase() : 'PN-000000';
 
-  // Smart future-booking gate — disable start until booked start time arrives
   const [canStart, setCanStart] = useState(() => {
     if (!activeBooking?.startTime) return true;
     return Date.now() >= new Date(activeBooking.startTime).getTime();
@@ -46,7 +45,7 @@ const BookingConfirmationView = ({
       const diff = startMs - Date.now();
       if (diff <= 0) {
         setCanStart(true);
-        onStartSession(); // auto-navigate when time arrives
+        onStartSession();
         return;
       }
       const h = Math.floor(diff / 3600000);
@@ -62,13 +61,27 @@ const BookingConfirmationView = ({
     return () => clearInterval(id);
   }, [canStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isFutureBooking = !canStart;
+
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 30 }}>
+
+      {/* Back button — only shown for future bookings */}
+      {isFutureBooking && onBack && (
+        <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={onBack}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', gap: 6, color: '#8E8E93', fontSize: 14, fontWeight: 500 }}
+          >
+            <ArrowLeft size={18} color="#8E8E93" /> Back to Home
+          </button>
+        </div>
+      )}
 
       {/* Success header */}
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '36px 20px 24px', textAlign: 'center',
+        padding: `${isFutureBooking ? '20px' : '36px'} 20px 24px`, textAlign: 'center',
       }}>
         <div style={{
           background: '#E8F8EE', borderRadius: '50%',
@@ -78,9 +91,7 @@ const BookingConfirmationView = ({
           <CheckCircle size={40} color="#34C759" strokeWidth={2} />
         </div>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Booking Confirmed!</h2>
-        <p style={{ margin: '6px 0 0', color: '#8E8E93', fontSize: 14 }}>
-          Ref: #{bookingRef}
-        </p>
+        <p style={{ margin: '6px 0 0', color: '#8E8E93', fontSize: 14 }}>Ref: #{bookingRef}</p>
       </div>
 
       {/* Spot details */}
@@ -157,6 +168,7 @@ const BookingConfirmationView = ({
 
       {/* CTA */}
       <div style={{ padding: '0 16px' }}>
+        {/* Future-booking countdown card */}
         {!canStart && (
           <div style={{
             textAlign: 'center', background: '#FFF9EC', border: '1px solid #FFE58F',
@@ -188,6 +200,21 @@ const BookingConfirmationView = ({
           Start Parking Session
         </button>
 
+        {/* Escape hatch for future bookings — lets user go back to dashboard */}
+        {!canStart && onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              width: '100%', background: 'none', border: 'none',
+              color: '#0056D2', fontSize: 14, fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 6, marginTop: 14, cursor: 'pointer', padding: '4px 0',
+            }}
+          >
+            Done — I'll come back later
+          </button>
+        )}
+
         <button
           onClick={onCancel}
           style={{
@@ -197,7 +224,7 @@ const BookingConfirmationView = ({
             gap: 6, marginTop: 14, cursor: 'pointer', padding: '4px 0',
           }}
         >
-          <XCircle size={16} /> Cancel Booking & Request Refund
+          <XCircle size={16} /> Cancel Booking &amp; Request Refund
         </button>
       </div>
     </div>

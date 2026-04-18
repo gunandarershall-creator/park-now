@@ -4,8 +4,8 @@
  * Displays a full receipt breakdown before entering the active session.
  */
 
-import React from 'react';
-import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle, Timer } from 'lucide-react';
 
 const fmt = (isoString) => {
   if (!isoString) return '--:--';
@@ -30,6 +30,37 @@ const BookingConfirmationView = ({
   const insuranceCost = hasInsurance ? 1.50 : 0;
   const total        = activeBooking?.totalPaid ?? (parkingCost + insuranceCost);
   const bookingRef   = activeBooking?.id ? activeBooking.id.slice(-8).toUpperCase() : 'PN-000000';
+
+  // Smart future-booking gate — disable start until booked start time arrives
+  const [canStart, setCanStart] = useState(() => {
+    if (!activeBooking?.startTime) return true;
+    return Date.now() >= new Date(activeBooking.startTime).getTime();
+  });
+  const [countdown, setCountdown] = useState('');
+
+  useEffect(() => {
+    if (canStart || !activeBooking?.startTime) return;
+    const startMs = new Date(activeBooking.startTime).getTime();
+
+    const tick = () => {
+      const diff = startMs - Date.now();
+      if (diff <= 0) {
+        setCanStart(true);
+        onStartSession(); // auto-navigate when time arrives
+        return;
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdown(
+        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      );
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [canStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 30 }}>
@@ -126,9 +157,37 @@ const BookingConfirmationView = ({
 
       {/* CTA */}
       <div style={{ padding: '0 16px' }}>
-        <button className="primary-btn" onClick={onStartSession}>
+        {!canStart && (
+          <div style={{
+            textAlign: 'center', background: '#FFF9EC', border: '1px solid #FFE58F',
+            borderRadius: 14, padding: '16px 20px', marginBottom: 14,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#FF9500', marginBottom: 6 }}>
+              <Timer size={16} />
+              <span style={{ fontWeight: 700, fontSize: 13 }}>Booking scheduled</span>
+            </div>
+            <p style={{ margin: 0, color: '#8E8E93', fontSize: 13 }}>Your session begins at</p>
+            <p style={{ margin: '4px 0 6px', fontWeight: 800, fontSize: 24, color: '#0056D2' }}>
+              {fmt(activeBooking?.startTime)}
+            </p>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 20, color: '#FF9500', letterSpacing: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {countdown}
+            </p>
+            <p style={{ margin: '6px 0 0', color: '#8E8E93', fontSize: 12 }}>
+              You'll be taken to your session automatically
+            </p>
+          </div>
+        )}
+
+        <button
+          className="primary-btn"
+          onClick={onStartSession}
+          disabled={!canStart}
+          style={{ opacity: canStart ? 1 : 0.35 }}
+        >
           Start Parking Session
         </button>
+
         <button
           onClick={onCancel}
           style={{

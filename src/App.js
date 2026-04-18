@@ -27,6 +27,7 @@ import { useChat }          from './controllers/useChat';
 import { useNotifications } from './controllers/useNotifications';
 import { usePayout }        from './controllers/usePayout';
 import { getChatId }        from './models/chatModel';
+import { subscribeToReportsForHost } from './models/reportModel';
 
 // --- VIEWS: Shared ---
 import Toast from './views/shared/Toast';
@@ -74,7 +75,8 @@ function App() {
   const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
-  const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map' });
+  const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map', hostId: null });
+  const [hostReports, setHostReports] = useState([]);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -105,8 +107,8 @@ function App() {
     navigate('chat');
   };
 
-  const openReport = (userType, returnScreen, relatedId = null, relatedAddress = null) => {
-    setReportContext({ userType, returnScreen, relatedId, relatedAddress });
+  const openReport = (userType, returnScreen, relatedId = null, relatedAddress = null, hostId = null) => {
+    setReportContext({ userType, returnScreen, relatedId, relatedAddress, hostId });
     navigate('report');
   };
 
@@ -120,6 +122,7 @@ function App() {
         description,
         relatedId: reportContext.relatedId,
         relatedAddress: reportContext.relatedAddress,
+        hostId: reportContext.hostId,
       });
       showToast('Report submitted. Our team will review it within 24 hours.', 'success');
     } catch (err) {
@@ -290,6 +293,13 @@ function App() {
     notifications.notifyNewBooking();
   }, [hostBookingCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Subscribe to reports filed against this host's listings
+  useEffect(() => {
+    if (!auth.user || profile.userMode !== 'host') return;
+    const unsub = subscribeToReportsForHost(auth.user.uid, setHostReports, (err) => console.warn('Reports sync error:', err));
+    return () => unsub();
+  }, [auth.user, profile.userMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-navigate when Firebase restores a saved session
   useEffect(() => {
     if (!auth.authLoading && auth.user && currentScreen === 'login') {
@@ -435,7 +445,7 @@ function App() {
             'activeBooking',
             getChatId(auth.user?.uid, spots.selectedSpot?.hostId, spots.selectedSpot?.id)
           )}
-          onReport={() => openReport('driver', 'activeBooking', spots.selectedSpot?.id, spots.selectedSpot?.address)}
+          onReport={() => openReport('driver', 'activeBooking', spots.selectedSpot?.id, spots.selectedSpot?.address, spots.selectedSpot?.hostId)}
         />
       )}
 
@@ -456,7 +466,8 @@ function App() {
             'driver',
             'pastBookingDetail',
             bookings.viewingReceipt?.id,
-            bookings.viewingReceipt?.address
+            bookings.viewingReceipt?.address,
+            bookings.viewingReceipt?.hostId
           )}
           showToast={showToast}
         />
@@ -468,6 +479,7 @@ function App() {
           myHostEarnings={bookings.myHostEarnings}
           hostListings={host.hostListings}
           allBookings={bookings.bookings}
+          hostReports={hostReports}
           activeHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             b.status === 'confirmed' &&

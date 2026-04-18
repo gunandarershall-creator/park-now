@@ -4,8 +4,14 @@
  */
 
 import React from 'react';
-import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, PlusCircle } from 'lucide-react';
+import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, PlusCircle, AlertTriangle } from 'lucide-react';
 import HostNav from '../shared/HostNav';
+
+const fmtDate = (ts) => {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 const HostDashboardView = ({
   myHostEarnings,
@@ -13,6 +19,7 @@ const HostDashboardView = ({
   allBookings,
   activeHostBookings,
   pastHostBookings,
+  hostReports = [],
   currentScreen,
   onNavigate,
   onToggleListing,
@@ -134,6 +141,40 @@ const HostDashboardView = ({
           </div>
         </div>
       ))
+    )}
+
+    {/* Reports section — only shown if drivers have flagged this host's listings */}
+    {hostReports.length > 0 && (
+      <>
+        <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8}}>
+          <AlertTriangle size={18} color="#FF9500" /> Reports ({hostReports.length})
+        </h3>
+        {hostReports.map(report => (
+          <div key={report.id} style={{
+            background: '#FFF9EC', border: '1px solid #FFE58F', borderRadius: 14,
+            padding: '14px 16px', marginBottom: 10,
+          }}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10}}>
+              <div style={{flex: 1}}>
+                <div style={{fontWeight: 700, fontSize: 14, color: '#1C1C1E'}}>{report.category}</div>
+                {report.relatedAddress && (
+                  <div style={{fontSize: 13, color: '#8E8E93', marginTop: 2}}>{report.relatedAddress}</div>
+                )}
+                {report.description && (
+                  <div style={{fontSize: 13, color: '#3A3A3C', marginTop: 6, lineHeight: 1.4}}>{report.description}</div>
+                )}
+              </div>
+              <div style={{
+                background: '#FF9500', color: 'white', borderRadius: 8,
+                padding: '3px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                {report.status || 'pending'}
+              </div>
+            </div>
+            <div style={{fontSize: 12, color: '#8E8E93', marginTop: 8}}>{fmtDate(report.createdAt)}</div>
+          </div>
+        ))}
+      </>
     )}
 
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>

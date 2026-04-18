@@ -39,8 +39,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     // Update local state immediately
     setHostListings(prev => prev.map(l => l.id === id ? { ...l, isActive: newActive } : l));
     setSpots(prev => prev.map(s => s.id === id ? { ...s, isActive: newActive } : s));
-    // Persist to Firestore (only real spots, not demo)
-    if (!['1', '2', '3'].includes(id)) {
+    // Persist to Firestore (only real spots, not demo seed data)
+    if (!['1', '2', '3', '4', '5'].includes(id)) {
       try {
         await updateSpot(id, { isActive: newActive });
       } catch (e) {
@@ -81,8 +81,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
         ? { ...l, address: newAddress, details: `£${parseFloat(newPrice).toFixed(2)} / hr • ${l.details.split('•')[1]?.trim() || '1 spot'}` }
         : l
     ));
-    // Persist to Firestore (only real spots, not demo)
-    if (!['1', '2', '3'].includes(editingSpotId)) {
+    // Persist to Firestore (only real spots, not demo seed data)
+    if (!['1', '2', '3', '4', '5'].includes(editingSpotId)) {
       try {
         await updateSpot(editingSpotId, updatedFields);
       } catch (e) {
@@ -132,11 +132,23 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
       rating: 5.0,
       distance: 'Local Neighbourhood',
       spotsLeft: 1,
+      isActive: true,
       hostId: user ? user.uid : 'system',
       imageUrl: newImage,
       availFrom,
       availTo,
     };
+
+    // Save to Firestore first — if it fails, surface the error rather than silently losing data
+    try {
+      await saveSpot(newSpotData);
+    } catch (err) {
+      console.error("Failed to save spot to Firestore:", err);
+      showToast('Could not save listing — check your internet connection and try again.', 'error');
+      return;
+    }
+
+    // Only update UI after Firestore confirms the write
     setSpots(prev => [...prev, newSpotData]);
     setHostListings(prev => [...prev, {
       id: newSpotData.id,
@@ -144,11 +156,6 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
       details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
       isActive: true
     }]);
-    try {
-      await saveSpot(newSpotData);
-    } catch (err) {
-      console.error("Failed to push to Firebase.", err);
-    }
     setNewAddress(''); setNewPrice(''); setNewImage(null); setNewCoords(null);
     showToast('Spot listed successfully!', 'success');
     setCurrentScreen('map');

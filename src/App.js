@@ -512,6 +512,7 @@ function App() {
       {currentScreen === 'hostDashboard' && (
         <HostDashboardView
           myHostEarnings={bookings.myHostEarnings}
+          availableBalance={payout.availableBalance}
           hostListings={host.hostListings}
           allBookings={bookings.bookings}
           hostReports={hostReports}
@@ -569,7 +570,9 @@ function App() {
 
       {currentScreen === 'payout' && (
         <PayoutView
-          earnings={bookings.myHostEarnings}
+          availableBalance={payout.availableBalance}
+          totalEarnings={bookings.myHostEarnings}
+          hostBookings={bookings.bookings.filter(b => b.hostId === auth.user?.uid)}
           payouts={payout.payouts}
           onRequestPayout={() => payout.handleRequestPayout(showToast)}
           isRequesting={payout.isRequesting}

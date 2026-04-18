@@ -15,6 +15,7 @@ const fmtDate = (ts) => {
 
 const HostDashboardView = ({
   myHostEarnings,
+  availableBalance,
   hostListings,
   allBookings,
   activeHostBookings,
@@ -35,8 +36,13 @@ const HostDashboardView = ({
     </div>
 
     <div className="earnings-card">
-      <p className="earnings-title">Total Earnings</p>
-      <p className="earnings-amount">£{myHostEarnings.toFixed(2)}</p>
+      <p className="earnings-title">Available Balance</p>
+      <p className="earnings-amount">£{(availableBalance ?? myHostEarnings).toFixed(2)}</p>
+      {availableBalance !== undefined && myHostEarnings > availableBalance && (
+        <p style={{margin: '4px 0 0', fontSize: 13, opacity: 0.8}}>
+          Total earned: £{myHostEarnings.toFixed(2)}
+        </p>
+      )}
       <button
         onClick={onRequestPayout}
         style={{marginTop: 12, background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.6)', color: 'white', borderRadius: 10, padding: '8px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer'}}

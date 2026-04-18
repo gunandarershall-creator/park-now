@@ -108,7 +108,11 @@ const AddSpotView = ({
     <div className="screen" style={{ overflowY: 'auto' }}>
       <div className="checkout-header" style={{ marginTop: 10 }}>
         <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
-        <h2 className="checkout-title">List Driveway</h2>
+        <h2 className="checkout-title">List Your Driveway</h2>
+      </div>
+
+      <div style={{ background: '#E6F0FF', borderRadius: 12, padding: '10px 14px', margin: '0 0 12px', fontSize: 13, color: '#0056D2', fontWeight: 500 }}>
+        🏠 Driveways and private parking spaces only — commercial garages and car parks are not permitted.
       </div>
 
       <form onSubmit={onSubmit}>

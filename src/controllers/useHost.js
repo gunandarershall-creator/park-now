@@ -167,9 +167,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
       return;
     }
 
-    // Only update UI after Firestore confirms the write
-    // Note: hostListings is auto-derived from spots via useEffect — don't add it manually here
-    setSpots(prev => [...prev, newSpotData]);
+    // Don't manually update spots — the Firestore onSnapshot listener fires immediately
+    // from local cache and updates spots automatically, avoiding duplicates
     setNewAddress(''); setNewPrice(''); setNewImage(null); setNewCoords(null);
     showToast('Spot listed successfully!', 'success');
     setCurrentScreen('hostDashboard');

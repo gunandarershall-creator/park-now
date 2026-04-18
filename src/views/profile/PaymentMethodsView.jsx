@@ -6,14 +6,14 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Plus, Trash2 } from 'lucide-react';
 
-const PaymentMethodsView = ({ cards = [], onAddCard, onDeleteCard, onSetDefault }) => {
+const PaymentMethodsView = ({ cards = [], onBack, onAddCard, onDeleteCard, onSetDefault }) => {
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 40 }}>
       <div className="checkout-header" style={{ marginTop: 10 }}>
-        <button className="close-btn" onClick={onAddCard ? undefined : null}>
-          <ArrowLeft size={20} color="#000" onClick={() => window.history.back()} />
+        <button className="close-btn" onClick={onBack}>
+          <ArrowLeft size={20} color="#000" />
         </button>
         <h2 className="checkout-title">Payment Methods</h2>
       </div>

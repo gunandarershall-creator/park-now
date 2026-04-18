@@ -76,7 +76,7 @@ const ChatView = ({
             );
 
             return (
-              <div key={msg.id}>
+              <div key={msg.id} style={{ display: 'flex', flexDirection: 'column' }}>
                 {showTime && msg.timestamp && (
                   <div style={{textAlign: 'center', color: '#8E8E93', fontSize: 12, margin: '10px 0'}}>
                     {formatTime(msg.timestamp)}

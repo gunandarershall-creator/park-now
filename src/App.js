@@ -141,11 +141,6 @@ function App() {
     if (success) navigate('map');
   };
 
-  const handleGoogleSuccess = async () => {
-    setIsAuthLoading(true);
-    await auth.handleGoogleSignIn();
-    setIsAuthLoading(false);
-  };
 
   const handleResetSuccess = async (e) => {
     const success = await auth.handleResetPassword(e);
@@ -295,7 +290,6 @@ function App() {
           email={auth.email} setEmail={auth.setEmail}
           password={auth.password} setPassword={auth.setPassword}
           onLogin={handleLoginSuccess}
-          onGoogleSignIn={handleGoogleSuccess}
           onForgotPassword={() => navigate('forgotPassword')}
           onRegister={() => navigate('register')}
           isLoading={isAuthLoading}
@@ -309,7 +303,6 @@ function App() {
           regName={profile.regName} setRegName={profile.setRegName}
           regPlate={profile.regPlate} setRegPlate={profile.setRegPlate}
           onRegister={handleRegisterSuccess}
-          onGoogleSignIn={handleGoogleSuccess}
           onBack={() => navigate('login')}
           isLoading={isAuthLoading}
         />

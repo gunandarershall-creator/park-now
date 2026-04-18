@@ -8,7 +8,7 @@ import {
   addDoc, deleteDoc, updateDoc,
   doc, onSnapshot, query, where,
 } from 'firebase/firestore';
-import { db, getCardsRef } from './firebase';
+import { getCardsRef } from './firebase';
 
 export const saveCard = async (userId, cardData) => {
   return addDoc(getCardsRef(), { ...cardData, userId });

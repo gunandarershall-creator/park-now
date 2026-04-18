@@ -5,7 +5,7 @@
  */
 
 import { addDoc, updateDoc, onSnapshot, query, where, serverTimestamp, doc } from 'firebase/firestore';
-import { db, getPayoutsRef } from './firebase';
+import { getPayoutsRef } from './firebase';
 
 export const requestPayout = async (userId, amount) => {
   await addDoc(getPayoutsRef(), {

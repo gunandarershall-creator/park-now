@@ -3,7 +3,7 @@
  * Saves user-submitted reports to Firestore.
  */
 
-import { db, getReportsRef } from './firebase';
+import { getReportsRef } from './firebase';
 import { addDoc, serverTimestamp, query, where, onSnapshot } from 'firebase/firestore';
 
 /**

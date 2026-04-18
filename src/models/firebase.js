@@ -39,17 +39,14 @@ try {
 export { db, auth, messaging };
 
 // Collection reference helpers — resolves correct path based on environment
-export const getSpotsRef = () =>
-  typeof window !== 'undefined' && window.__app_id
-    ? collection(db, 'artifacts', rawAppId, 'public', 'data', 'spots')
-    : collection(db, 'spots');
+export const getSpotsRef    = () => collection(db, 'spots');
+export const getBookingsRef = () => collection(db, 'bookings');
+export const getPayoutsRef  = () => collection(db, 'payouts');
+export const getCardsRef    = () => collection(db, 'cards');
+export const getReportsRef  = () => collection(db, 'reports');
 
-export const getBookingsRef = () =>
-  typeof window !== 'undefined' && window.__app_id
-    ? collection(db, 'artifacts', rawAppId, 'public', 'data', 'bookings')
-    : collection(db, 'bookings');
+export const getUserDocRef  = (uid) => doc(db, 'users', uid);
 
-export const getUserDocRef = (uid) =>
-  typeof window !== 'undefined' && window.__app_id
-    ? doc(db, 'artifacts', rawAppId, 'users', uid)
-    : doc(db, 'users', uid);
+/** Chat subcollection: /chats/{chatId}/messages */
+export const getChatMessagesRef = (chatId) =>
+  collection(db, 'chats', chatId, 'messages');

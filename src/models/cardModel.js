@@ -6,11 +6,9 @@
 
 import {
   addDoc, deleteDoc, updateDoc,
-  doc, collection, onSnapshot, query, where,
+  doc, onSnapshot, query, where,
 } from 'firebase/firestore';
-import { db } from './firebase';
-
-const getCardsRef = () => collection(db, 'cards');
+import { db, getCardsRef } from './firebase';
 
 export const saveCard = async (userId, cardData) => {
   return addDoc(getCardsRef(), { ...cardData, userId });

@@ -4,10 +4,8 @@
  * No React state — just data access.
  */
 
-import { addDoc, updateDoc, collection, onSnapshot, query, where, serverTimestamp, doc } from 'firebase/firestore';
-import { db } from './firebase';
-
-const getPayoutsRef = () => collection(db, 'payouts');
+import { addDoc, updateDoc, onSnapshot, query, where, serverTimestamp, doc } from 'firebase/firestore';
+import { db, getPayoutsRef } from './firebase';
 
 export const requestPayout = async (userId, amount) => {
   await addDoc(getPayoutsRef(), {

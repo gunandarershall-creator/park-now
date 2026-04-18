@@ -26,6 +26,7 @@ import { useSessionTimer } from './controllers/useSessionTimer';
 import { useChat }          from './controllers/useChat';
 import { useNotifications } from './controllers/useNotifications';
 import { usePayout }        from './controllers/usePayout';
+import { useCards }         from './controllers/useCards';
 import { getChatId }        from './models/chatModel';
 import { subscribeToReportsForHost } from './models/reportModel';
 
@@ -98,6 +99,7 @@ function App() {
   const chat          = useChat(chatContext.chatId, auth.user?.uid, showToast);
   const notifications = useNotifications(auth.user);
   const payout        = usePayout(auth.user, bookings.myHostEarnings);
+  const cards         = useCards(auth.user, showToast);
 
   // --- NAVIGATION HELPERS ---
   const navigate = (screen) => setCurrentScreen(screen);
@@ -168,14 +170,20 @@ function App() {
       const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots, bookingStartTime);
       if (success) {
         notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
-        // If the booking starts now (or within the past minute), skip confirmation
-        // and go straight to the active session screen.
+        // Check whether the booking starts now or in the future
         const isImmediate = !bookingStartTime || (() => {
           const [h, m] = bookingStartTime.split(':').map(Number);
           const d = new Date(); d.setHours(h, m, 0, 0);
-          return Date.now() >= d.getTime() - 60000; // 1-min grace
+          return Date.now() >= d.getTime() - 120000; // 2-min grace window
         })();
-        navigate(isImmediate ? 'activeBooking' : 'confirmation');
+        if (isImmediate) {
+          // Start right away — no confirmation screen needed
+          navigate('activeBooking');
+        } else {
+          // Future booking — land in Activity so user can see "Upcoming" section
+          showToast('Booking confirmed! Check your upcoming bookings.', 'success');
+          navigate('driverDashboard');
+        }
       }
     } catch (err) {
       console.error('Payment error:', err);
@@ -391,7 +399,26 @@ function App() {
           upcomingBookings={bookings.myDriverBookings.filter(b =>
             b.startTime && new Date(b.startTime).getTime() > Date.now()
           )}
-          onViewUpcoming={() => navigate('confirmation')}
+          onViewUpcoming={(b) => {
+            // Restore selectedSpot so the confirmation screen can render
+            if (!spots.selectedSpot || spots.selectedSpot.id !== b.spotId) {
+              const spot = spots.spots.find(s => s.id === b.spotId) || {
+                id: b.spotId, address: b.address,
+                price: b.totalPaid / (b.duration || 1),
+                lat: 0, lng: 0, spotsLeft: 1,
+                hostId: b.hostId,
+              };
+              spots.setSelectedSpot(spot);
+            }
+            // Make sure activeBooking reflects this upcoming booking
+            if (!bookings.activeBooking || bookings.activeBooking.id !== b.id) {
+              bookings.setActiveBooking({
+                id: b.id, startTime: b.startTime,
+                endTime: b.endTime, totalPaid: b.totalPaid,
+              });
+            }
+            navigate('confirmation');
+          }}
         />
       )}
 
@@ -617,14 +644,19 @@ function App() {
 
       {currentScreen === 'paymentMethods' && (
         <PaymentMethodsView
+          cards={cards.cards}
           onBack={() => navigate(paymentReturnScreen)}
           onAddCard={() => navigate('addCard')}
-          showToast={showToast}
+          onDeleteCard={cards.removeCard}
+          onSetDefault={cards.setDefaultCard}
         />
       )}
 
       {currentScreen === 'addCard' && (
-        <AddCardView onBack={() => navigate('paymentMethods')} showToast={showToast} />
+        <AddCardView
+          onBack={() => navigate('paymentMethods')}
+          onSave={cards.addCard}
+        />
       )}
 
       {currentScreen === 'notifications' && (

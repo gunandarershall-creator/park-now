@@ -1,43 +1,20 @@
 /**
  * VIEW: PaymentMethodsView.jsx
- * Saved cards list with option to add or delete cards.
+ * Saved cards list — data comes from Firebase via useCards hook in App.js.
  */
 
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Plus, Trash2 } from 'lucide-react';
 
-const INITIAL_CARDS = [
-  { id: 1, label: 'Personal Visa',       last4: '4242', isDefault: true  },
-  { id: 2, label: 'Business Mastercard', last4: '8899', isDefault: false },
-];
-
-const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
-  const [cards, setCards] = useState(INITIAL_CARDS);
-  const [confirmDelete, setConfirmDelete] = useState(null); // id of card pending delete
-
-  const handleDelete = (id) => {
-    setCards(prev => {
-      const remaining = prev.filter(c => c.id !== id);
-      // If we deleted the default card, promote the first remaining card
-      const deletedWasDefault = prev.find(c => c.id === id)?.isDefault;
-      if (deletedWasDefault && remaining.length > 0) {
-        remaining[0] = { ...remaining[0], isDefault: true };
-      }
-      return remaining;
-    });
-    setConfirmDelete(null);
-    showToast('Card removed.', 'success');
-  };
-
-  const handleSetDefault = (id) => {
-    setCards(prev => prev.map(c => ({ ...c, isDefault: c.id === id })));
-    showToast('Default card updated.', 'success');
-  };
+const PaymentMethodsView = ({ cards = [], onAddCard, onDeleteCard, onSetDefault }) => {
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 40 }}>
       <div className="checkout-header" style={{ marginTop: 10 }}>
-        <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
+        <button className="close-btn" onClick={onAddCard ? undefined : null}>
+          <ArrowLeft size={20} color="#000" onClick={() => window.history.back()} />
+        </button>
         <h2 className="checkout-title">Payment Methods</h2>
       </div>
 
@@ -45,22 +22,25 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
 
       {cards.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#8E8E93', padding: '32px 20px', fontSize: 14 }}>
-          No saved cards. Add one below.
+          No saved cards yet. Add one below.
         </div>
       ) : (
         <div className="ios-input-group">
           {cards.map((card, idx) => (
             <div key={card.id}>
               <div className="settings-row" style={{ alignItems: 'center' }}>
-                {/* Card info — tap to set as default if not already */}
+                {/* Tap to set as default */}
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, cursor: card.isDefault ? 'default' : 'pointer' }}
-                  onClick={() => !card.isDefault && handleSetDefault(card.id)}
+                  onClick={() => !card.isDefault && onSetDefault && onSetDefault(card.id)}
                 >
                   <CreditCard size={20} color={card.isDefault ? '#0056D2' : '#8E8E93'} />
                   <div>
                     <span style={{ fontWeight: 500, display: 'block', marginBottom: 2 }}>{card.label}</span>
-                    <span style={{ fontSize: 13, color: '#8E8E93' }}>**** **** **** {card.last4}</span>
+                    <span style={{ fontSize: 13, color: '#8E8E93' }}>
+                      **** **** **** {card.last4}
+                      {card.expiry ? `  ·  ${card.expiry}` : ''}
+                    </span>
                   </div>
                 </div>
 
@@ -72,7 +52,7 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
                   )}
                   <button
                     onClick={() => setConfirmDelete(card.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
                   >
                     <Trash2 size={18} color="#FF3B30" />
                   </button>
@@ -84,11 +64,9 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
                 <div style={{
                   background: '#FFF5F5', borderTop: '1px solid #FFD0CE',
                   padding: '12px 16px', display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between', gap: 12,
+                  justifyContent: 'space-between',
                 }}>
-                  <span style={{ fontSize: 13, color: '#FF3B30', fontWeight: 500 }}>
-                    Remove this card?
-                  </span>
+                  <span style={{ fontSize: 13, color: '#FF3B30', fontWeight: 500 }}>Remove this card?</span>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button
                       onClick={() => setConfirmDelete(null)}
@@ -97,7 +75,7 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
                       Cancel
                     </button>
                     <button
-                      onClick={() => handleDelete(card.id)}
+                      onClick={() => { onDeleteCard && onDeleteCard(card.id); setConfirmDelete(null); }}
                       style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#FF3B30', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
                     >
                       Remove
@@ -114,10 +92,10 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
         </div>
       )}
 
-      {!cards.every(c => c.isDefault) && cards.length > 1 && (
-        <div style={{ fontSize: 12, color: '#8E8E93', padding: '6px 16px' }}>
+      {cards.length > 1 && (
+        <p style={{ fontSize: 12, color: '#8E8E93', padding: '6px 16px' }}>
           Tap a card to set it as default.
-        </div>
+        </p>
       )}
 
       <div className="settings-section-title" style={{ marginTop: 25 }}>Add New</div>
@@ -125,7 +103,7 @@ const PaymentMethodsView = ({ onBack, onAddCard, showToast }) => {
         <div className="settings-row" onClick={onAddCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#0056D2' }}>
             <Plus size={20} />
-            <span style={{ fontWeight: 500 }}>Enter Card Details Manually</span>
+            <span style={{ fontWeight: 500 }}>Enter Card Details</span>
           </div>
         </div>
       </div>

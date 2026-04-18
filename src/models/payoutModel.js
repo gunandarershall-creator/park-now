@@ -4,7 +4,7 @@
  * No React state — just data access.
  */
 
-import { addDoc, collection, onSnapshot, query, where, serverTimestamp } from 'firebase/firestore';
+import { addDoc, updateDoc, collection, onSnapshot, query, where, serverTimestamp, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
 const getPayoutsRef = () => collection(db, 'payouts');
@@ -16,6 +16,10 @@ export const requestPayout = async (userId, amount) => {
     status: 'pending',
     requestedAt: serverTimestamp(),
   });
+};
+
+export const completePayout = async (payoutId) => {
+  await updateDoc(doc(getPayoutsRef(), payoutId), { status: 'completed' });
 };
 
 /**

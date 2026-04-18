@@ -53,8 +53,9 @@ export const useBookings = (user, showToast) => {
   }, [bookings, user]);
 
   // Derived state: bookings belonging to this driver, sorted newest first
+  // Exclude demo/seed spot bookings (hostId: 'demo' or 'system') made during testing
   const myDriverBookings = bookings
-    .filter(b => b.driverId === user?.uid)
+    .filter(b => b.driverId === user?.uid && b.hostId !== 'demo' && b.hostId !== 'system')
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   // Derived state: total earnings for this host

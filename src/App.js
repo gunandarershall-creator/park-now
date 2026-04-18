@@ -286,11 +286,13 @@ function App() {
     }
   }, [session.isWarning]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Notify host when a new booking comes in for their spot
-  const hostBookingCount = bookings.bookings.filter(b => b.hostId === auth.user?.uid && b.status === 'confirmed').length;
+  // Notify host when a new booking comes in for their spot — only fires in host mode
+  const myHostBookings = bookings.bookings.filter(b => b.hostId === auth.user?.uid && b.status === 'confirmed');
+  const hostBookingCount = myHostBookings.length;
   useEffect(() => {
-    if (!auth.user || hostBookingCount === 0) return;
-    notifications.notifyNewBooking();
+    if (!auth.user || hostBookingCount === 0 || profile.userMode !== 'host') return;
+    const latest = [...myHostBookings].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+    notifications.notifyNewBooking(latest?.address);
   }, [hostBookingCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to reports filed against this host's listings

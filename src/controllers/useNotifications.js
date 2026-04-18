@@ -22,7 +22,7 @@ export const useNotifications = (user) => {
 
   const notifyBookingConfirmed = useCallback((address) => {
     fireNotifyBookingConfirmed(address);
-    addToHistory('booking', 'Booking Confirmed', `Your spot at ${address} is booked.`);
+    addToHistory('booking', 'Booking Confirmed', `Your booking at ${address} is confirmed.`);
   }, [addToHistory]);
 
   const notifyExpiryWarning = useCallback((address, minutesLeft) => {

@@ -168,20 +168,11 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     }
 
     // Only update UI after Firestore confirms the write
+    // Note: hostListings is auto-derived from spots via useEffect — don't add it manually here
     setSpots(prev => [...prev, newSpotData]);
-    setHostListings(prev => [...prev, {
-      id: newSpotData.id,
-      address: newAddress,
-      details: `£${parseFloat(newPrice).toFixed(2)} / hr • 1 spot`,
-      isActive: true
-    }]);
     setNewAddress(''); setNewPrice(''); setNewImage(null); setNewCoords(null);
     showToast('Spot listed successfully!', 'success');
-    setCurrentScreen('map');
-    setSearchQuery(newAddress);
-    setTimeout(() => {
-      if (panTo) panTo(actualLat, actualLng, 15);
-    }, 300);
+    setCurrentScreen('hostDashboard');
   };
 
   const resetSpotForm = () => {

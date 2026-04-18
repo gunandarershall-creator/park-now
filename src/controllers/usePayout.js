@@ -14,7 +14,11 @@ export const usePayout = (user, earnings) => {
   useEffect(() => {
     if (!user) return;
     try {
-      const unsubscribe = subscribeToPayouts(user.uid, (docs) => setPayouts(docs));
+      const unsubscribe = subscribeToPayouts(
+        user.uid,
+        (docs) => setPayouts(docs),
+        (err) => console.error('Payout listener error:', err),
+      );
       return () => unsubscribe();
     } catch (e) {
       console.error('Payout sync error:', e);

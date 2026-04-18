@@ -4,9 +4,8 @@
  * No React state — just data access.
  */
 
-import { addDoc, collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
-import { db } from "./firebase";
-import { serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query, where, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase';
 
 const getPayoutsRef = () => collection(db, 'payouts');
 
@@ -19,14 +18,25 @@ export const requestPayout = async (userId, amount) => {
   });
 };
 
-export const subscribeToPayouts = (userId, onData) => {
-  const q = query(
-    getPayoutsRef(),
-    where('userId', '==', userId),
-    orderBy('requestedAt', 'desc')
+/**
+ * Subscribe to all payouts for a user.
+ * Sorting is done in JS to avoid needing a Firestore composite index
+ * on (userId, requestedAt).
+ */
+export const subscribeToPayouts = (userId, onData, onError) => {
+  const q = query(getPayoutsRef(), where('userId', '==', userId));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const docs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const toMs = (ts) =>
+            ts?.toDate ? ts.toDate().getTime() : ts ? new Date(ts).getTime() : 0;
+          return toMs(b.requestedAt) - toMs(a.requestedAt); // newest first
+        });
+      onData(docs);
+    },
+    onError,
   );
-  return onSnapshot(q, (snap) => {
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    onData(docs);
-  });
 };

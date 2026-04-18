@@ -30,12 +30,20 @@ import { db, getSpotsRef, getBookingsRef } from "./firebase";
  * @param {boolean} hasInsurance    - Whether driver opted into £1.50 insurance
  * @returns {object} { bookingId, newSpotsLeft, amountToCharge, startTime, endTime }
  */
-export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsurance }) => {
+export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsurance, bookingStartTime }) => {
   const spotRef  = doc(getSpotsRef(), spot.id);
   const bookingId  = `${Date.now()}-${user.uid.slice(0, 6)}`;
   const bookingRef = doc(getBookingsRef(), bookingId);
 
-  const startTime = new Date();
+  // Use driver-selected start time if provided, otherwise default to now
+  const startTime = (() => {
+    const d = new Date();
+    if (bookingStartTime) {
+      const [h, m] = bookingStartTime.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
+    }
+    return d;
+  })();
   const endTime   = new Date(startTime.getTime() + bookingDuration * 3600 * 1000);
   const amountToCharge = +(spot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
 

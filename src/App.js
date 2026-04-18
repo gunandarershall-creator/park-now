@@ -159,10 +159,10 @@ function App() {
     navigate(mode === 'host' ? 'hostDashboard' : 'map');
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (bookingStartTime) => {
     setIsPaymentLoading(true);
     try {
-      const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots);
+      const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots, bookingStartTime);
       if (success) {
         navigate('confirmation');
         notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
@@ -268,9 +268,11 @@ function App() {
         });
       }
     }
-    // Auto-navigate to active session if user is on map or dashboard after a refresh
+    // Auto-navigate to active session only once the booking's start time has arrived
     if (currentScreen === 'map' || currentScreen === 'driverDashboard') {
-      navigate('activeBooking');
+      const startTime = bookings.activeBooking?.startTime;
+      const hasStarted = !startTime || new Date() >= new Date(startTime);
+      if (hasStarted) navigate('activeBooking');
     }
   }, [bookings.activeBooking]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -426,6 +428,7 @@ function App() {
           isWarning={session.isWarning}
           isExpired={session.isExpired}
           bookingId={bookings.activeBooking?.id ?? null}
+          endTime={bookings.activeBooking?.endTime ?? null}
           onReturnToMap={() => navigate('map')}
           onMessageHost={() => openChat(
             `Host (${spots.selectedSpot.address})`,

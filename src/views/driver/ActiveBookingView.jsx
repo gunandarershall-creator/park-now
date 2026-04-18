@@ -10,6 +10,11 @@ const Spinner = () => (
   <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
 );
 
+const fmtTime = (isoString) => {
+  if (!isoString) return null;
+  return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 const ActiveBookingView = ({
   selectedSpot,
   hasInsurance,
@@ -25,6 +30,7 @@ const ActiveBookingView = ({
   isWarning,
   isExpired,
   bookingId,
+  endTime,
 }) => (
   <div className="screen" style={{paddingBottom: 20, overflowY: 'auto'}}>
     <div className="checkout-header" style={{borderBottom: 'none', justifyContent: 'center'}}>
@@ -41,6 +47,15 @@ const ActiveBookingView = ({
       >
         {timeDisplay || '00:00:00'}
       </div>
+      {fmtTime(endTime) && (
+        <div style={{
+          fontSize: 14, fontWeight: 700, opacity: 0.9,
+          background: 'rgba(255,255,255,0.15)', borderRadius: 10,
+          padding: '5px 14px', display: 'inline-block', marginTop: 4,
+        }}>
+          Ends at {fmtTime(endTime)}
+        </div>
+      )}
       <div className="qr-box"><QrCode size={100} color="#0056D2" /></div>
       <p style={{fontSize: 14, opacity: 0.9, margin: 0}}>
         Scan this QR code at the barrier to enter and exit <b>{selectedSpot.address}</b>.

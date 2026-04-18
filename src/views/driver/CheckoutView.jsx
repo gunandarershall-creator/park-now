@@ -19,11 +19,22 @@ const CheckoutView = ({
   onChangePaymentMethod,
   isLoading,
 }) => {
-  const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const startStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const end = new Date(now.getTime() + bookingDuration * 60 * 60 * 1000);
-  const endStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+  // Local start time state — default to right now
+  const [bookingStartTime, setBookingStartTime] = React.useState(() => {
+    const now = new Date();
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
+
+  // Compute end time string dynamically from chosen start + duration
+  const computeEndStr = (startStr, durationHrs) => {
+    const [h, m] = startStr.split(':').map(Number);
+    const endDate = new Date();
+    endDate.setHours(h, m + durationHrs * 60, 0, 0);
+    return `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+  };
+  const endStr = computeEndStr(bookingStartTime, bookingDuration);
 
   return (
   <div className="screen" style={{overflowY: 'auto'}}>
@@ -35,7 +46,21 @@ const CheckoutView = ({
     <div className="receipt-box">
       <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
       <div className="receipt-row"><span style={{color: '#8E8E93'}}>Date</span><span>Today</span></div>
-      <div className="receipt-row"><span style={{color: '#8E8E93'}}>Time</span><span>{startStr} – {endStr}</span></div>
+
+      {/* Start time picker */}
+      <div className="receipt-row" style={{alignItems: 'center'}}>
+        <span style={{color: '#8E8E93'}}>Start Time</span>
+        <input
+          type="time"
+          value={bookingStartTime}
+          onChange={(e) => setBookingStartTime(e.target.value)}
+          style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+        />
+      </div>
+      <div className="receipt-row">
+        <span style={{color: '#8E8E93'}}>End Time</span>
+        <span style={{fontWeight: 600}}>{endStr}</span>
+      </div>
 
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Duration</span>
@@ -88,7 +113,7 @@ const CheckoutView = ({
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 
-    <button className="apple-pay-btn" onClick={onPayment} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+    <button className="apple-pay-btn" onClick={() => onPayment(bookingStartTime)} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
       {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
     </button>
 

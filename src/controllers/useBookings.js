@@ -46,7 +46,7 @@ export const useBookings = (user, showToast) => {
     );
 
     if (liveBooking) {
-      setActiveBooking({ id: liveBooking.id, endTime: liveBooking.endTime, totalPaid: liveBooking.totalPaid });
+      setActiveBooking({ id: liveBooking.id, startTime: liveBooking.startTime, endTime: liveBooking.endTime, totalPaid: liveBooking.totalPaid });
       setIsSessionActive(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,18 +62,29 @@ export const useBookings = (user, showToast) => {
     .filter(b => b.hostId === user?.uid)
     .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
 
-  const handlePayment = async (selectedSpot, setSpots) => {
+  const handlePayment = async (selectedSpot, setSpots, bookingStartTime) => {
     if (!selectedSpot) return;
 
-    const isDemoSpot = ['1', '2', '3'].includes(selectedSpot.id);
+    // Parse user-selected start time (HH:MM) → actual Date for today
+    const parseStartTime = (timeStr) => {
+      const d = new Date();
+      if (timeStr) {
+        const [h, m] = timeStr.split(':').map(Number);
+        d.setHours(h, m, 0, 0);
+      }
+      return d;
+    };
+
+    const isDemoSpot = ['1', '2', '3', '4', '5'].includes(selectedSpot.id);
 
     if (isDemoSpot) {
       // ── Demo spots: simple optimistic update (not in Firestore) ──────────────
       const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
       const amountToCharge = +(selectedSpot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
       const bookingId = Date.now().toString();
-      const startTime = new Date().toISOString();
-      const endTime   = new Date(Date.now() + bookingDuration * 3600000).toISOString();
+      const startDate = parseStartTime(bookingStartTime);
+      const startTime = startDate.toISOString();
+      const endTime   = new Date(startDate.getTime() + bookingDuration * 3600000).toISOString();
 
       setSpots(prev =>
         updatedSpotsLeft <= 0
@@ -99,15 +110,16 @@ export const useBookings = (user, showToast) => {
         }).catch(err => console.warn('Could not persist booking to Firestore:', err));
       }
 
-      setActiveBooking({ id: bookingId, endTime, totalPaid: amountToCharge });
+      setActiveBooking({ id: bookingId, startTime, endTime, totalPaid: amountToCharge });
     } else {
       // ── Real spots: Hybrid OCC transaction (concurrency-safe) ────────────────
       try {
-        const { bookingId, newSpotsLeft, amountToCharge, endTime } = await bookSpotAtomically({
+        const { bookingId, newSpotsLeft, amountToCharge, startTime, endTime } = await bookSpotAtomically({
           spot: selectedSpot,
           user,
           bookingDuration,
           hasInsurance,
+          bookingStartTime,
         });
 
         // Mirror confirmed server state into local UI
@@ -117,7 +129,7 @@ export const useBookings = (user, showToast) => {
             : prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: newSpotsLeft } : s)
         );
 
-        setActiveBooking({ id: bookingId, endTime: endTime.toISOString(), totalPaid: amountToCharge });
+        setActiveBooking({ id: bookingId, startTime: startTime.toISOString(), endTime: endTime.toISOString(), totalPaid: amountToCharge });
       } catch (err) {
         const msg =
           err.code === 'SPOT_NOT_FOUND'   ? "This spot no longer exists — it may have been removed by the host." :

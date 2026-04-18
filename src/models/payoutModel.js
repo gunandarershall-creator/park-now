@@ -17,7 +17,10 @@ export const requestPayout = async (userId, amount) => {
 };
 
 export const completePayout = async (payoutId) => {
-  await updateDoc(doc(getPayoutsRef(), payoutId), { status: 'completed' });
+  await updateDoc(doc(getPayoutsRef(), payoutId), {
+    status: 'completed',
+    completedAt: serverTimestamp(),
+  });
 };
 
 /**

@@ -604,7 +604,12 @@ function App() {
         <PayoutView
           availableBalance={payout.availableBalance}
           totalEarnings={bookings.myHostEarnings}
-          hostBookings={bookings.bookings.filter(b => b.hostId === auth.user?.uid)}
+          hostBookings={bookings.bookings.filter(b =>
+            b.hostId === auth.user?.uid &&
+            b.status !== 'cancelled' &&
+            b.endTime &&
+            new Date(b.endTime) <= new Date()
+          )}
           payouts={payout.payouts}
           onRequestPayout={() => payout.handleRequestPayout(showToast)}
           isRequesting={payout.isRequesting}

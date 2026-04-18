@@ -296,17 +296,31 @@ const PayoutView = ({
                 borderLeft: `4px solid ${p.status === 'pending' ? '#FF9500' : '#34C759'}`,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1C1C1E' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: 20, color: '#1C1C1E' }}>
                     £{(p.amount || 0).toFixed(2)}
                   </div>
-                  <div style={{ color: '#8E8E93', fontSize: 13, marginTop: 3 }}>
+
+                  <div style={{ color: '#8E8E93', fontSize: 13, marginTop: 4 }}>
                     Requested {fmtDate(p.requestedAt)}
                   </div>
-                  {p.status === 'pending' && (
-                    <div style={{ color: '#FF9500', fontSize: 12, marginTop: 3, fontWeight: 500 }}>
-                      Expected in 3–5 business days
+
+                  {p.status === 'pending' ? (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: '#FFF3E0', borderRadius: 8, padding: '4px 10px',
+                      marginTop: 8, fontSize: 12, color: '#FF9500', fontWeight: 600,
+                    }}>
+                      <Clock size={12} /> Expected in 3–5 business days
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: '#E8F8EE', borderRadius: 8, padding: '4px 10px',
+                      marginTop: 8, fontSize: 12, color: '#34C759', fontWeight: 600,
+                    }}>
+                      <CheckCircle size={12} /> Paid out {fmtDate(p.completedAt || p.requestedAt)}
                     </div>
                   )}
                 </div>

@@ -247,6 +247,26 @@ function App() {
     setIsPublishLoading(false);
   };
 
+  // Restore selectedSpot from Firestore when an active booking is recovered after refresh
+  useEffect(() => {
+    if (!bookings.activeBooking || spots.selectedSpot) return;
+    const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
+    if (!booking) return;
+    const spot = spots.spots.find(s => s.id === booking.spotId);
+    if (spot) {
+      spots.setSelectedSpot(spot);
+    } else {
+      // Spot may no longer be in the live list — reconstruct a minimal version from the booking
+      spots.setSelectedSpot({
+        id: booking.spotId,
+        address: booking.address,
+        price: booking.totalPaid / (booking.duration || 1),
+        lat: 0, lng: 0,
+        spotsLeft: 1,
+      });
+    }
+  }, [bookings.activeBooking]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Notify driver when session is about to expire (fires once when warning trips)
   useEffect(() => {
     if (session.isWarning && bookings.activeBooking) {
@@ -566,8 +586,7 @@ function App() {
       {currentScreen === 'helpCenter' && (
         <HelpCenterView
           onBack={() => navigate('profile')}
-          onContactSupport={() => openChat('Support Agent', 'helpCenter')}
-          showToast={showToast}
+          userMode={profile.userMode}
         />
       )}
 

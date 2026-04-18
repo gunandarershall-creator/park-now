@@ -35,6 +35,12 @@ const ReportView = ({ reportContext, userId, onSubmit, onBack }) => {
     if (!description.trim()) return;
     setSubmitting(true);
     await onSubmit({ category, description });
+    // Open mailto so the report also goes to the support email
+    const subject = encodeURIComponent(`Park Now Report: ${category}`);
+    const body = encodeURIComponent(
+      `Category: ${category}\n\nLocation: ${reportContext.relatedAddress || 'N/A'}\n\nDescription:\n${description}`
+    );
+    window.open(`mailto:k2339894@kingston.ac.uk?subject=${subject}&body=${body}`);
     setSubmitting(false);
   };
 
@@ -100,7 +106,9 @@ const ReportView = ({ reportContext, userId, onSubmit, onBack }) => {
         </button>
 
         <p style={{ textAlign: 'center', fontSize: 13, color: '#8E8E93', margin: 0 }}>
-          Our team will review your report within 24 hours.
+          Your report will be sent to{' '}
+          <a href="mailto:k2339894@kingston.ac.uk" style={{ color: '#0056D2' }}>k2339894@kingston.ac.uk</a>
+          {' '}and reviewed within 24 hours.
         </p>
       </form>
     </div>

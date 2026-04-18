@@ -31,6 +31,27 @@ export const useBookings = (user, showToast) => {
     }
   }, [user]);
 
+  // Restore active session from Firestore on load / page refresh
+  useEffect(() => {
+    if (!user || bookings.length === 0) return;
+    // Already have an active session in state — don't overwrite it
+    if (isSessionActive && activeBooking) return;
+
+    const now = new Date();
+    const liveBooking = bookings.find(b =>
+      b.driverId === user.uid &&
+      b.status === 'confirmed' &&
+      b.endTime &&
+      new Date(b.endTime) > now
+    );
+
+    if (liveBooking) {
+      setActiveBooking({ id: liveBooking.id, endTime: liveBooking.endTime, totalPaid: liveBooking.totalPaid });
+      setIsSessionActive(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings, user]);
+
   // Derived state: bookings belonging to this driver, sorted newest first
   const myDriverBookings = bookings
     .filter(b => b.driverId === user?.uid)

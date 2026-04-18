@@ -13,9 +13,66 @@ import { sortSpotsByProximity } from '../models/geoModel';
 export const GOOGLE_MAPS_LIBRARIES = ['places'];
 
 const DEFAULT_SPOTS = [
-  { id: '1', lat: 51.4039, lng: -0.3035, price: 4.50, address: 'Kingston University', rating: 4.8, distance: 'Kingston upon Thames', spotsLeft: 3, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80' },
-  { id: '2', lat: 51.4045, lng: -0.3015, price: 6.00, address: 'Penrhyn Road', rating: 4.5, distance: 'Surbiton, Surrey', spotsLeft: 1, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80' },
-  { id: '3', lat: 51.4085, lng: -0.3060, price: 5.25, address: 'High St Garage', rating: 4.9, distance: 'Kingston City Centre', spotsLeft: 8, hostId: 'system', imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80' }
+  {
+    id: '1',
+    lat: 51.4039, lng: -0.3035,
+    price: 4.50,
+    address: '53 Penrhyn Road, Kingston upon Thames, KT1 2EE',
+    rating: 4.8,
+    distance: 'Kingston upon Thames',
+    spotsLeft: 2,
+    hostId: 'system',
+    availFrom: '07:00', availTo: '20:00',
+    imageUrl: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: '2',
+    lat: 51.4061, lng: -0.3008,
+    price: 3.50,
+    address: '12 Fassett Road, Kingston upon Thames, KT1 2TQ',
+    rating: 4.6,
+    distance: 'Kingston upon Thames',
+    spotsLeft: 1,
+    hostId: 'system',
+    availFrom: '08:00', availTo: '18:00',
+    imageUrl: 'https://images.unsplash.com/photo-1604063154567-b5b8219df515?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: '3',
+    lat: 51.4085, lng: -0.3060,
+    price: 5.00,
+    address: '8 Brook Street, Kingston upon Thames, KT1 2AT',
+    rating: 4.9,
+    distance: 'Kingston Town Centre',
+    spotsLeft: 3,
+    hostId: 'system',
+    availFrom: '00:00', availTo: '23:59',
+    imageUrl: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: '4',
+    lat: 51.4022, lng: -0.2991,
+    price: 2.50,
+    address: '27 Villiers Road, Kingston upon Thames, KT1 3BA',
+    rating: 4.3,
+    distance: 'Norbiton',
+    spotsLeft: 4,
+    hostId: 'system',
+    availFrom: '09:00', availTo: '17:00',
+    imageUrl: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    id: '5',
+    lat: 51.4101, lng: -0.3041,
+    price: 6.00,
+    address: '3 London Road, Kingston upon Thames, KT2 6ND',
+    rating: 5.0,
+    distance: 'Kingston upon Thames',
+    spotsLeft: 1,
+    hostId: 'system',
+    availFrom: '00:00', availTo: '23:59',
+    imageUrl: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=400&q=80'
+  },
 ];
 
 const getRecentSearches = () => {

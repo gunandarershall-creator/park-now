@@ -33,7 +33,7 @@ const TermsPrivacyView = ({ onBack }) => (
       <p>Every booking includes a standard public liability protection for both the host and the driver. This is included in the service fee. Damage must be reported within 24 hours of the session end time.</p>
 
       <h3 style={{fontSize: 18, color: '#000', marginTop: 24}}>7. Community Safety</h3>
-      <p>We maintain a strict code of conduct. All students must be respectful and park within the designated lines of the host's property. Any reports of inappropriate behaviour will result in an immediate account review.</p>
+      <p>We maintain a strict code of conduct. All drivers must be respectful and park within the designated lines of the host's property. Any reports of inappropriate behaviour will result in an immediate account review.</p>
 
       <p style={{color: '#8E8E93', marginTop: 30, fontSize: 12, textAlign: 'center'}}>Last updated: October 2025</p>
     </div>

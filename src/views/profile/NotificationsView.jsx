@@ -58,19 +58,6 @@ const NotificationsView = ({
         </div>
       </div>
 
-      <div className="payment-method-row" style={{ marginBottom: 0, border: 'none' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600 }}>Promotions &amp; Offers</div>
-          <div style={{ fontSize: 13, color: '#8E8E93', marginTop: 2 }}>Discounts and new features.</div>
-        </div>
-        <div
-          className="toggle-switch"
-          style={notifPromo ? {} : { background: '#E5E5EA' }}
-          onClick={() => setNotifPromo(!notifPromo)}
-        >
-          <div className="toggle-knob" style={notifPromo ? {} : { right: 'auto', left: 2 }} />
-        </div>
-      </div>
     </div>
 
     {/* ── Inbox ── */}

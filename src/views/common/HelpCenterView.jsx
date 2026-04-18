@@ -55,7 +55,7 @@ const HelpCenterView = ({ onBack, userMode }) => {
   );
 
   return (
-    <div className="screen" style={{ overflowY: 'auto' }}>
+    <div className="screen" style={{ overflowY: 'auto', paddingBottom: 100 }}>
       <div className="checkout-header" style={{ marginTop: 10 }}>
         <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
         <h2 className="checkout-title">{userMode === 'host' ? 'Host Help' : 'Driver Help'}</h2>
@@ -76,7 +76,7 @@ const HelpCenterView = ({ onBack, userMode }) => {
       <div className="settings-section-title">
         {searchQuery ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : 'Frequently Asked Questions'}
       </div>
-      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+      <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
         {filtered.length > 0 ? filtered.map((faq) => (
           <FAQItem key={faq.q} {...faq} />
         )) : (

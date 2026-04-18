@@ -597,6 +597,7 @@ function App() {
         <PaymentMethodsView
           onBack={() => navigate(paymentReturnScreen)}
           onAddCard={() => navigate('addCard')}
+          showToast={showToast}
         />
       )}
 

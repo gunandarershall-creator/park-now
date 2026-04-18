@@ -177,12 +177,11 @@ function App() {
           return Date.now() >= d.getTime() - 120000; // 2-min grace window
         })();
         if (isImmediate) {
-          // Start right away — no confirmation screen needed
+          // Start right away — skip confirmation entirely
           navigate('activeBooking');
         } else {
-          // Future booking — land in Activity so user can see "Upcoming" section
-          showToast('Booking confirmed! Check your upcoming bookings.', 'success');
-          navigate('driverDashboard');
+          // Future booking — show confirmation screen with countdown
+          navigate('confirmation');
         }
       }
     } catch (err) {

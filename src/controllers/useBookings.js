@@ -31,23 +31,61 @@ export const useBookings = (user, showToast) => {
     }
   }, [user]);
 
-  // Restore active session from Firestore on load / page refresh
+  /**
+   * Restore session state from Firestore on load / page refresh.
+   *
+   * Two cases:
+   *  1. Active now   — startTime ≤ now AND endTime > now → isSessionActive = true
+   *  2. Upcoming     — startTime > now AND endTime > now → isSessionActive = false
+   *                    (App.js timer will flip it to true when startTime arrives)
+   */
   useEffect(() => {
     if (!user || bookings.length === 0) return;
-    // Already have an active session in state — don't overwrite it
+    // Already have a truly active session in state — don't overwrite
     if (isSessionActive && activeBooking) return;
 
     const now = new Date();
-    const liveBooking = bookings.find(b =>
+
+    // ── Case 1: session already started ──────────────────────────────────────
+    const activeNow = bookings.find(b =>
       b.driverId === user.uid &&
       b.status === 'confirmed' &&
-      b.endTime &&
+      b.startTime && b.endTime &&
+      new Date(b.startTime) <= now &&
       new Date(b.endTime) > now
     );
 
-    if (liveBooking) {
-      setActiveBooking({ id: liveBooking.id, startTime: liveBooking.startTime, endTime: liveBooking.endTime, totalPaid: liveBooking.totalPaid });
+    if (activeNow) {
+      setActiveBooking({
+        id: activeNow.id,
+        startTime: activeNow.startTime,
+        endTime:   activeNow.endTime,
+        totalPaid: activeNow.totalPaid,
+      });
       setIsSessionActive(true);
+      return;
+    }
+
+    // ── Case 2: session scheduled for the future ──────────────────────────────
+    // Only restore if we don't already have this booking tracked
+    if (!activeBooking) {
+      const upcoming = bookings.find(b =>
+        b.driverId === user.uid &&
+        b.status === 'confirmed' &&
+        b.startTime && b.endTime &&
+        new Date(b.startTime) > now &&
+        new Date(b.endTime) > now
+      );
+
+      if (upcoming) {
+        setActiveBooking({
+          id: upcoming.id,
+          startTime: upcoming.startTime,
+          endTime:   upcoming.endTime,
+          totalPaid: upcoming.totalPaid,
+        });
+        // isSessionActive stays false — timer in App.js will trigger when start arrives
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, user]);
@@ -76,6 +114,10 @@ export const useBookings = (user, showToast) => {
       return d;
     };
 
+    // Booking is "immediate" if start time is now or within a 2-minute grace window
+    const parsedStart = parseStartTime(bookingStartTime);
+    const isImmediate = Date.now() >= parsedStart.getTime() - 120000;
+
     const isDemoSpot = ['1', '2', '3', '4', '5'].includes(selectedSpot.id);
 
     if (isDemoSpot) {
@@ -83,9 +125,8 @@ export const useBookings = (user, showToast) => {
       const updatedSpotsLeft = (selectedSpot.spotsLeft || 1) - 1;
       const amountToCharge = +(selectedSpot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
       const bookingId = Date.now().toString();
-      const startDate = parseStartTime(bookingStartTime);
-      const startTime = startDate.toISOString();
-      const endTime   = new Date(startDate.getTime() + bookingDuration * 3600000).toISOString();
+      const startTime = parsedStart.toISOString();
+      const endTime   = new Date(parsedStart.getTime() + bookingDuration * 3600000).toISOString();
 
       setSpots(prev =>
         updatedSpotsLeft <= 0
@@ -94,7 +135,6 @@ export const useBookings = (user, showToast) => {
       );
 
       if (user) {
-        // Non-blocking — Firestore failure must not freeze the payment spinner
         saveBooking({
           id: bookingId,
           driverId:    user.uid,
@@ -123,14 +163,18 @@ export const useBookings = (user, showToast) => {
           bookingStartTime,
         });
 
-        // Mirror confirmed server state into local UI
         setSpots(prev =>
           newSpotsLeft <= 0
             ? prev.filter(s => s.id !== selectedSpot.id)
             : prev.map(s => s.id === selectedSpot.id ? { ...s, spotsLeft: newSpotsLeft } : s)
         );
 
-        setActiveBooking({ id: bookingId, startTime: startTime.toISOString(), endTime: endTime.toISOString(), totalPaid: amountToCharge });
+        setActiveBooking({
+          id: bookingId,
+          startTime: startTime.toISOString(),
+          endTime:   endTime.toISOString(),
+          totalPaid: amountToCharge,
+        });
       } catch (err) {
         const msg =
           err.code === 'SPOT_NOT_FOUND'   ? "This spot no longer exists — it may have been removed by the host." :
@@ -142,7 +186,9 @@ export const useBookings = (user, showToast) => {
       }
     }
 
-    setIsSessionActive(true);
+    // Only mark the session as active if the booking starts right now.
+    // Future bookings stay as isSessionActive=false until the start time arrives.
+    setIsSessionActive(isImmediate);
     return true;
   };
 
@@ -150,17 +196,13 @@ export const useBookings = (user, showToast) => {
     if (!selectedSpot || !activeBooking) return;
 
     const extensionCost = +(selectedSpot.price * extensionDuration).toFixed(2);
-
-    // Push endTime forward by extensionDuration hours
     const currentEnd = new Date(activeBooking.endTime);
     const newEnd = new Date(currentEnd.getTime() + extensionDuration * 3600000);
     const newEndIso = newEnd.toISOString();
 
-    // Update local state — timer re-reads endTime and resets automatically
     setActiveBooking(prev => ({ ...prev, endTime: newEndIso }));
 
-    // Persist to Firestore if it's a real booking (not a demo ID)
-    const isDemoBooking = ['1', '2', '3'].includes(selectedSpot.id);
+    const isDemoBooking = ['1', '2', '3', '4', '5'].includes(selectedSpot.id);
     if (!isDemoBooking) {
       try {
         await updateBooking(activeBooking.id, { endTime: newEndIso });

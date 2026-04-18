@@ -296,7 +296,10 @@ function App() {
     if (!startTime) return;
     const delay = new Date(startTime).getTime() - Date.now();
     if (delay <= 0) return; // already started — handled by handlePayment
-    const timer = setTimeout(() => navigate('activeBooking'), delay);
+    const timer = setTimeout(() => {
+      bookings.setIsSessionActive(true);
+      navigate('activeBooking');
+    }, delay);
     return () => clearTimeout(timer);
   }, [bookings.activeBooking?.startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -480,7 +483,7 @@ function App() {
           activeBooking={bookings.activeBooking}
           hasInsurance={bookings.hasInsurance}
           bookingDuration={bookings.bookingDuration}
-          onStartSession={() => navigate('activeBooking')}
+          onStartSession={() => { bookings.setIsSessionActive(true); navigate('activeBooking'); }}
           onCancel={handleCancelBooking}
           onBack={() => navigate('driverDashboard')}
         />

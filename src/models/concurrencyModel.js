@@ -72,7 +72,10 @@ export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsur
     const newSpotsLeft = spotsLeft - 1;
 
     if (newSpotsLeft <= 0) {
-      txn.delete(spotRef);
+      // Mark as temporarily unavailable (isActive: false) rather than deleting —
+      // deletion permanently removes the host's listing from their dashboard.
+      // The host can re-activate it from their listings panel after the session ends.
+      txn.update(spotRef, { spotsLeft: 0, isActive: false });
     } else {
       txn.update(spotRef, { spotsLeft: newSpotsLeft });
     }

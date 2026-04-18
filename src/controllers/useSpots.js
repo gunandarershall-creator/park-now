@@ -145,7 +145,15 @@ export const useSpots = (user, currentScreen, showToast) => {
           }
           return prev;
         });
-      }, (err) => console.error("Spots sync error:", err));
+      }, (err) => {
+        console.error("Spots sync error:", err);
+        if (err?.code === 'permission-denied') {
+          showToast(
+            'Firestore rules not applied — go to Firebase Console → Firestore → Rules and publish the project rules.',
+            'error'
+          );
+        }
+      });
       return () => unsubscribe();
     } catch (e) {
       console.error("Firestore Spots Error:", e);

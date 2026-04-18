@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { saveSpot, updateSpot } from '../models/spotModel';
+import { saveSpot, updateSpot, subscribeToHostSpots } from '../models/spotModel';
 
 
 export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const [hostListings, setHostListings] = useState([]);
+  const [hostSpots, setHostSpots]       = useState([]); // direct Firestore sub — all host spots incl. inactive
   const [newAddress, setNewAddress] = useState('');
   const [newCoords, setNewCoords] = useState(null); // { lat, lng } resolved by Places selection
   const [newPrice, setNewPrice] = useState('');
@@ -19,18 +20,28 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   const [editingSpotId, setEditingSpotId] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Derive host listings from spots — only the user's own spots
+  // Direct Firestore subscription scoped to this host — returns inactive spots too so
+  // the dashboard never loses a listing just because it was marked unavailable after booking.
   useEffect(() => {
-    const listings = spots
-      .filter(s => s.hostId === user?.uid)
-      .map(s => ({
-        id: s.id,
-        address: s.address,
-        details: `£${Number(s.price).toFixed(2)} / hr • ${s.spotsLeft || 1} spot`,
-        isActive: s.isActive ?? true,
-      }));
+    if (!user) return;
+    const unsubscribe = subscribeToHostSpots(
+      user.uid,
+      (docs) => setHostSpots(docs),
+      (err) => console.error('Host spots sync error:', err),
+    );
+    return () => unsubscribe();
+  }, [user]);
+
+  // Derive host listings from hostSpots (includes isActive:false spots)
+  useEffect(() => {
+    const listings = hostSpots.map(s => ({
+      id: s.id,
+      address: s.address,
+      details: `£${Number(s.price).toFixed(2)} / hr • ${s.spotsLeft ?? 1} spot${(s.spotsLeft ?? 1) !== 1 ? 's' : ''}`,
+      isActive: s.isActive ?? true,
+    }));
     setHostListings(listings);
-  }, [spots, user]);
+  }, [hostSpots]);
 
   const toggleHostListing = async (id) => {
     const listing = hostListings.find(l => l.id === id);
@@ -42,7 +53,11 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     // Persist to Firestore (only real spots, not demo seed data)
     if (!['1', '2', '3', '4', '5'].includes(id)) {
       try {
-        await updateSpot(id, { isActive: newActive });
+        // When re-activating a spot that was deactivated due to full booking,
+        // restore spotsLeft to 1 so drivers can book it again.
+        const updateData = { isActive: newActive };
+        if (newActive) updateData.spotsLeft = 1;
+        await updateSpot(id, updateData);
       } catch (e) {
         console.warn('Could not persist toggle to Firestore:', e);
       }
@@ -71,7 +86,8 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
   };
 
   const openEditSpot = (id) => {
-    const spot = spots.find(s => s.id === id);
+    // Prefer hostSpots (includes inactive) so the host can edit a fully-booked listing
+    const spot = hostSpots.find(s => s.id === id) || spots.find(s => s.id === id);
     if (!spot) return;
     setNewAddress(spot.address);
     setNewPrice(spot.price.toString());
@@ -86,15 +102,11 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
     e.preventDefault();
     if (!newAddress || !newPrice) { showToast('Please enter an address and a price.', 'error'); return false; }
     const updatedFields = { address: newAddress, price: parseFloat(newPrice), imageUrl: newImage, availFrom, availTo };
+    // Optimistically update the map spots state
     setSpots(prev => prev.map(s =>
       s.id === editingSpotId ? { ...s, ...updatedFields } : s
     ));
-    setHostListings(prev => prev.map(l =>
-      l.id === editingSpotId
-        ? { ...l, address: newAddress, details: `£${parseFloat(newPrice).toFixed(2)} / hr • ${l.details.split('•')[1]?.trim() || '1 spot'}` }
-        : l
-    ));
-    // Persist to Firestore (only real spots, not demo seed data)
+    // hostListings will update automatically via the hostSpots Firestore subscription
     if (!['1', '2', '3', '4', '5'].includes(editingSpotId)) {
       try {
         await updateSpot(editingSpotId, updatedFields);
@@ -186,6 +198,7 @@ export const useHost = (user, spots, setSpots, showToast, panTo) => {
 
   return {
     hostListings, setHostListings,
+    hostSpots,
     newAddress, setNewAddress,
     newCoords, setNewCoords,
     newPrice, setNewPrice,

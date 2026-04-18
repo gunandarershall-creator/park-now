@@ -10,6 +10,7 @@ import { ArrowLeft, Send, MessageCircle } from 'lucide-react';
 const ChatView = ({
   chatContext,
   userId,
+  userMode,
   messages,
   messageText, setMessageText,
   onSend,
@@ -65,7 +66,12 @@ const ChatView = ({
           </div>
         ) : (
           messages.map((msg, i) => {
-            const isMine = msg.senderId === userId;
+            // Role-based colouring: a host message is always grey on the driver
+            // side even if the same account opened both views during testing.
+            // Fall back to UID comparison for legacy messages without senderRole.
+            const isMine = msg.senderRole
+              ? msg.senderRole === userMode
+              : msg.senderId === userId;
             const showTime = i === 0 || (
               messages[i - 1]?.timestamp &&
               msg.timestamp &&

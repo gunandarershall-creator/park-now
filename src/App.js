@@ -96,7 +96,7 @@ function App() {
   const bookings = useBookings(auth.user, showToast);
   const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast, spots.panTo);
   const session       = useSessionTimer(bookings.activeBooking?.endTime ?? null);
-  const chat          = useChat(chatContext.chatId, auth.user?.uid, showToast);
+  const chat          = useChat(chatContext.chatId, auth.user?.uid, profile.userMode, showToast);
   const notifications = useNotifications(auth.user);
   const payout        = usePayout(auth.user, bookings.myHostEarnings);
   const cards         = useCards(auth.user, showToast);
@@ -686,6 +686,7 @@ function App() {
         <ChatView
           chatContext={chatContext}
           userId={auth.user?.uid}
+          userMode={profile.userMode}
           messages={chat.messages}
           messageText={chat.messageText} setMessageText={chat.setMessageText}
           onSend={chat.handleSendMessage}

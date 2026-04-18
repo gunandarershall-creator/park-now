@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import { sendMessage, subscribeToMessages } from '../models/chatModel';
 
-export const useChat = (chatId, userId, showToast) => {
+export const useChat = (chatId, userId, userMode, showToast) => {
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -26,7 +26,7 @@ export const useChat = (chatId, userId, showToast) => {
     if (!messageText.trim() || !chatId || !userId || isSending) return;
     setIsSending(true);
     try {
-      await sendMessage(chatId, userId, messageText.trim());
+      await sendMessage(chatId, userId, userMode, messageText.trim());
       setMessageText('');
     } catch (err) {
       console.error('Failed to send message:', err);

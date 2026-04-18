@@ -12,10 +12,11 @@ export const getChatId = (uid1, uid2, spotId) =>
   [...[uid1, uid2].sort(), spotId].join('_');
 
 /** Send a message to a chat room */
-export const sendMessage = async (chatId, senderId, text) => {
+export const sendMessage = async (chatId, senderId, senderRole, text) => {
   const ref = getChatMessagesRef(chatId);
   await addDoc(ref, {
     senderId,
+    senderRole, // 'host' or 'driver' — used to colour bubbles by role, not by UID
     text: text.trim(),
     timestamp: serverTimestamp(),
   });

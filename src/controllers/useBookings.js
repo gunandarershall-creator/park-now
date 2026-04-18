@@ -17,6 +17,14 @@ export const useBookings = (user, showToast) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [activeBooking, setActiveBooking] = useState(null);
 
+  // Tick every 60 s so myHostEarnings recalculates when a booking's endTime passes
+  // even if no Firestore event fires at that exact moment.
+  const [, setEarningsTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setEarningsTick(t => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Sync live bookings from Firestore
   useEffect(() => {
     if (!user) return;
@@ -96,14 +104,20 @@ export const useBookings = (user, showToast) => {
     .filter(b => b.driverId === user?.uid && b.hostId !== 'demo' && b.hostId !== 'system')
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-  // Derived state: total earnings for this host — only completed sessions count
-  // (endTime has passed and booking was not cancelled)
+  // Derived state: total earnings for this host.
+  // A booking counts as earned when EITHER:
+  //   • Its endTime has passed (session expired naturally), OR
+  //   • The driver submitted a review / status was marked completed
+  //     (driver ended early — status update via Firestore triggers this immediately).
   const myHostEarnings = bookings
     .filter(b =>
       b.hostId === user?.uid &&
       b.status !== 'cancelled' &&
-      b.endTime &&
-      new Date(b.endTime) <= new Date()
+      b.endTime && (
+        new Date(b.endTime) <= new Date() ||
+        b.status === 'reviewed'            ||
+        b.status === 'completed'
+      )
     )
     .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
 

@@ -1,10 +1,10 @@
 /**
  * VIEW: DriverDashboardView.jsx
- * Driver activity hub — shows active/upcoming session card and booking history.
+ * Driver activity hub — upcoming bookings section + booking history.
  */
 
 import React from 'react';
-import { Timer, MapPin, ChevronRight, CalendarX, Clock, Calendar } from 'lucide-react';
+import { Timer, MapPin, ChevronRight, CalendarX, Clock, Calendar, CalendarCheck } from 'lucide-react';
 import DriverNav from '../shared/DriverNav';
 
 const fmtTime = (iso) => {
@@ -26,8 +26,8 @@ const DriverDashboardView = ({
   upcomingBookings = [],
   onViewUpcoming,
 }) => {
-  // Exclude upcoming bookings from the past/recent list
-  const upcomingIds = new Set(upcomingBookings.map(b => b.id));
+  // Keep upcoming and past completely separate
+  const upcomingIds  = new Set(upcomingBookings.map(b => b.id));
   const pastBookings = myDriverBookings.filter(b => !upcomingIds.has(b.id));
 
   return (
@@ -37,7 +37,7 @@ const DriverDashboardView = ({
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Activity Hub</h2>
         </div>
 
-        {/* ── Top card ── */}
+        {/* ── Top status card ── */}
         {isSessionActive ? (
           <div
             className="earnings-card"
@@ -53,11 +53,11 @@ const DriverDashboardView = ({
         ) : upcomingBookings.length > 0 ? (
           <div
             className="earnings-card"
-            style={{ background: 'linear-gradient(135deg, #0056D2 0%, #003A99 100%)', cursor: 'pointer' }}
+            style={{ cursor: 'pointer' }}
             onClick={() => onViewUpcoming && onViewUpcoming(upcomingBookings[0])}
           >
-            <p className="earnings-title">Next Session</p>
-            <p className="earnings-amount" style={{ fontSize: 16, marginTop: 4 }}>
+            <p className="earnings-title">Next Booking</p>
+            <p className="earnings-amount" style={{ fontSize: 18, marginTop: 4 }}>
               {upcomingBookings[0].address}
             </p>
             <p style={{ margin: '10px 0 0', fontSize: 14, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -75,40 +75,59 @@ const DriverDashboardView = ({
           </div>
         )}
 
-        {/* ── Upcoming bookings ── */}
-        {upcomingBookings.length > 0 && (
-          <>
-            <h3 style={{ fontSize: 18, marginTop: 20, marginBottom: 12 }}>Upcoming</h3>
-            {upcomingBookings.map(b => (
-              <div
-                key={b.id}
-                className="listing-item"
-                style={{ cursor: 'pointer', borderLeft: '4px solid #0056D2' }}
-                onClick={() => onViewUpcoming && onViewUpcoming(b)}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{b.address}</div>
-                  <div style={{ color: '#8E8E93', fontSize: 13, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={13} />
-                    {fmtDate(b.startTime)} · {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
-                  </div>
+        {/* ── Upcoming Bookings — always rendered ── */}
+        <h3 style={{ fontSize: 18, marginTop: 20, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CalendarCheck size={18} color="#0056D2" /> Upcoming Bookings
+        </h3>
+
+        {upcomingBookings.length === 0 ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14, background: '#E6F0FF', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Calendar size={22} color="#0056D2" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#1C1C1E' }}>No upcoming bookings</p>
+              <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8E8E93' }}>
+                Future bookings will appear here as soon as you book.
+              </p>
+            </div>
+          </div>
+        ) : (
+          upcomingBookings.map(b => (
+            <div
+              key={b.id}
+              className="listing-item"
+              style={{ cursor: 'pointer', borderLeft: '4px solid #0056D2', marginBottom: 10 }}
+              onClick={() => onViewUpcoming && onViewUpcoming(b)}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{b.address}</div>
+                <div style={{ color: '#8E8E93', fontSize: 13, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Calendar size={13} />
+                  {fmtDate(b.startTime)} · {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 600, color: '#0056D2' }}>£{(b.totalPaid || 0).toFixed(2)}</div>
-                    <div style={{ fontSize: 11, color: '#34C759', fontWeight: 600, marginTop: 2 }}>Upcoming</div>
-                  </div>
-                  <ChevronRight size={20} color="#C7C7CC" />
+                <div style={{ color: '#0056D2', fontWeight: 600, fontSize: 13, marginTop: 3 }}>
+                  {b.duration} hr{b.duration > 1 ? 's' : ''} · £{(b.totalPaid || 0).toFixed(2)} paid
                 </div>
               </div>
-            ))}
-          </>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 11, color: '#0056D2', fontWeight: 700, background: '#E6F0FF', padding: '4px 10px', borderRadius: 20 }}>
+                  Upcoming
+                </div>
+                <ChevronRight size={18} color="#C7C7CC" />
+              </div>
+            </div>
+          ))
         )}
 
-        {/* ── Recent bookings ── */}
-        <h3 style={{ fontSize: 18, marginTop: upcomingBookings.length > 0 ? 20 : 10, marginBottom: 15 }}>
-          Recent Bookings
-        </h3>
+        {/* ── Recent Bookings — always rendered ── */}
+        <h3 style={{ fontSize: 18, marginTop: 24, marginBottom: 15 }}>Recent Bookings</h3>
 
         {pastBookings.length === 0 ? (
           <div style={{
@@ -139,13 +158,13 @@ const DriverDashboardView = ({
             <div
               className="listing-item"
               key={b.id}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', marginBottom: 10 }}
               onClick={() => onViewReceipt(b)}
             >
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{b.address}</div>
                 <div style={{ color: '#8E8E93', fontSize: 14, marginTop: 4 }}>
-                  {new Date(b.timestamp).toLocaleDateString()} • {b.duration} Hour{b.duration > 1 ? 's' : ''}
+                  {new Date(b.timestamp).toLocaleDateString()} · {b.duration} hr{b.duration > 1 ? 's' : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

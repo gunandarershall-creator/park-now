@@ -398,9 +398,12 @@ function App() {
           currentScreen={currentScreen}
           onNavigate={navigate}
           onViewReceipt={(b) => { bookings.setViewingReceipt(b); navigate('pastBookingDetail'); }}
-          upcomingBookings={bookings.myDriverBookings.filter(b =>
-            b.startTime && new Date(b.startTime).getTime() > Date.now()
-          )}
+          upcomingBookings={bookings.bookings.filter(b =>
+            b.driverId === auth.user?.uid &&
+            b.status === 'confirmed' &&
+            b.startTime &&
+            new Date(b.startTime).getTime() > Date.now()
+          ).sort((a, b) => new Date(a.startTime) - new Date(b.startTime))}
           onViewUpcoming={(b) => {
             // Restore selectedSpot so the confirmation screen can render
             if (!spots.selectedSpot || spots.selectedSpot.id !== b.spotId) {

@@ -12,7 +12,7 @@
  * Views   → src/views/          (Pure presentational React components)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles/app.css';
 
 // --- CONTROLLERS ---
@@ -73,7 +73,7 @@ function App() {
   // --- NAVIGATION STATE ---
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('parkNowOnboarded'));
   const [currentScreen, setCurrentScreen] = useState('login');
-  const [paymentReturnScreen, setPaymentReturnScreen] = useState('profile');
+  const navHistoryRef = useRef([]);
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
   const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map', hostId: null });
@@ -102,7 +102,22 @@ function App() {
   const cards         = useCards(auth.user, showToast);
 
   // --- NAVIGATION HELPERS ---
-  const navigate = (screen) => setCurrentScreen(screen);
+  const navigate = (screen) => {
+    navHistoryRef.current = [...navHistoryRef.current, currentScreen];
+    if (navHistoryRef.current.length > 30) {
+      navHistoryRef.current = navHistoryRef.current.slice(-30);
+    }
+    setCurrentScreen(screen);
+  };
+
+  const goBack = (fallback = 'map') => {
+    const hist = navHistoryRef.current;
+    if (!hist.length) { setCurrentScreen(fallback); return; }
+    const newHist = [...hist];
+    const prev = newHist.pop();
+    navHistoryRef.current = newHist;
+    setCurrentScreen(prev);
+  };
 
   const openChat = (recipientName, returnScreen, chatId = null) => {
     setChatContext({ name: recipientName, returnScreen, chatId });
@@ -474,7 +489,7 @@ function App() {
           onBack={() => navigate('map')}
           onPayment={handlePayment}
           isLoading={isPaymentLoading}
-          onChangePaymentMethod={() => { setPaymentReturnScreen('checkout'); navigate('paymentMethods'); }}
+          onChangePaymentMethod={() => navigate('paymentMethods')}
         />
       )}
 
@@ -526,7 +541,7 @@ function App() {
       {currentScreen === 'pastBookingDetail' && bookings.viewingReceipt && (
         <PastBookingDetailView
           viewingReceipt={bookings.viewingReceipt}
-          onBack={() => navigate('driverDashboard')}
+          onBack={() => goBack('driverDashboard')}
           onReport={() => openReport(
             'driver',
             'pastBookingDetail',
@@ -618,7 +633,7 @@ function App() {
           payouts={payout.payouts}
           onRequestPayout={() => payout.handleRequestPayout(showToast)}
           isRequesting={payout.isRequesting}
-          onBack={() => navigate('hostDashboard')}
+          onBack={() => goBack('hostDashboard')}
         />
       )}
 
@@ -645,7 +660,7 @@ function App() {
           email={auth.email} setEmail={auth.setEmail}
           onSubmit={async (e) => { setIsSaveProfileLoading(true); try { await handleUpdateProfile(e); } finally { setIsSaveProfileLoading(false); } }}
           isLoading={isSaveProfileLoading}
-          onBack={() => navigate('profile')}
+          onBack={() => goBack('profile')}
         />
       )}
 
@@ -653,14 +668,14 @@ function App() {
         <ManageVehiclesView
           regPlate={profile.regPlate} setRegPlate={profile.setRegPlate}
           onSubmit={handleUpdateVehicle}
-          onBack={() => navigate('profile')}
+          onBack={() => goBack('profile')}
         />
       )}
 
       {currentScreen === 'paymentMethods' && (
         <PaymentMethodsView
           cards={cards.cards}
-          onBack={() => navigate(paymentReturnScreen)}
+          onBack={() => goBack('profile')}
           onAddCard={() => navigate('addCard')}
           onDeleteCard={cards.removeCard}
           onSetDefault={cards.setDefaultCard}
@@ -669,7 +684,7 @@ function App() {
 
       {currentScreen === 'addCard' && (
         <AddCardView
-          onBack={() => navigate('paymentMethods')}
+          onBack={() => goBack('paymentMethods')}
           onSave={cards.addCard}
         />
       )}
@@ -682,7 +697,7 @@ function App() {
           setNotifPromo={(v) => profile.handleToggleNotif('promo', v)}
           notifHistory={notifications.notifHistory}
           onClearHistory={notifications.clearHistory}
-          onBack={() => navigate('profile')}
+          onBack={() => goBack('profile')}
         />
       )}
 
@@ -703,13 +718,13 @@ function App() {
 
       {currentScreen === 'helpCenter' && (
         <HelpCenterView
-          onBack={() => navigate('profile')}
+          onBack={() => goBack('profile')}
           userMode={profile.userMode}
         />
       )}
 
       {currentScreen === 'termsPrivacy' && (
-        <TermsPrivacyView onBack={() => navigate('profile')} />
+        <TermsPrivacyView onBack={() => goBack('profile')} />
       )}
 
       {/* REPORT SCREEN */}

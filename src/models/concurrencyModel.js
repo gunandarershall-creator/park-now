@@ -37,17 +37,33 @@ export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsur
 
   // Use driver-selected start time if provided, otherwise default to now.
   // bookingStartTime is "YYYY-MM-DDTHH:MM" (new) or legacy "HH:MM" (today only).
+  //
+  // If the user selected the CURRENT minute (the common "book now" flow),
+  // snap to the live `Date.now()` including seconds/ms. This makes
+  //   endTime = startTime + duration
+  // align with the timer's reference of `Date.now()`, so a 2-hour booking
+  // displays as 2:00:00 instead of 1:59:XX.
   const startTime = (() => {
+    let d;
     if (!bookingStartTime) return new Date();
     if (bookingStartTime.includes('-')) {
       // New ISO format: "2025-04-20T14:30"
-      const d = new Date(bookingStartTime);
-      return isNaN(d.getTime()) ? new Date() : d;
+      d = new Date(bookingStartTime);
+      if (isNaN(d.getTime())) d = new Date();
+    } else {
+      // Legacy "HH:MM" — assume today
+      d = new Date();
+      const [h, m] = bookingStartTime.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
     }
-    // Legacy "HH:MM" — assume today
-    const d = new Date();
-    const [h, m] = bookingStartTime.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
+    const now = new Date();
+    if (d.getFullYear() === now.getFullYear() &&
+        d.getMonth()    === now.getMonth()    &&
+        d.getDate()     === now.getDate()     &&
+        d.getHours()    === now.getHours()    &&
+        d.getMinutes()  === now.getMinutes()) {
+      return now;
+    }
     return d;
   })();
   const endTime   = new Date(startTime.getTime() + bookingDuration * 3600 * 1000);

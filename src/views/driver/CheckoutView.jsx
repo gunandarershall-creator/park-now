@@ -39,7 +39,17 @@ const CheckoutView = ({
     : undefined;
 
   // Guard: is the selected start in the past?
-  const isPastTime = new Date(bookingStart) < new Date();
+  // Compare at MINUTE precision so the current minute is always allowed —
+  // users shouldn't be blocked from picking "right now" just because the
+  // wall-clock has ticked past :00 seconds (e.g. at 14:33:47, picking 14:33
+  // must be valid).
+  const isPastTime = (() => {
+    const selected = new Date(bookingStart);
+    const now      = new Date();
+    selected.setSeconds(0, 0);
+    now.setSeconds(0, 0);
+    return selected.getTime() < now.getTime();
+  })();
 
   // When the date changes, if the user switches back to today and the
   // current bookingTime is already in the past, snap it forward to now.

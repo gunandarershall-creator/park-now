@@ -136,17 +136,32 @@ export const useBookings = (user, showToast) => {
     if (!selectedSpot) return;
 
     // Parse user-selected start — now "YYYY-MM-DDTHH:MM" (with date) or legacy "HH:MM"
+    //
+    // If the user selected the CURRENT minute (the common "book now" flow),
+    // snap to the live `Date.now()` including seconds/ms. This makes
+    //   endTime = startTime + duration
+    // align with the timer's reference of `Date.now()`, so a 2-hour booking
+    // displays as 2:00:00 instead of 1:59:XX.
     const parseStartTime = (startStr) => {
+      let d;
       if (!startStr) return new Date();
-      // New format: contains a date portion (has a '-')
       if (startStr.includes('-')) {
-        const d = new Date(startStr);
-        return isNaN(d.getTime()) ? new Date() : d;
+        d = new Date(startStr);
+        if (isNaN(d.getTime())) d = new Date();
+      } else {
+        // Legacy "HH:MM" — assume today
+        d = new Date();
+        const [h, m] = startStr.split(':').map(Number);
+        d.setHours(h, m, 0, 0);
       }
-      // Legacy "HH:MM" — assume today
-      const d = new Date();
-      const [h, m] = startStr.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
+      const now = new Date();
+      if (d.getFullYear() === now.getFullYear() &&
+          d.getMonth()    === now.getMonth()    &&
+          d.getDate()     === now.getDate()     &&
+          d.getHours()    === now.getHours()    &&
+          d.getMinutes()  === now.getMinutes()) {
+        return now;
+      }
       return d;
     };
 

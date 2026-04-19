@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight, XCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight, XCircle, AlertCircle } from 'lucide-react';
 
 const Spinner = () => (
   <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
@@ -31,6 +31,27 @@ const CheckoutView = ({
 
   // Combined ISO datetime string passed to onPayment
   const bookingStart = `${bookingDate}T${bookingTime}`;
+
+  // Minimum allowed time: if today is selected, can't pick a past time
+  const nowForMin = new Date();
+  const minTime = bookingDate === todayStr
+    ? `${pad(nowForMin.getHours())}:${pad(nowForMin.getMinutes())}`
+    : undefined;
+
+  // Guard: is the selected start in the past?
+  const isPastTime = new Date(bookingStart) < new Date();
+
+  // When the date changes, if the user switches back to today and the
+  // current bookingTime is already in the past, snap it forward to now.
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setBookingDate(newDate);
+    if (newDate === todayStr) {
+      const fresh = new Date();
+      const freshStr = `${pad(fresh.getHours())}:${pad(fresh.getMinutes())}`;
+      if (bookingTime < freshStr) setBookingTime(freshStr);
+    }
+  };
 
   // Human-readable date label
   const dateLabel = bookingDate === todayStr
@@ -64,7 +85,7 @@ const CheckoutView = ({
           type="date"
           value={bookingDate}
           min={todayStr}
-          onChange={(e) => setBookingDate(e.target.value)}
+          onChange={handleDateChange}
           style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
         />
       </div>
@@ -75,10 +96,19 @@ const CheckoutView = ({
         <input
           type="time"
           value={bookingTime}
+          min={minTime}
           onChange={(e) => setBookingTime(e.target.value)}
-          style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: '#0056D2'}}
+          style={{border: 'none', background: '#F2F2F7', padding: '6px 12px', borderRadius: '8px', fontSize: '15px', fontWeight: '600', outline: 'none', cursor: 'pointer', color: isPastTime ? '#FF3B30' : '#0056D2'}}
         />
       </div>
+
+      {/* Past-time warning */}
+      {isPastTime && (
+        <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#FF3B30', fontSize: 13, fontWeight: 500, marginTop: 4, marginBottom: 2}}>
+          <AlertCircle size={14} />
+          Start time can't be in the past — please pick a future time.
+        </div>
+      )}
       <div className="receipt-row">
         <span style={{color: '#8E8E93'}}>End Time</span>
         <span style={{fontWeight: 600}}>{endStr} · {dateLabel}</span>
@@ -135,7 +165,12 @@ const CheckoutView = ({
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 
-    <button className="apple-pay-btn" onClick={() => onPayment(bookingStart)} disabled={isLoading} style={{ opacity: isLoading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+    <button
+      className="apple-pay-btn"
+      onClick={() => { if (!isPastTime) onPayment(bookingStart); }}
+      disabled={isLoading || isPastTime}
+      style={{ opacity: (isLoading || isPastTime) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+    >
       {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
     </button>
 

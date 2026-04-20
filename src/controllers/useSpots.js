@@ -1,17 +1,36 @@
-/**
- * CONTROLLER: useSpots.js
- * Manages parking spots state, Google Maps lifecycle, search, and geolocation.
- * Depends on: SpotModel, GeoModel, user from useAuth
- */
+// ============================================================================
+//  CONTROLLER: useSpots.js - parking spots, maps, search, geolocation
+// ============================================================================
+//  The other big hook. It owns:
+//
+//    - The list of spots shown on the map (real Firestore ones + the
+//      five demo seed spots in Kingston)
+//    - Google Maps instance lifecycle (map handle, panning, zooming)
+//    - Search bar: Places autocomplete, REST geocoding fallback,
+//      recent-search memory in localStorage
+//    - Geolocation: "find my nearest spot" with a fast two-phase
+//      fix (network first, GPS refinement in the background)
+//    - A live toast that fires when another driver books somewhere
+//      nearby (social proof)
+// ============================================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { subscribeToSpots } from '../models/spotModel';
 import { subscribeToBookings } from '../models/bookingModel';
 import { sortSpotsByProximity } from '../models/geoModel';
 
-// Stable libraries array — must not be inline to avoid Google Maps reload warnings
+// This array has to be defined at module scope, not inline inside the
+// component. The Google Maps library does a === comparison on it and
+// rebuilding it every render would cause it to reload, which is slow
+// and logs a warning.
 export const GOOGLE_MAPS_LIBRARIES = ['places'];
 
+
+// ─── Demo seed spots ─────────────────────────────────────────────────────────
+// Five hand-picked Kingston-upon-Thames listings so the map has
+// something to show before the user has signed in, and so examiners
+// have something to book during the demo without needing a real host
+// to have listed first.
 const DEFAULT_SPOTS = [
   {
     id: '1',
@@ -75,6 +94,10 @@ const DEFAULT_SPOTS = [
   },
 ];
 
+
+// ─── Recent search memory ───────────────────────────────────────────────────
+// Persisted to localStorage so "recent searches" survive a page refresh.
+// The try/catch handles the (rare) case of corrupted JSON in storage.
 const getRecentSearches = () => {
   try { return JSON.parse(localStorage.getItem('parkNowRecents') || '[]'); }
   catch { return []; }
@@ -83,28 +106,38 @@ const getRecentSearches = () => {
 const saveRecentSearch = (item) => {
   try {
     const recents = getRecentSearches();
+    // De-dupe by title, then prepend and cap at 5.
     const filtered = recents.filter(r => r.title !== item.title);
     const updated = [{ title: item.title, subtext: item.subtext, lat: item.lat, lng: item.lng }, ...filtered].slice(0, 5);
     localStorage.setItem('parkNowRecents', JSON.stringify(updated));
   } catch {}
 };
 
+
 export const useSpots = (user, currentScreen, showToast) => {
+  // All state this hook owns.
   const [spots, setSpots] = useState(DEFAULT_SPOTS);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [liveToastMessage, setLiveToastMessage] = useState(null);
+  // Default map centre = roughly Kingston town centre.
   const [mapCenter, setMapCenter] = useState({ lat: 51.4060, lng: -0.3040 });
   const [mapZoom, setMapZoom] = useState(15);
   const [searchSuggestions, setSearchSuggestions] = useState(getRecentSearches);
   const [isLocating, setIsLocating] = useState(false);
+
+  // Refs to Google Maps objects. Using refs not state because changing
+  // them shouldn't trigger a rerender.
   const mapRef = useRef(null);
   const autocompleteServiceRef = useRef(null);
   const geocoderRef = useRef(null);
 
-  // Ensure geocoder is always available once Google Maps loads
+
+  // Lazy-init Google Maps service objects the first time we need them.
+  // Can't init at module load because the Google Maps script hasn't
+  // loaded yet. We check window.google.maps existence each time.
   const ensureGeocoderReady = () => {
     if (!geocoderRef.current && window.google?.maps) {
       geocoderRef.current = new window.google.maps.Geocoder();
@@ -114,13 +147,18 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   };
 
-  // Called when Google Map instance is ready
+
+  // Callback passed to <GoogleMap onLoad={...}> so we grab a handle
+  // to the map instance once Google Maps finishes initialising.
   const onMapLoad = useCallback((map) => {
     mapRef.current = map;
     ensureGeocoderReady();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Navigate the Google Map — update both React state and imperative API
+
+  // Programmatically pan the map to a new centre and zoom. Updates
+  // both React state (so the next render is consistent) and calls
+  // the imperative API (so the move is instant, no wait for rerender).
   const panTo = useCallback((lat, lng, zoom = 14) => {
     setMapCenter({ lat, lng });
     setMapZoom(zoom);
@@ -130,7 +168,11 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   }, []);
 
-  // Sync live spots from Firestore + merge with defaults
+
+  // ─── Live sync of spots from Firestore ────────────────────────────────
+  // Merge strategy: always show demo seed spots + whatever real spots
+  // are isActive !== false in Firestore. If the driver has a known
+  // location, sort by proximity at merge time.
   useEffect(() => {
     setSpots(DEFAULT_SPOTS);
     if (!user) return;
@@ -138,6 +180,9 @@ export const useSpots = (user, currentScreen, showToast) => {
       const unsubscribe = subscribeToSpots((cloudDocs) => {
         const merged = [...DEFAULT_SPOTS, ...cloudDocs.filter(s => s.isActive !== false)];
         setDriverLocation(prev => {
+          // Using the setter's functional form to read driverLocation
+          // without adding it as a dependency of this effect, which
+          // would cause it to resubscribe on every location change.
           if (prev) {
             setSpots(sortSpotsByProximity(merged, prev));
           } else {
@@ -147,9 +192,11 @@ export const useSpots = (user, currentScreen, showToast) => {
         });
       }, (err) => {
         console.error("Spots sync error:", err);
+        // Common first-time gotcha: security rules haven't been
+        // deployed. Give a specific hint.
         if (err?.code === 'permission-denied') {
           showToast(
-            'Firestore rules not applied — go to Firebase Console → Firestore → Rules and publish the project rules.',
+            'Firestore rules not applied - go to Firebase Console > Firestore > Rules and publish the project rules.',
             'error'
           );
         }
@@ -160,7 +207,15 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Live toast — fires when a real booking lands in Firestore
+
+  // ─── Social-proof live toast ──────────────────────────────────────────
+  // When another driver books somewhere, I want to show a little
+  // "someone just booked Kingston Road" banner on the map. The trick
+  // is distinguishing a genuinely NEW booking from the ones we get
+  // delivered at first-subscribe time. So on the first callback I
+  // just record every id I've seen. Any id not in that set on a later
+  // callback must be genuinely new, and if it's less than 30s old and
+  // the user is on the map, I show the toast.
   useEffect(() => {
     const seenIds = new Set();
     let initialised = false;
@@ -186,7 +241,10 @@ export const useSpots = (user, currentScreen, showToast) => {
     return () => unsubscribe();
   }, [currentScreen]);
 
-  // Fetch real Google Places predictions as user types
+
+  // ─── Search autocomplete ──────────────────────────────────────────────
+  // Debounced by 200ms so we don't fire an API call on every keystroke.
+  // When the query is empty, show recent searches instead.
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchSuggestions(getRecentSearches());
@@ -211,24 +269,25 @@ export const useSpots = (user, currentScreen, showToast) => {
           }
         }
       );
-    }, 200); // debounce 200ms
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Navigate to a selected suggestion by placeId or lat/lng
+
+  // ─── User picks a suggestion ──────────────────────────────────────────
   const selectSuggestion = useCallback(async (item) => {
     setSearchQuery(item.title);
     setIsSearchFocused(false);
 
-    // Recent search — has lat/lng already
+    // Recent search - lat/lng already known.
     if (item.lat && item.lng) {
       panTo(item.lat, item.lng, 14);
       saveRecentSearch(item);
       return;
     }
 
-    // Places suggestion — geocode via REST using placeId
+    // Places suggestion - need to geocode the placeId to lat/lng.
     if (item.placeId) {
       const key = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
       const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${item.placeId}&key=${key}`;
@@ -247,6 +306,9 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   }, [panTo, showToast]);
 
+
+  // Geocode a free-text address to lat/lng. Used when the user hits
+  // Enter instead of picking an autocomplete suggestion.
   const geocodeAddress = async (address) => {
     const key = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${key}`;
@@ -264,18 +326,19 @@ export const useSpots = (user, currentScreen, showToast) => {
     return null;
   };
 
+
+  // Search form submit handler. Prefer the first autocomplete
+  // suggestion if there is one, else fall back to REST geocode.
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
     setIsSearchFocused(false);
 
-    // Use first Places suggestion if available (click-selected)
     if (searchSuggestions.length > 0 && searchSuggestions[0].placeId) {
       selectSuggestion(searchSuggestions[0]);
       return;
     }
 
-    // Direct REST geocode — works regardless of window.google timing
     const result = await geocodeAddress(searchQuery);
     if (result) {
       panTo(result.lat, result.lng, 13);
@@ -285,6 +348,17 @@ export const useSpots = (user, currentScreen, showToast) => {
     }
   };
 
+
+  // ─── "Find me the nearest spot" ───────────────────────────────────────
+  // Two-phase geolocation:
+  //   Phase 1: fast network/WiFi fix (usually < 1s, accuracy ~100m).
+  //            Sort the list by proximity and pan the map immediately.
+  //   Phase 2: GPS fix running in the background (up to 10s, accuracy
+  //            ~5-10m). Re-sort silently once it arrives.
+  // This gives a snappy UI without sacrificing accuracy.
+  //
+  // If geolocation fails entirely (user denied permission, browser
+  // doesn't support it, timeout), fall back to Kingston town centre.
   const findClosestSpot = () => {
     if (!("geolocation" in navigator)) {
       showToast('Geolocation is not supported by your browser', 'error');
@@ -301,6 +375,8 @@ export const useSpots = (user, currentScreen, showToast) => {
       panTo(loc.lat, loc.lng, 15);
       const closest = sorted[0];
       if (closest) {
+        // After a brief pause, auto-select the closest spot so its
+        // details popup opens. Pause so the map pan settles first.
         setTimeout(() => {
           setSelectedSpot(closest);
           panTo(closest.lat, closest.lng, 16);
@@ -308,11 +384,11 @@ export const useSpots = (user, currentScreen, showToast) => {
       }
     };
 
-    // Phase 1: fast network/WiFi location (instant)
+    // Phase 1: fast, low-accuracy fix.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         applyProximity({ lat: position.coords.latitude, lng: position.coords.longitude });
-        // Phase 2: silently refine with GPS in background
+        // Phase 2: silent high-accuracy fix in the background.
         navigator.geolocation.getCurrentPosition(
           (precise) => applyProximity({ lat: precise.coords.latitude, lng: precise.coords.longitude }),
           () => {},
@@ -320,8 +396,9 @@ export const useSpots = (user, currentScreen, showToast) => {
         );
       },
       () => {
+        // Both phases failed. Fall back to Kingston centre.
         setIsLocating(false);
-        showToast('Could not get your location — showing nearest Kingston spots', 'info');
+        showToast('Could not get your location - showing nearest Kingston spots', 'info');
         applyProximity({ lat: 51.4055, lng: -0.3030 });
       },
       { enableHighAccuracy: false, timeout: 3000, maximumAge: 30000 }

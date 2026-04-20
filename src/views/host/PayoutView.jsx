@@ -1,52 +1,77 @@
-/**
- * VIEW: PayoutView.jsx
- * Payout request — available balance, balance-over-time chart, payout history.
- */
+// ============================================================================
+//  VIEW: PayoutView.jsx - the host's "cash out my earnings" screen
+// ============================================================================
+//  Three main pieces:
+//
+//    1. Available balance card - the single big number the host cares
+//       about, plus a "Request Payout" button.
+//
+//    2. Balance-over-time chart - an inline SVG bar chart showing how
+//       their balance moved across the last 6 weeks. Balance goes up
+//       when a booking completes, and back to £0 whenever they request
+//       a payout. Lets the host see the peaks/troughs visually.
+//
+//    3. Payout history list - every payout they've requested, colour
+//       coded: orange border for pending, green for completed.
+//
+//  The request flow has a two-step confirmation. First tap opens a
+//  confirm card. Second tap actually fires off the request.
+// ============================================================================
 
 import React, { useState } from 'react';
 import { ArrowLeft, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
-/* ── Helpers ──────────────────────────────────────────────────────────── */
+/* ── Small helpers ─────────────────────────────────────────────────── */
 
+// Format a timestamp (Firestore Timestamp or string) as "20 Apr 2026".
 const fmtDate = (ts) => {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+// Normalise a timestamp into a plain JS Date, whatever shape it came in as.
 const tsToDate = (ts) => {
   if (!ts) return null;
   if (ts.toDate) return ts.toDate();
   return new Date(ts);
 };
 
-/**
- * Build a 6-point series of available balance sampled at the END of each
- * of the last 6 weeks.  Earnings push the balance up; payouts push it down.
- * The chart therefore drops to ~£0 immediately after every payout request.
+/*
+ * Build 6 balance snapshots, one for the end of each of the last 6 weeks.
+ *
+ * Approach: list every event (a booking = +£, a payout = -£), sort them
+ * by time, then for each week-end work out the cumulative total up to
+ * that point. That's the balance AT that moment.
+ *
+ * Because payouts drain the balance to zero, the chart visually shows
+ * drops after each payout - which is actually pretty readable.
  */
 const getBalanceSeries = (hostBookings, payouts) => {
-  // Combine earning events (+) and payout events (-) into one sorted timeline
   const events = [];
 
+  // Every booking adds earnings to the balance.
   hostBookings.forEach(b => {
     const t = tsToDate(b.timestamp || b.startTime);
     if (t) events.push({ time: t, delta: +(b.totalPaid || 0) });
   });
 
+  // Every payout drains from it.
   payouts.forEach(p => {
     const t = tsToDate(p.requestedAt);
     if (t) events.push({ time: t, delta: -(p.amount || 0) });
   });
 
+  // Sort chronologically so the running sum is correct.
   events.sort((a, b) => a.time - b.time);
 
-  // Sample cumulative balance at the end of each of the last 6 weeks (Mon–Sun)
+  // Work out the Monday that started THIS week (reset to midnight).
   const now = new Date();
   const mondayThisWeek = new Date(now);
   mondayThisWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   mondayThisWeek.setHours(0, 0, 0, 0);
 
+  // Build 6 weeks' worth of buckets working backwards.
   const weeks = [];
   for (let w = 5; w >= 0; w--) {
     const weekStart = new Date(mondayThisWeek);
@@ -56,6 +81,8 @@ const getBalanceSeries = (hostBookings, payouts) => {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
+    // Running total of everything up to and including this week's end.
+    // Math.max(0, ...) because balance can't be negative.
     const balance = Math.max(
       0,
       events
@@ -71,20 +98,23 @@ const getBalanceSeries = (hostBookings, payouts) => {
   return weeks;
 };
 
-/* ── Balance-over-time bar chart (inline SVG) ─────────────────────────── */
+/* ── Balance-over-time bar chart (inline SVG, no chart library) ────── */
 const BalanceChart = ({ hostBookings, payouts }) => {
   const series  = getBalanceSeries(hostBookings, payouts);
+  // Highest bar determines the chart's scale. Floor at 0.01 so we don't divide by zero.
   const maxVal  = Math.max(...series.map(s => s.balance), 0.01);
   const hasData = series.some(s => s.balance > 0);
 
+  // Chart dimensions - hand-tuned for the screen width.
   const CHART_H = 90;
   const BAR_W   = 32;
   const GAP     = 13;
-  const SVG_W   = 6 * BAR_W + 5 * GAP; // 252
+  const SVG_W   = 6 * BAR_W + 5 * GAP; // 252 total width
 
   return (
     <div style={{ width: '100%' }}>
       {!hasData ? (
+        // Friendly placeholder while the host hasn't earned anything yet.
         <div style={{ textAlign: 'center', color: '#C7C7CC', padding: '24px 0', fontSize: 13 }}>
           No earnings yet — bookings will appear here as they come in.
         </div>
@@ -94,11 +124,14 @@ const BalanceChart = ({ hostBookings, payouts }) => {
           style={{ width: '100%', height: 'auto', display: 'block' }}
         >
           {series.map((s, i) => {
+            // Bar height proportional to balance, minimum 4px so zero-weeks
+            // still show a tiny stub for visual continuity.
             const barH = s.balance > 0
               ? Math.max(4, (s.balance / maxVal) * CHART_H)
               : 4;
+            // Grey for zero-balance weeks, blue otherwise.
             const isPaidOut = s.balance === 0 && i < series.length - 1
-              && series.slice(0, i + 1).some(() => true); // week exists but balance 0
+              && series.slice(0, i + 1).some(() => true);
             const x = i * (BAR_W + GAP);
             const y = CHART_H - barH;
             const fill = isPaidOut ? '#E5E5EA' : '#0056D2';
@@ -106,6 +139,7 @@ const BalanceChart = ({ hostBookings, payouts }) => {
             return (
               <g key={i}>
                 <rect x={x} y={y} width={BAR_W} height={barH} rx={6} fill={fill} />
+                {/* Pound amount above each non-zero bar */}
                 {s.balance > 0 && (
                   <text
                     x={x + BAR_W / 2} y={y - 5}
@@ -114,6 +148,7 @@ const BalanceChart = ({ hostBookings, payouts }) => {
                     £{s.balance.toFixed(0)}
                   </text>
                 )}
+                {/* Week label below each bar */}
                 <text
                   x={x + BAR_W / 2} y={CHART_H + 16}
                   textAnchor="middle" fontSize="8" fill="#8E8E93"
@@ -129,7 +164,7 @@ const BalanceChart = ({ hostBookings, payouts }) => {
   );
 };
 
-/* ── Status badge ─────────────────────────────────────────────────────── */
+/* ── Small status pill used in each payout history row ─────────────── */
 const StatusBadge = ({ status }) => {
   const isPending = status === 'pending';
   return (
@@ -144,7 +179,9 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-/* ── Main view ────────────────────────────────────────────────────────── */
+/* ── Main view ──────────────────────────────────────────────────────── */
+
+// Tiny spinner for the Confirm button while the request is flying.
 const Spinner = () => (
   <div style={{
     width: 16, height: 16,
@@ -165,8 +202,10 @@ const PayoutView = ({
   isRequesting,
   onBack,
 }) => {
+  // Toggles between "Request Payout" button and the confirm card below it.
   const [confirming, setConfirming] = useState(false);
 
+  // Hit when the host finally confirms the payout.
   const handleConfirm = async () => {
     await onRequestPayout();
     setConfirming(false);
@@ -174,7 +213,7 @@ const PayoutView = ({
 
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 60 }}>
-      {/* Header */}
+      {/* Top bar */}
       <div className="checkout-header" style={{ marginTop: 10 }}>
         <button className="close-btn" onClick={onBack}>
           <ArrowLeft size={20} color="#000" />
@@ -188,6 +227,7 @@ const PayoutView = ({
         <div className="earnings-card" style={{ marginBottom: 20 }}>
           <p className="earnings-title">Available Balance</p>
           <p className="earnings-amount">£{availableBalance.toFixed(2)}</p>
+          {/* If they've had payouts before, show their lifetime earned total too */}
           {totalEarnings > availableBalance && totalEarnings > 0 && (
             <p style={{ margin: '4px 0 0', fontSize: 13, opacity: 0.8 }}>
               Total earned all-time: £{totalEarnings.toFixed(2)}
@@ -198,7 +238,7 @@ const PayoutView = ({
           </p>
         </div>
 
-        {/* ── Request payout button / confirmation ── */}
+        {/* ── Either the big "Request Payout" button OR the confirm card ── */}
         {!confirming ? (
           <>
             <button
@@ -216,6 +256,7 @@ const PayoutView = ({
             )}
           </>
         ) : (
+          // Confirm card - explains what's about to happen + Cancel/Confirm buttons
           <div style={{
             background: '#F0F6FF', border: '1.5px solid #BDD5FF',
             borderRadius: 16, padding: '18px 16px', marginBottom: 20,
@@ -257,7 +298,7 @@ const PayoutView = ({
           </div>
         )}
 
-        {/* ── Balance-over-time chart ── */}
+        {/* ── Balance-over-time bar chart card ── */}
         <div style={{
           background: '#fff', borderRadius: 16, padding: '16px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginBottom: 24,
@@ -274,7 +315,7 @@ const PayoutView = ({
           <BalanceChart hostBookings={hostBookings} payouts={payouts} />
         </div>
 
-        {/* ── Payout history ── */}
+        {/* ── Payout history list ── */}
         <h3 style={{ fontSize: 17, marginTop: 0, marginBottom: 14, fontWeight: 700 }}>
           Payout History
         </h3>
@@ -293,6 +334,7 @@ const PayoutView = ({
               style={{
                 background: '#fff', borderRadius: 14, padding: '14px 16px',
                 marginBottom: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                // Orange border for pending, green for completed.
                 borderLeft: `4px solid ${p.status === 'pending' ? '#FF9500' : '#34C759'}`,
               }}
             >
@@ -306,6 +348,7 @@ const PayoutView = ({
                     Requested {fmtDate(p.requestedAt)}
                   </div>
 
+                  {/* Small pill with status-specific text */}
                   {p.status === 'pending' ? (
                     <div style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,

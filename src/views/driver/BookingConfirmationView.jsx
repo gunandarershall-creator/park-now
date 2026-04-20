@@ -1,12 +1,26 @@
-/**
- * VIEW: BookingConfirmationView.jsx
- * Shown immediately after a successful payment for a FUTURE booking.
- * (Immediate bookings skip this screen and go straight to ActiveBookingView.)
- */
+// ============================================================================
+//  VIEW: BookingConfirmationView.jsx - "Booking confirmed!" screen
+// ============================================================================
+//  Shown right after a successful FUTURE booking (one starting later than
+//  right now). For bookings that start immediately, we skip this screen
+//  entirely and jump straight into the Active Session.
+//
+//  Two modes:
+//    1. Future booking - shows a countdown to the start time and the
+//       primary "Start Parking Session" button is disabled until we get
+//       there. At the exact moment the start time hits, the countdown
+//       trips onStartSession() automatically.
+//
+//    2. Ready to start - countdown card is gone, button is active.
+//
+//  There's a "Done - I'll come back later" escape hatch for future
+//  bookings so the user doesn't feel stuck on this screen.
+// ============================================================================
 
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, MapPin, Clock, ShieldCheck, CreditCard, XCircle, Timer, ArrowLeft } from 'lucide-react';
 
+// Format helpers - "14:30" and "Sat, 20 Apr" respectively.
 const fmt = (isoString) => {
   if (!isoString) return '--:--';
   return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -26,17 +40,25 @@ const BookingConfirmationView = ({
   onCancel,
   onBack,
 }) => {
+  // Cost breakdown for the summary card. Prefer the actual totalPaid we
+  // stored on the booking, fall back to recalculating from spot price.
   const parkingCost   = selectedSpot ? +(selectedSpot.price * bookingDuration).toFixed(2) : 0;
   const insuranceCost = hasInsurance ? 1.50 : 0;
   const total         = activeBooking?.totalPaid ?? (parkingCost + insuranceCost);
+  // Short reference code for the header.
   const bookingRef    = activeBooking?.id ? activeBooking.id.slice(-8).toUpperCase() : 'PN-000000';
 
+  // canStart = has the start time arrived? Default to true if no start
+  // time is set (treat as "starts now").
   const [canStart, setCanStart] = useState(() => {
     if (!activeBooking?.startTime) return true;
     return Date.now() >= new Date(activeBooking.startTime).getTime();
   });
   const [countdown, setCountdown] = useState('');
 
+  // Countdown ticker - runs every second while the start time is still
+  // in the future. When the moment hits, we flip canStart and fire off
+  // onStartSession so the app advances automatically.
   useEffect(() => {
     if (canStart || !activeBooking?.startTime) return;
     const startMs = new Date(activeBooking.startTime).getTime();
@@ -44,6 +66,7 @@ const BookingConfirmationView = ({
     const tick = () => {
       const diff = startMs - Date.now();
       if (diff <= 0) {
+        // Time's up - advance to the active session screen.
         setCanStart(true);
         onStartSession();
         return;
@@ -58,7 +81,7 @@ const BookingConfirmationView = ({
 
     tick();
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    return () => clearInterval(id); // clean up the timer on unmount
   }, [canStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isFutureBooking = !canStart;
@@ -66,7 +89,7 @@ const BookingConfirmationView = ({
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 30 }}>
 
-      {/* Back button — only shown for future bookings */}
+      {/* Back arrow only shown for future bookings - lets user browse other tabs */}
       {isFutureBooking && onBack && (
         <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center' }}>
           <button
@@ -78,7 +101,7 @@ const BookingConfirmationView = ({
         </div>
       )}
 
-      {/* Success header */}
+      {/* Big green "Booking Confirmed!" success banner */}
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: `${isFutureBooking ? '20px' : '36px'} 20px 24px`, textAlign: 'center',
@@ -94,7 +117,7 @@ const BookingConfirmationView = ({
         <p style={{ margin: '6px 0 0', color: '#8E8E93', fontSize: 14 }}>Ref: #{bookingRef}</p>
       </div>
 
-      {/* Spot details */}
+      {/* White card - spot details (address + time window) */}
       <div style={{
         background: 'white', borderRadius: 16, margin: '0 16px 16px',
         padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -130,7 +153,7 @@ const BookingConfirmationView = ({
         </div>
       </div>
 
-      {/* Cost breakdown */}
+      {/* White card - payment breakdown */}
       <div style={{
         background: 'white', borderRadius: 16, margin: '0 16px 16px',
         padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
@@ -166,9 +189,9 @@ const BookingConfirmationView = ({
         </div>
       </div>
 
-      {/* CTA */}
+      {/* Buttons at the bottom */}
       <div style={{ padding: '0 16px' }}>
-        {/* Future-booking countdown card */}
+        {/* Yellow countdown card - only shown while waiting for a future booking */}
         {!canStart && (
           <div style={{
             textAlign: 'center', background: '#FFF9EC', border: '1px solid #FFE58F',
@@ -191,6 +214,7 @@ const BookingConfirmationView = ({
           </div>
         )}
 
+        {/* Start Session - disabled while canStart is false */}
         <button
           className="primary-btn"
           onClick={onStartSession}
@@ -200,7 +224,7 @@ const BookingConfirmationView = ({
           Start Parking Session
         </button>
 
-        {/* Escape hatch for future bookings — lets user go back to dashboard */}
+        {/* Escape hatch - for future bookings, lets the user go back to the dashboard */}
         {!canStart && onBack && (
           <button
             onClick={onBack}
@@ -215,6 +239,7 @@ const BookingConfirmationView = ({
           </button>
         )}
 
+        {/* Red cancel-and-refund link */}
         <button
           onClick={onCancel}
           style={{

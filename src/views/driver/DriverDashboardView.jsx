@@ -1,12 +1,27 @@
-/**
- * VIEW: DriverDashboardView.jsx
- * Driver activity hub — upcoming bookings section + booking history.
- */
+// ============================================================================
+//  VIEW: DriverDashboardView.jsx - the driver's "Activity" hub
+// ============================================================================
+//  This is the screen behind the Activity tab in the driver nav. It's split
+//  into three parts:
+//
+//    1. Top status card - changes depending on what's going on:
+//         - Active session   -> green card linking to the live ticket
+//         - Upcoming booking -> blue card with the next booking details
+//         - Nothing on       -> plain card telling them to open the map
+//
+//    2. Upcoming bookings list - every booking that hasn't started yet.
+//
+//    3. Recent bookings list - everything that's already happened.
+//
+//  I separate upcoming from past up front with a Set so a booking never
+//  shows in both places at the same time.
+// ============================================================================
 
 import React from 'react';
 import { Timer, MapPin, ChevronRight, CalendarX, Clock, Calendar, CalendarCheck } from 'lucide-react';
 import DriverNav from '../shared/DriverNav';
 
+// Small helpers - format an ISO string as a friendly time or date label.
 const fmtTime = (iso) => {
   if (!iso) return '';
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -26,7 +41,8 @@ const DriverDashboardView = ({
   upcomingBookings = [],
   onViewUpcoming,
 }) => {
-  // Keep upcoming and past completely separate
+  // Build a Set of upcoming ids so we can exclude them from the "past"
+  // list without double-showing anything.
   const upcomingIds  = new Set(upcomingBookings.map(b => b.id));
   const pastBookings = myDriverBookings.filter(b => !upcomingIds.has(b.id));
 
@@ -37,8 +53,9 @@ const DriverDashboardView = ({
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Activity Hub</h2>
         </div>
 
-        {/* ── Top status card ── */}
+        {/* ── 1. Top status card - content depends on current state ── */}
         {isSessionActive ? (
+          // GREEN - user is currently parked, tap to see the ticket
           <div
             className="earnings-card"
             style={{ background: 'linear-gradient(135deg, #34C759 0%, #28a745 100%)', cursor: 'pointer' }}
@@ -51,6 +68,7 @@ const DriverDashboardView = ({
             </p>
           </div>
         ) : upcomingBookings.length > 0 ? (
+          // BLUE - user has a future booking, show when and where
           <div
             className="earnings-card"
             style={{ cursor: 'pointer' }}
@@ -66,6 +84,7 @@ const DriverDashboardView = ({
             </p>
           </div>
         ) : (
+          // Neutral - nothing happening, prompt to find a spot
           <div className="earnings-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('map')}>
             <p className="earnings-title">Ready to park?</p>
             <p className="earnings-amount">Find a Spot</p>
@@ -75,12 +94,13 @@ const DriverDashboardView = ({
           </div>
         )}
 
-        {/* ── Upcoming Bookings — always rendered ── */}
+        {/* ── 2. Upcoming bookings list ── */}
         <h3 style={{ fontSize: 18, marginTop: 20, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <CalendarCheck size={18} color="#0056D2" /> Upcoming Bookings
         </h3>
 
         {upcomingBookings.length === 0 ? (
+          // Empty-state tile with a calendar icon
           <div style={{
             display: 'flex', alignItems: 'center', gap: 14,
             background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
@@ -99,6 +119,7 @@ const DriverDashboardView = ({
             </div>
           </div>
         ) : (
+          // One row per upcoming booking
           upcomingBookings.map(b => (
             <div
               key={b.id}
@@ -117,6 +138,7 @@ const DriverDashboardView = ({
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Blue pill tag for visual distinction */}
                 <div style={{ fontSize: 11, color: '#0056D2', fontWeight: 700, background: '#E6F0FF', padding: '4px 10px', borderRadius: 20 }}>
                   Upcoming
                 </div>
@@ -126,10 +148,11 @@ const DriverDashboardView = ({
           ))
         )}
 
-        {/* ── Recent Bookings — always rendered ── */}
+        {/* ── 3. Recent (past) bookings list ── */}
         <h3 style={{ fontSize: 18, marginTop: 24, marginBottom: 15 }}>Recent Bookings</h3>
 
         {pastBookings.length === 0 ? (
+          // Fancy empty-state card prompting first booking
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             padding: '36px 20px', background: '#fff', borderRadius: 20,
@@ -154,6 +177,7 @@ const DriverDashboardView = ({
             </button>
           </div>
         ) : (
+          // One row per past booking - tap to see the receipt
           pastBookings.map(b => (
             <div
               className="listing-item"
@@ -175,6 +199,7 @@ const DriverDashboardView = ({
           ))
         )}
       </div>
+      {/* Bottom nav bar */}
       <DriverNav currentScreen={currentScreen} onNavigate={onNavigate} />
     </div>
   );

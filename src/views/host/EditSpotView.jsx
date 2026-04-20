@@ -1,7 +1,14 @@
-/**
- * VIEW: EditSpotView.jsx
- * Form screen for editing an existing parking driveway listing.
- */
+// ============================================================================
+//  VIEW: EditSpotView.jsx - edit an existing driveway listing
+// ============================================================================
+//  Form for the host to update an already-published listing. Fewer fields
+//  than the add screen because we only let them tweak the photo, address,
+//  and hourly rate here.
+//
+//  The hidden <input type="file"> is triggered by clicking the big photo
+//  box - that way we get a nice big tap target instead of the ugly
+//  default file-picker button.
+// ============================================================================
 
 import React from 'react';
 import { ArrowLeft, Camera, MapPin } from 'lucide-react';
@@ -16,12 +23,14 @@ const EditSpotView = ({
   onBack,
 }) => (
   <div className="screen" style={{overflowY: 'auto'}}>
+    {/* Top bar */}
     <div className="checkout-header" style={{marginTop: 10}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
       <h2 className="checkout-title">Edit Driveway</h2>
     </div>
 
     <form onSubmit={onSubmit}>
+      {/* Hidden file input - clicking the photo box below triggers it */}
       <input
         type="file"
         accept="image/*"
@@ -30,6 +39,7 @@ const EditSpotView = ({
         style={{display: 'none'}}
       />
 
+      {/* Photo picker - shows current/chosen image or a "tap to change" prompt */}
       <div className="photo-upload-box" onClick={() => fileInputRef.current.click()}>
         {newImage ? (
           <img src={newImage} alt="Driveway Preview" className="photo-preview" />
@@ -41,6 +51,7 @@ const EditSpotView = ({
         )}
       </div>
 
+      {/* Address field */}
       <div className="form-section">
         <div className="input-label">Address (or Postcode)</div>
         <div className="ios-input-group" style={{marginBottom: 0}}>
@@ -51,6 +62,7 @@ const EditSpotView = ({
         </div>
       </div>
 
+      {/* Hourly rate field. number input with step=0.10 so the up/down keys move in 10p increments */}
       <div className="form-section">
         <div className="input-label">Hourly Rate (£)</div>
         <div className="ios-input-group" style={{marginBottom: 0}}>

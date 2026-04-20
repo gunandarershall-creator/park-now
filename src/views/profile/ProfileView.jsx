@@ -1,7 +1,20 @@
-/**
- * VIEW: ProfileView.jsx
- * Main profile/settings screen — account info, preferences, support, and mode switching.
- */
+// ============================================================================
+//  VIEW: ProfileView.jsx - the main settings / account screen
+// ============================================================================
+//  The "you" tab of the app. Shows the user's avatar + email at the top,
+//  then groups settings into sections:
+//    - Account Settings   (personal info, vehicles, payment methods)
+//    - Preferences        (notifications)
+//    - Support & About    (help centre, report issue, T&Cs)
+//    - App Actions        (switch to host/driver mode, log out)
+//
+//  Some rows only show in driver mode - e.g. "Manage Vehicles" makes no
+//  sense for a host who rents out a driveway. The mode switch at the
+//  bottom is how the same account flips between the two experiences.
+//
+//  The bottom nav bar (DriverNav vs HostNav) is picked based on userMode
+//  so the icons match the role they're currently in.
+// ============================================================================
 
 import React, { useRef } from 'react';
 import { User, Car, CreditCard, Bell, HelpCircle, FileText, Home, LogOut, ChevronRight, Flag, Camera } from 'lucide-react';
@@ -17,26 +30,33 @@ const ProfileView = ({
   onReport,
   onLogout,
 }) => {
+  // Hidden <input type=file> that we trigger by clicking the avatar.
   const photoInputRef = useRef(null);
+
   return (
   <div className="screen" style={{padding: 0}}>
-    {/* Scrollable content — padded at bottom to clear the fixed nav bar */}
+    {/* Scrollable content - padded at bottom to clear the fixed nav bar */}
     <div style={{flex: 1, overflowY: 'auto', padding: '20px 20px 100px 20px'}}>
 
+      {/* Page title */}
       <div className="host-header" style={{paddingBottom: 0}}>
         <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Profile</h2>
       </div>
 
+      {/* Header card - avatar + name/email + license plate (driver only) */}
       <div className="profile-header-card">
+        {/* Hidden file input; fires when the user picks a new photo */}
         <input
           type="file" accept="image/*" ref={photoInputRef}
           style={{ display: 'none' }}
           onChange={(e) => e.target.files[0] && onUpdatePhoto(e.target.files[0])}
         />
+        {/* The avatar itself - tap to open the file picker */}
         <div
           onClick={() => photoInputRef.current.click()}
           style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
         >
+          {/* Either show the uploaded photo, or a round initial-letter badge */}
           {photoUrl ? (
             <img
               src={photoUrl}
@@ -48,6 +68,8 @@ const ProfileView = ({
               {regName ? regName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}
             </div>
           )}
+          {/* Little camera badge overlay in the bottom-right of the avatar -
+              visual cue that the avatar is tappable to change the photo */}
           <div style={{
             position: 'absolute', bottom: 0, right: 0,
             background: '#0056D2', borderRadius: '50%',
@@ -57,6 +79,8 @@ const ProfileView = ({
             <Camera size={10} color="#fff" />
           </div>
         </div>
+
+        {/* Name + email + (driver only) plate */}
         <div>
           <h3 style={{margin: '0 0 4px 0', fontSize: 20}}>{userMode === 'driver' ? 'Driver Account' : 'Host Account'}</h3>
           <p style={{margin: 0, color: '#8E8E93', fontSize: 14}}>{email || ''}</p>
@@ -66,6 +90,7 @@ const ProfileView = ({
         </div>
       </div>
 
+      {/* ── Account Settings ─────────────────────────────────────────── */}
       <div className="settings-section-title">Account Settings</div>
       <div className="ios-input-group">
         <div className="settings-row" onClick={() => onNavigate('personalInfo')}>
@@ -76,6 +101,7 @@ const ProfileView = ({
           <ChevronRight size={20} color="#C7C7CC" />
         </div>
 
+        {/* Vehicles row only makes sense for drivers - hosts don't park here */}
         {userMode === 'driver' && (
           <div className="settings-row" onClick={() => onNavigate('manageVehicles')}>
             <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
@@ -86,6 +112,7 @@ const ProfileView = ({
           </div>
         )}
 
+        {/* Wording flips based on role - drivers PAY, hosts get PAID */}
         <div className="settings-row" onClick={() => onNavigate('paymentMethods')}>
           <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
             <CreditCard size={20} color="#0056D2" />
@@ -95,6 +122,7 @@ const ProfileView = ({
         </div>
       </div>
 
+      {/* ── Preferences ─────────────────────────────────────────────── */}
       <div className="settings-section-title" style={{marginTop: 25}}>Preferences</div>
       <div className="ios-input-group">
         <div className="settings-row" onClick={() => onNavigate('notifications')}>
@@ -106,6 +134,7 @@ const ProfileView = ({
         </div>
       </div>
 
+      {/* ── Support & About ─────────────────────────────────────────── */}
       <div className="settings-section-title" style={{marginTop: 25}}>Support & About</div>
       <div className="ios-input-group">
         <div className="settings-row" onClick={() => onNavigate('helpCenter')}>
@@ -115,6 +144,8 @@ const ProfileView = ({
           </div>
           <ChevronRight size={20} color="#C7C7CC" />
         </div>
+        {/* "Report an Issue" is red to signal "something went wrong" without
+            scaring the user too much */}
         <div className="settings-row" onClick={onReport}>
           <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
             <Flag size={20} color="#FF3B30" />
@@ -131,8 +162,10 @@ const ProfileView = ({
         </div>
       </div>
 
+      {/* ── App Actions (mode switch + logout) ──────────────────────── */}
       <div className="settings-section-title" style={{marginTop: 25}}>App Actions</div>
       <div className="ios-input-group">
+        {/* Label + target mode flip based on where the user currently is */}
         {userMode === 'driver' ? (
           <div className="settings-row" onClick={() => onSwitchMode('host')}>
             <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
@@ -150,6 +183,7 @@ const ProfileView = ({
             <ChevronRight size={20} color="#C7C7CC" />
           </div>
         )}
+        {/* Log Out - red to separate it visually from the other rows */}
         <div className="settings-row" onClick={onLogout}>
           <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
             <LogOut size={20} color="#FF3B30" />
@@ -160,7 +194,8 @@ const ProfileView = ({
 
     </div>
 
-    {/* Nav bar outside scroll area — always visible at the bottom */}
+    {/* Nav bar outside the scroll area - always visible at the bottom.
+        We render DriverNav or HostNav depending on the current role */}
     {userMode === 'driver'
       ? <DriverNav currentScreen={currentScreen} onNavigate={onNavigate} />
       : <HostNav currentScreen={currentScreen} onNavigate={onNavigate} />

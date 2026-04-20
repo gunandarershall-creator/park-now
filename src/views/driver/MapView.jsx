@@ -1,7 +1,22 @@
-/**
- * VIEW: MapView.jsx
- * Google Maps integration with spot markers, search, booking sheet, and filters.
- */
+// ============================================================================
+//  VIEW: MapView.jsx - the main "find a spot" screen
+// ============================================================================
+//  This is the screen behind the Map tab in driver mode. A live Google Map
+//  with a blue price marker on every available spot, a search bar up top,
+//  a filter panel, a locate-me button, and a bottom sheet that slides up
+//  when you tap a marker.
+//
+//  Key pieces:
+//    - @react-google-maps/api loads the map script and gives us <GoogleMap>.
+//    - Custom price markers via OverlayView (not default pins) so they
+//      can show the spot's hourly rate directly.
+//    - Markers shrink when the map is zoomed out so they don't cover
+//      each other up - smooth scale between 40% (zoom 10) and 100% (zoom 15+).
+//    - Filters for price, rating and distance. Rating filter uses the
+//      actual average from completed bookings, not the seed rating field.
+//    - Selecting a spot opens a bottom sheet with photo, rate, reviews
+//      and the "Book Spot" button.
+// ============================================================================
 
 import React, { useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
@@ -9,6 +24,8 @@ import { MapPin, Clock, X, Star, Navigation, ChevronRight, SlidersHorizontal } f
 import { GOOGLE_MAPS_LIBRARIES } from '../../controllers/useSpots';
 import DriverNav from '../shared/DriverNav';
 
+// Options passed to <GoogleMap>. Hides every default button, disables
+// POI labels (less clutter), and stops the user from zooming out too far.
 const MAP_OPTIONS = {
   disableDefaultUI: true,
   gestureHandling: 'greedy',
@@ -23,9 +40,10 @@ const MAP_OPTIONS = {
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 
-// Haversine distance in km between two lat/lng points
+// Haversine formula - calculates the great-circle distance in km between
+// two lat/lng points. Used for the "distance from centre" filter.
 const getDistanceKm = (lat1, lng1, lat2, lng2) => {
-  const R = 6371;
+  const R = 6371; // Earth radius in km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
@@ -34,6 +52,7 @@ const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+// The three filter categories. Each option has a min/max and a label.
 const PRICE_OPTIONS = [
   { label: 'Any', max: Infinity },
   { label: 'Under £3', max: 3 },
@@ -55,6 +74,7 @@ const DISTANCE_OPTIONS = [
   { label: '<2 km', max: 2 },
 ];
 
+// Little pill-style button used in the filter panel.
 const FilterChip = ({ label, active, onClick }) => (
   <button
     onClick={onClick}
@@ -98,53 +118,63 @@ const MapView = ({
   currentScreen,
   onNavigate,
 }) => {
+  // Loads the Google Maps JS SDK asynchronously. `isLoaded` flips true
+  // once the script's ready - until then we show a "Loading map..." box.
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
+  // Track the current zoom level so we can scale down the price markers
+  // as the user zooms out.
   const [currentZoom, setCurrentZoom] = useState(mapZoom);
   const mapRef = React.useRef(null);
   const handleMapLoad = useCallback((map) => { mapRef.current = map; onMapLoad(map); }, [onMapLoad]);
   const handleZoomChanged = useCallback(() => { if (mapRef.current) setCurrentZoom(mapRef.current.getZoom()); }, []);
-  // Smooth continuous scale: full size at zoom ≥15, shrinks down to 40% at zoom 10 and below
+  // Smooth marker scaling: full size at zoom 15+, shrinks down to 40%
+  // at zoom 10 and below. Otherwise markers overlap badly at city level.
   const markerScale = Math.min(1, Math.max(0.4, (currentZoom - 9) / 6));
 
   // --- FILTER STATE ---
   const [showFilters, setShowFilters] = useState(false);
-  const [priceIdx, setPriceIdx] = useState(0);
+  const [priceIdx, setPriceIdx] = useState(0);     // 0 means "Any"
   const [ratingIdx, setRatingIdx] = useState(0);
   const [distanceIdx, setDistanceIdx] = useState(0);
 
+  // Count how many filters are active (not "Any") so we can show a badge.
   const activeFilterCount = (priceIdx > 0 ? 1 : 0) + (ratingIdx > 0 ? 1 : 0) + (distanceIdx > 0 ? 1 : 0);
 
   const clearFilters = () => { setPriceIdx(0); setRatingIdx(0); setDistanceIdx(0); };
 
-  // Compute per-spot ratings from allBookings
+  // For a given spot, calculate its average rating from actual completed
+  // bookings with reviews. Returns null if nothing's been reviewed yet.
   const getSpotRating = (spotId) => {
     const reviews = (allBookings || []).filter(b => b.spotId === spotId && b.review);
     if (reviews.length === 0) return null;
     return reviews.reduce((sum, b) => sum + b.review.rating, 0) / reviews.length;
   };
 
-  // Apply filters to spots
+  // Apply all three filters + the "has capacity" check to produce the
+  // subset of spots we actually show on the map.
   const filteredSpots = spots.filter(s => {
+    // Fully booked - hide from the map entirely.
     if (s.spotsLeft <= 0) return false;
 
-    // Price filter
+    // Price filter.
     const p = PRICE_OPTIONS[priceIdx];
     if (p.min !== undefined && s.price < p.min) return false;
     if (p.max !== undefined && p.max !== Infinity && s.price > p.max) return false;
 
-    // Rating filter
+    // Rating filter - prefer real review average, fall back to seed rating.
     const r = RATING_OPTIONS[ratingIdx];
     if (r.min > 0) {
       const rating = getSpotRating(s.id) ?? s.rating ?? 0;
       if (rating < r.min) return false;
     }
 
-    // Distance filter
+    // Distance filter - measured from the current map centre, so as the
+    // user pans around the list updates.
     const d = DISTANCE_OPTIONS[distanceIdx];
     if (d.max !== Infinity) {
       const centre = mapRef.current
@@ -157,6 +187,7 @@ const MapView = ({
     return true;
   });
 
+  // Reviews for the currently-selected spot, used in the bottom sheet.
   const spotReviews = selectedSpot
     ? (allBookings || []).filter(b => b.spotId === selectedSpot.id && b.review)
     : [];
@@ -167,6 +198,7 @@ const MapView = ({
   return (
     <div className="screen" style={{ padding: 0, position: 'relative', paddingBottom: 0 }}>
 
+      {/* "Sarah just booked in Tulse Hill" style live social-proof toast */}
       {liveToastMessage && (
         <div className="live-toast">
           <div className="live-indicator"></div>
@@ -174,7 +206,7 @@ const MapView = ({
         </div>
       )}
 
-      {/* Search Bar + Filter Button */}
+      {/* Top search bar and filter button */}
       <div className="search-header">
         <div className="search-container" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <form className="search-input" style={{ flex: 1 }} onSubmit={onSearch}>
@@ -184,6 +216,8 @@ const MapView = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
+              // Delay the blur so clicking a suggestion still fires before
+              // the dropdown closes and swallows the click.
               onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
               placeholder="Search for an address or postcode"
             />
@@ -192,7 +226,7 @@ const MapView = ({
             )}
           </form>
 
-          {/* Filter toggle button */}
+          {/* Filter toggle - turns blue with a count badge when filters are active */}
           <button
             onClick={() => setShowFilters(v => !v)}
             style={{
@@ -214,6 +248,8 @@ const MapView = ({
             {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
           </button>
 
+          {/* Autocomplete dropdown. When the search box is focused and there
+              are either recent searches or Places suggestions, show them. */}
           {isSearchFocused && searchSuggestions.length > 0 && (
             <div className="search-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100 }}>
               <div className="dropdown-header">
@@ -223,10 +259,13 @@ const MapView = ({
                 <div
                   key={idx}
                   className="search-suggestion"
+                  // onMouseDown + preventDefault stops the input losing focus
+                  // before we can handle the click
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectSuggestion && selectSuggestion(item)}
                 >
                   <div className="suggestion-icon">
+                    {/* Clock icon for recent searches, pin for places suggestions */}
                     {item.lat ? <Clock size={16} color="#8E8E93" /> : <MapPin size={16} color="#0056D2" />}
                   </div>
                   <div>
@@ -240,7 +279,7 @@ const MapView = ({
         </div>
       </div>
 
-      {/* Filter Panel */}
+      {/* Filter panel - slides down when the filter button is pressed */}
       {showFilters && (
         <div style={{
           position: 'absolute', top: 72, left: 0, right: 0, zIndex: 200,
@@ -256,6 +295,7 @@ const MapView = ({
             )}
           </div>
 
+          {/* Price chip row */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Price</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -265,6 +305,7 @@ const MapView = ({
             </div>
           </div>
 
+          {/* Rating chip row */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Rating</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -274,6 +315,7 @@ const MapView = ({
             </div>
           </div>
 
+          {/* Distance chip row */}
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#8E8E93', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance from centre</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -283,6 +325,7 @@ const MapView = ({
             </div>
           </div>
 
+          {/* Live result count - orange if there's nothing matching */}
           {filteredSpots.length === 0 ? (
             <div style={{ marginTop: 16, background: '#FFF3E0', borderRadius: 10, padding: '10px 14px', textAlign: 'center', fontSize: 14, color: '#FF9500', fontWeight: 600 }}>
               No spots match your filters — try widening your search
@@ -295,7 +338,7 @@ const MapView = ({
         </div>
       )}
 
-      {/* Active session banner */}
+      {/* Green "Return to Active Session" banner - only shown while parked */}
       {isSessionActive && (
         <div className="active-session-banner" onClick={onViewActiveBooking}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -306,7 +349,7 @@ const MapView = ({
         </div>
       )}
 
-      {/* Google Map */}
+      {/* The actual Google Map */}
       <div id="real-map" style={{ width: '100%', height: '100%' }}>
         {isLoaded ? (
           <GoogleMap
@@ -317,6 +360,7 @@ const MapView = ({
             onLoad={handleMapLoad}
             onZoomChanged={handleZoomChanged}
           >
+            {/* One price marker per spot */}
             {filteredSpots.map(spot => {
               const isActive = selectedSpot?.id === spot.id;
               return (
@@ -324,12 +368,14 @@ const MapView = ({
                   key={spot.id}
                   position={{ lat: spot.lat, lng: spot.lng }}
                   mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  // Centre the marker horizontally and sit it just above the point
                   getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -h - 4 })}
                   zIndex={isActive ? 999 : 1}
                 >
                   <div
                     className={`price-marker ${isActive ? 'active' : ''}`}
                     onClick={() => { setSelectedSpot(spot); panTo && panTo(spot.lat, spot.lng, 16); }}
+                    // Shrink/grow smoothly as the user zooms
                     style={{ transform: `scale(${markerScale})`, transformOrigin: 'bottom center' }}
                   >
                     £{spot.price.toFixed(2)}
@@ -338,6 +384,7 @@ const MapView = ({
               );
             })}
 
+            {/* Blue pulsing dot showing driver's current location */}
             {driverLocation && (
               <OverlayView
                 position={{ lat: driverLocation.lat, lng: driverLocation.lng }}
@@ -349,13 +396,15 @@ const MapView = ({
             )}
           </GoogleMap>
         ) : (
+          // Fallback while Google Maps JS is still loading
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0' }}>
             <p style={{ color: '#8E8E93' }}>Loading map…</p>
           </div>
         )}
       </div>
 
-      {/* Locate button */}
+      {/* Blue "locate me" button, hidden when a spot is selected so it
+          doesn't fight with the bottom sheet for attention */}
       {!selectedSpot && (
         <div className={`locate-btn ${isLocating ? 'locating' : ''}`} onClick={onLocate}>
           {isLocating
@@ -365,9 +414,10 @@ const MapView = ({
         </div>
       )}
 
-      {/* Spot bottom sheet */}
+      {/* Bottom sheet - shown when a spot is selected */}
       {selectedSpot && !isSessionActive && (
         <div className="bottom-sheet" style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          {/* Sheet header: title, rating, distance */}
           <div className="sheet-header">
             <div style={{ flex: 1, minWidth: 0 }}>
               <h3 className="sheet-title">{selectedSpot.address}</h3>
@@ -378,6 +428,7 @@ const MapView = ({
                   : ' No reviews yet'}
                 {selectedSpot.distance && <span style={{ marginLeft: 8 }}>• {selectedSpot.distance}</span>}
               </p>
+              {/* Open in the device's maps app */}
               <a
                 href={`https://maps.google.com/maps?q=${selectedSpot.lat},${selectedSpot.lng}`}
                 target="_blank"
@@ -392,6 +443,7 @@ const MapView = ({
             </button>
           </div>
 
+          {/* Spot image - tap to open full screen. Fallback if missing. */}
           {selectedSpot.imageUrl ? (
             <img
               src={selectedSpot.imageUrl}
@@ -406,22 +458,27 @@ const MapView = ({
             </div>
           )}
 
+          {/* Price and capacity */}
           <div className="price-row">
             <div>
               <p className="price-label">Total per hour</p>
               <p className="sheet-price">£{selectedSpot.price.toFixed(2)}</p>
             </div>
+            {/* Green pill if 4+ spots available, default pill otherwise */}
             <p className="spots-left" style={selectedSpot.spotsLeft > 3 ? { color: '#34C759', background: '#E8F8EE' } : {}}>
               {selectedSpot.spotsLeft} spots left
             </p>
           </div>
 
-          {/* Availability hours */}
+          {/* Availability hours. IIFE so we can compute and return
+              nothing if there's nothing useful to show. */}
           {(() => {
             const from = selectedSpot.availFrom;
             const to = selectedSpot.availTo;
             if (!from && !to) return null;
+            // If hours span a full day, show "Available all day" instead.
             const isAllDay = (!from || from === '00:00') && (!to || to === '23:59' || to === '00:00');
+            // Convert 24h to 12h with AM/PM for readability.
             const fmt = (t) => {
               const [h, m] = t.split(':').map(Number);
               return `${h % 12 || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
@@ -434,6 +491,7 @@ const MapView = ({
             );
           })()}
 
+          {/* Main "Book Spot" button - sticky to the bottom of the sheet */}
           <button
             className="primary-btn"
             onClick={onBookSpot}
@@ -447,12 +505,14 @@ const MapView = ({
             Book Spot
           </button>
 
+          {/* Reviews list at the bottom of the sheet */}
           {spotReviews.length > 0 && (
             <div style={{ marginTop: 16, borderTop: '1px solid #F2F2F7', paddingTop: 16 }}>
               <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 12px 0' }}>Reviews</p>
               {spotReviews.map((b, i) => (
                 <div key={i} style={{ marginBottom: 12, padding: '12px', background: '#F9F9F9', borderRadius: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                    {/* Star row - filled yellow for stars earned */}
                     {[1, 2, 3, 4, 5].map(s => (
                       <Star key={s} size={13} fill={b.review.rating >= s ? '#FFCC00' : 'transparent'} color={b.review.rating >= s ? '#FFCC00' : '#E5E5EA'} />
                     ))}
@@ -470,6 +530,7 @@ const MapView = ({
         </div>
       )}
 
+      {/* Bottom nav bar */}
       <DriverNav currentScreen={currentScreen} onNavigate={onNavigate} />
     </div>
   );

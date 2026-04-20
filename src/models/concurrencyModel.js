@@ -1,107 +1,142 @@
-/**
- * MODEL: concurrencyModel.js
- * Implements a Hybrid Optimistic Concurrency Control (OCC) algorithm
- * using Firestore transactions to guarantee conflict-free P2P bookings.
- *
- * Algorithm (3-phase):
- *   Phase 1 – Read:   Fetch the spot document optimistically (no lock held).
- *   Phase 2 – Validate: Check spotsLeft > 0 and no overlapping active booking.
- *   Phase 3 – Commit: Atomically decrement inventory AND write the booking record.
- *
- * If another transaction modifies the spot between Phase 1 and Phase 3,
- * Firestore detects the conflict and auto-retries — achieving OCC semantics
- * without requiring a distributed lock or pessimistic locking overhead.
- *
- * This prevents double-booking even under high concurrent load.
- *
- * Reference: Baker (2021) — Optimistic Concurrency Control in distributed systems.
- */
+// ============================================================================
+//  MODEL: concurrencyModel.js - the heart of the booking system
+// ============================================================================
+//  This file is the most important piece of code in the whole project.
+//  Everything that prevents double-booking lives here.
+//
+//  The problem (again):
+//    Two drivers tap "Book Now" on the same spot at the same time. If I
+//    naively read the counter, subtract 1, and write it back, both
+//    writes think they decremented from 1 to 0, and two bookings get
+//    saved for a spot that only exists once. Host arrives, chaos.
+//
+//  The fix: Optimistic Concurrency Control using Firestore transactions.
+//  Three phases:
+//    Phase 1 READ:     Read the spot (no lock, "optimistic" = assume
+//                      nobody else is meddling and deal with it later).
+//    Phase 2 VALIDATE: Check spotsLeft > 0. Check no other booking
+//                      overlaps our time window.
+//    Phase 3 COMMIT:   Decrement the counter AND save the booking in
+//                      one atomic write batch.
+//
+//  If another transaction commits between our read and our write,
+//  Firestore detects the conflict and automatically replays our whole
+//  function. So we never apply stale writes. No distributed locks
+//  needed, no manual retry logic in the caller.
+//
+//  There's also a BEFORE-transaction check for time-window overlap,
+//  because two bookings at different times on the same spot shouldn't
+//  conflict on the counter but should still be rejected.
+//
+//  Reference: Baker (2021), Optimistic Concurrency Control in
+//  distributed systems.
+// ============================================================================
 
 import { runTransaction, doc, query, where, getDocs } from "firebase/firestore";
 import { db, getSpotsRef, getBookingsRef } from "./firebase";
 
 /**
- * Attempts to atomically book a parking spot.
- * Throws a typed error string on failure so the caller can show a user-friendly message.
+ * Try to book a parking spot atomically. Either the whole thing succeeds
+ * and a booking row lands in Firestore with the counter decremented, or
+ * NOTHING happens and an error is thrown with a specific code the UI
+ * can match on.
  *
- * @param {object} spot         - The spot object (id, price, hostId, address, spotsLeft)
- * @param {object} user         - Firebase auth user (uid)
- * @param {number} bookingDuration  - Duration in hours
- * @param {boolean} hasInsurance    - Whether driver opted into £1.50 insurance
- * @returns {object} { bookingId, newSpotsLeft, amountToCharge, startTime, endTime }
+ * Possible error codes:
+ *   SPOT_NOT_FOUND   - the spot was deleted between listing and booking
+ *   SPOT_UNAVAILABLE - somebody else grabbed the last place
+ *   TIME_CONFLICT    - this time window clashes with an existing booking
  */
 export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsurance, bookingStartTime }) => {
+  // Handles to the two documents we're about to read/write.
   const spotRef  = doc(getSpotsRef(), spot.id);
   const bookingId  = `${Date.now()}-${user.uid.slice(0, 6)}`;
   const bookingRef = doc(getBookingsRef(), bookingId);
 
-  // Use driver-selected start time if provided, otherwise default to now.
-  // bookingStartTime is "YYYY-MM-DDTHH:MM" (new) or legacy "HH:MM" (today only).
+  // ─── Work out start/end times ─────────────────────────────────────────
+  // bookingStartTime can come in as:
+  //   - undefined/null             => book starting right now
+  //   - "YYYY-MM-DDTHH:MM"         => the new ISO format from the picker
+  //   - "HH:MM" (legacy)           => assume today
   //
-  // If the user selected the CURRENT minute (the common "book now" flow),
-  // snap to the live `Date.now()` including seconds/ms. This makes
-  //   endTime = startTime + duration
-  // align with the timer's reference of `Date.now()`, so a 2-hour booking
-  // displays as 2:00:00 instead of 1:59:XX.
+  // Special case: if the driver picked the CURRENT MINUTE (very common
+  // because the picker only has minute precision), snap to the precise
+  // Date.now() including seconds and ms. That way the countdown timer
+  // starts with exactly N hours visible instead of 1:59:XX.
   const startTime = (() => {
     let d;
     if (!bookingStartTime) return new Date();
     if (bookingStartTime.includes('-')) {
-      // New ISO format: "2025-04-20T14:30"
+      // New ISO format
       d = new Date(bookingStartTime);
       if (isNaN(d.getTime())) d = new Date();
     } else {
-      // Legacy "HH:MM" — assume today
+      // Legacy HH:MM - assume today
       d = new Date();
       const [h, m] = bookingStartTime.split(':').map(Number);
       d.setHours(h, m, 0, 0);
     }
+    // Did the user pick the current wall-clock minute?
     const now = new Date();
     if (d.getFullYear() === now.getFullYear() &&
         d.getMonth()    === now.getMonth()    &&
         d.getDate()     === now.getDate()     &&
         d.getHours()    === now.getHours()    &&
         d.getMinutes()  === now.getMinutes()) {
+      // Yes - snap to right-now-including-seconds.
       return now;
     }
     return d;
   })();
   const endTime   = new Date(startTime.getTime() + bookingDuration * 3600 * 1000);
+
+  // Price calc: hourly rate × hours + optional insurance.
+  // The +(x.toFixed(2)) trick rounds to 2 decimal places AND converts
+  // back to a number (toFixed returns a string on its own).
   const amountToCharge = +(spot.price * bookingDuration + (hasInsurance ? 1.50 : 0)).toFixed(2);
 
-  // ─── Pre-transaction: check for overlapping active bookings (spatio-temporal) ───
+
+  // ─── Pre-transaction: temporal overlap check ─────────────────────────
+  // This runs OUTSIDE the transaction because time-window conflicts are
+  // a separate concern from the inventory counter. If the window clashes
+  // with an existing booking, bail before we even open a transaction.
   await assertNoOverlappingBooking(spot.id, startTime, endTime, user.uid);
 
-  // ─── Firestore OCC Transaction ────────────────────────────────────────────────
+
+  // ─── The transaction itself ──────────────────────────────────────────
   const result = await runTransaction(db, async (txn) => {
 
-    // PHASE 1 — Read (optimistic, no lock)
+    // PHASE 1 - READ (no lock, optimistic)
     const spotSnap = await txn.get(spotRef);
-
     if (!spotSnap.exists()) {
+      // Spot was deleted between the driver seeing it and pressing Pay.
       throw Object.assign(new Error("This spot no longer exists."), { code: "SPOT_NOT_FOUND" });
     }
 
     const liveData  = spotSnap.data();
+    // Default to 1 if the field is missing (defensive for older docs).
     const spotsLeft = typeof liveData.spotsLeft === "number" ? liveData.spotsLeft : 1;
 
-    // PHASE 2 — Validate (conflict detection)
+    // PHASE 2 - VALIDATE (conflict detection)
     if (spotsLeft <= 0) {
+      // Someone beat us to the last place. This is the losing branch
+      // of the concurrency race.
       throw Object.assign(new Error("This spot has just been taken by another driver."), { code: "SPOT_UNAVAILABLE" });
     }
 
-    // PHASE 3 — Commit (atomic: inventory + booking in one write batch)
+    // PHASE 3 - COMMIT (atomic: both writes land together or neither does)
     const newSpotsLeft = spotsLeft - 1;
 
     if (newSpotsLeft <= 0) {
-      // Mark as temporarily unavailable (isActive: false) rather than deleting —
-      // deletion permanently removes the host's listing from their dashboard.
-      // The host can re-activate it from their listings panel after the session ends.
+      // Counter hit zero. Flip isActive to false so the listing
+      // disappears from the map, but DON'T delete the doc - the host
+      // may re-open the spot after the session ends.
       txn.update(spotRef, { spotsLeft: 0, isActive: false });
     } else {
+      // Still have places left, just decrement.
       txn.update(spotRef, { spotsLeft: newSpotsLeft });
     }
 
+    // Write the booking document in the same transaction.
     txn.set(bookingRef, {
       id:          bookingId,
       driverId:    user.uid,
@@ -117,23 +152,30 @@ export const bookSpotAtomically = async ({ spot, user, bookingDuration, hasInsur
       status:      "confirmed",
     });
 
+    // Return value from the transaction, received by the caller.
     return { bookingId, newSpotsLeft, amountToCharge, startTime, endTime };
   });
 
   return result;
 };
 
-/**
- * Spatio-Temporal Overlap Check
- * Queries existing bookings for the same spot and rejects if any active booking
- * overlaps with the requested [startTime, endTime] window.
- *
- * Overlap condition: existingStart < requestedEnd AND existingEnd > requestedStart
- *
- * This implements the temporal dimension of the spatio-temporal query architecture
- * described in the design chapter (Section 3.9.2).
- */
+
+// ============================================================================
+//  Spatio-temporal overlap check
+// ============================================================================
+//  Two bookings overlap in time if:
+//     existingStart < requestedEnd   AND   existingEnd > requestedStart
+//
+//  This one-liner catches every overlap pattern (contained, partial,
+//  encompassing) without needing separate cases.
+//
+//  Runs BEFORE the OCC transaction because it's a different kind of
+//  conflict than the inventory counter.
+// ============================================================================
 const assertNoOverlappingBooking = async (spotId, startTime, endTime, userId) => {
+  // Get every confirmed booking for this spot. I filter further in JS
+  // rather than in the query, because Firestore doesn't support range
+  // queries on two fields at the same time without a composite index.
   const q = query(
     getBookingsRef(),
     where("spotId", "==", spotId),
@@ -147,9 +189,11 @@ const assertNoOverlappingBooking = async (spotId, startTime, endTime, userId) =>
     const bStart = new Date(b.startTime);
     const bEnd   = new Date(b.endTime);
 
-    // Overlap: the two intervals intersect
+    // The classic interval-overlap formula.
     const overlaps = bStart < endTime && bEnd > startTime;
 
+    // Ignore the driver's own bookings - they're allowed to re-book
+    // or view their own slot without triggering a conflict.
     if (overlaps && b.driverId !== userId) {
       throw Object.assign(
         new Error("This spot is already booked for the selected time window."),

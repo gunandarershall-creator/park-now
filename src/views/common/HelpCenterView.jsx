@@ -1,11 +1,23 @@
-/**
- * VIEW: HelpCenterView.jsx
- * Role-aware FAQ screen — different Q&A for drivers vs hosts.
- */
+// ============================================================================
+//  VIEW: HelpCenterView.jsx - the FAQ / Help Centre screen
+// ============================================================================
+//  A proper little help centre with different FAQs depending on whether
+//  the user is in driver mode or host mode. Each question is a collapsible
+//  row (tap to expand, tap again to collapse).
+//
+//  A search box at the top does a plain lowercase "contains" match against
+//  both the question and the answer, so typing "refund" surfaces every
+//  FAQ that mentions refunds.
+//
+//  If nothing found we just show a friendly "no results" row instead of
+//  hiding the block entirely.
+// ============================================================================
 
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, ChevronDown, ChevronUp, Mail } from 'lucide-react';
 
+// Driver-specific questions - focused on finding, booking, extending,
+// cancelling, and getting to the spot.
 const DRIVER_FAQS = [
   { q: 'How do I find and book a parking spot?', a: 'Open the Map tab, tap on any blue price marker to see spot details, then tap "Book Spot" to go to checkout. Choose your duration and confirm payment.' },
   { q: 'How do I pay for a booking?', a: 'Payment is taken at checkout using your saved card. Tap "Pay & Confirm" to complete the booking. You\'ll receive a confirmation receipt immediately.' },
@@ -17,6 +29,8 @@ const DRIVER_FAQS = [
   { q: 'Where can I see my past bookings?', a: 'Go to the Activity tab. All your past and current bookings are listed there. Tap any booking to view the full receipt.' },
 ];
 
+// Host-specific questions - focused on listing, payouts, availability,
+// and handling problem drivers.
 const HOST_FAQS = [
   { q: 'How do I list my driveway?', a: 'Switch to Host mode from your Profile, then tap the + button on the Host Dashboard. Add your address, a photo, your hourly rate, and set your availability hours.' },
   { q: 'When do I get paid?', a: 'Your earnings accumulate in your Host Dashboard. Go to the Payout screen and tap "Request Payout" to transfer your balance.' },
@@ -28,6 +42,8 @@ const HOST_FAQS = [
   { q: 'What happens if I get a bad driver?', a: 'You can report any driver using the Flag button on their booking card. Our team reviews all reports within 24 hours.' },
 ];
 
+// Self-contained collapsible Q&A row. Each one manages its own open/closed
+// state so you can have multiple expanded at once.
 const FAQItem = ({ q, a }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -37,6 +53,7 @@ const FAQItem = ({ q, a }) => {
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
         <span style={{ fontWeight: 600, fontSize: 14, flex: 1, paddingRight: 12, color: '#1C1C1E' }}>{q}</span>
+        {/* Chevron flips up/down depending on open state */}
         {open ? <ChevronUp size={18} color="#8E8E93" /> : <ChevronDown size={18} color="#8E8E93" />}
       </div>
       {open && (
@@ -48,7 +65,10 @@ const FAQItem = ({ q, a }) => {
 
 const HelpCenterView = ({ onBack, userMode }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  // Pick the right list based on which mode the user is currently in.
   const faqs = userMode === 'host' ? HOST_FAQS : DRIVER_FAQS;
+  // Filter as the user types. Plain lowercase contains - no fancy fuzzy
+  // matching, but good enough for a short list.
   const filtered = faqs.filter(({ q, a }) =>
     q.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.toLowerCase().includes(searchQuery.toLowerCase())
@@ -56,12 +76,13 @@ const HelpCenterView = ({ onBack, userMode }) => {
 
   return (
     <div className="screen" style={{ overflowY: 'auto', paddingBottom: 100 }}>
+      {/* Top bar - title changes based on which mode they're in */}
       <div className="checkout-header" style={{ marginTop: 10 }}>
         <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
         <h2 className="checkout-title">{userMode === 'host' ? 'Host Help' : 'Driver Help'}</h2>
       </div>
 
-      {/* Search */}
+      {/* Search box */}
       <div style={{ background: '#E5E5EA', padding: '12px 15px', borderRadius: 12, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
         <HelpCircle size={18} color="#8E8E93" />
         <input
@@ -72,7 +93,7 @@ const HelpCenterView = ({ onBack, userMode }) => {
         />
       </div>
 
-      {/* FAQs */}
+      {/* FAQ list - heading switches to a result count once the user searches */}
       <div className="settings-section-title">
         {searchQuery ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : 'Frequently Asked Questions'}
       </div>
@@ -84,7 +105,7 @@ const HelpCenterView = ({ onBack, userMode }) => {
         )}
       </div>
 
-      {/* Contact */}
+      {/* Fallback - if the FAQ didn't solve it, email a human */}
       <a
         href="mailto:k2339894@kingston.ac.uk?subject=Park Now Support"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#E6F0FF', color: '#0056D2', fontWeight: 600, padding: '16px', borderRadius: '14px', textDecoration: 'none', fontSize: 16, marginBottom: 40 }}

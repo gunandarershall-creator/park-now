@@ -1,18 +1,26 @@
-/**
- * VIEW: TermsPrivacyView.jsx
- * Terms of Service and Privacy Policy document.
- */
+// ============================================================================
+//  VIEW: TermsPrivacyView.jsx - legal boilerplate
+// ============================================================================
+//  Plain static document with the Terms of Service and Privacy Policy,
+//  split into numbered sections. Scrollable. No interactive bits other
+//  than the back button.
+//
+//  The header is sticky so it stays visible as the user scrolls through
+//  the wall of text.
+// ============================================================================
 
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 const TermsPrivacyView = ({ onBack }) => (
   <div className="screen" style={{overflowY: 'auto', background: '#fff'}}>
+    {/* Sticky top bar so the back button is always reachable */}
     <div className="checkout-header" style={{marginTop: 10, background: '#fff', position: 'sticky', top: 0, zIndex: 10, paddingBottom: 15}}>
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
       <h2 className="checkout-title">Terms & Privacy</h2>
     </div>
 
+    {/* The long-form text itself - just <h3> headings and <p> paragraphs */}
     <div style={{color: '#333', fontSize: 14, lineHeight: 1.6, paddingBottom: 40}}>
       <h3 style={{fontSize: 18, color: '#000'}}>1. Acceptance of Terms</h3>
       <p>By accessing or using the Park Now application, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our services.</p>

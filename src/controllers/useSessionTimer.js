@@ -1,14 +1,23 @@
-/**
- * CONTROLLER: useSessionTimer.js
- * Live countdown timer for an active parking session.
- *
- * Calculates remaining seconds from a fixed endTime ISO string,
- * ticking every second via setInterval. Returns a formatted HH:MM:SS
- * string, a warning flag for the last 5 minutes, and an expiry flag.
- */
+// ============================================================================
+//  CONTROLLER: useSessionTimer.js - the live countdown clock
+// ============================================================================
+//  While a booking is active, the app shows a big countdown timer ticking
+//  down to the end of the session. This hook is what powers it.
+//
+//  You give it an endTime (ISO string) and it gives you back:
+//    timeDisplay  - "HH:MM:SS" formatted for the UI
+//    secondsLeft  - raw number of seconds remaining
+//    isExpired    - true once the end time has passed
+//    isWarning    - true in the last 5 minutes (UI goes orange)
+//
+//  Internally it just runs setInterval(1000) and recomputes the delta on
+//  every tick. Very cheap.
+// ============================================================================
 
 import { useState, useEffect } from 'react';
 
+// Turn a number of seconds into "HH:MM:SS" with zero-padding.
+// 3700 -> "01:01:40"
 const formatTime = (totalSeconds) => {
   if (totalSeconds <= 0) return '00:00:00';
   const h = Math.floor(totalSeconds / 3600);
@@ -17,15 +26,14 @@ const formatTime = (totalSeconds) => {
   return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
 };
 
-/**
- * @param {string|null} endTime - ISO date string of when the session ends
- * @returns {{ timeDisplay: string, secondsLeft: number, isExpired: boolean, isWarning: boolean }}
- */
 export const useSessionTimer = (endTime) => {
-  // Use Math.ceil (not floor) so the countdown displays the full duration at
-  // commit time. With floor, a 2-hour booking committed at 14:33:47.234 would
-  // initialise at 7199.995 s → 1:59:59; ceil initialises it at 7200 s → 2:00:00,
-  // then ticks down to 1:59:59 one wall-clock second later as expected.
+  // Math.ceil (not floor) is deliberate and the reason is worth
+  // explaining. When a booking commits at, say, 14:33:47.234 for a
+  // 2-hour window, the raw delta is 7199.995 seconds. floor() rounds
+  // down to 7199 and shows "1:59:59" immediately, which looks wrong to
+  // the user who expected a full 2:00:00. ceil() rounds up to 7200 so
+  // they see "2:00:00" and it ticks down to 1:59:59 one real second
+  // later, as expected. This was a defect I fixed in testing.
   const calcSeconds = () =>
     endTime ? Math.max(0, Math.ceil((new Date(endTime) - Date.now()) / 1000)) : 0;
 
@@ -33,12 +41,17 @@ export const useSessionTimer = (endTime) => {
 
   useEffect(() => {
     if (!endTime) return;
+    // Recompute once immediately so changing endTime is reflected
+    // instantly, not after a 1-second delay.
     setSecondsLeft(calcSeconds());
 
+    // Tick every second.
     const interval = setInterval(() => {
       setSecondsLeft(calcSeconds());
     }, 1000);
 
+    // Cleanup: stop the timer when the component unmounts or endTime
+    // changes. Otherwise we'd leak intervals.
     return () => clearInterval(interval);
   }, [endTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -46,6 +59,6 @@ export const useSessionTimer = (endTime) => {
     timeDisplay: formatTime(secondsLeft),
     secondsLeft,
     isExpired:  secondsLeft <= 0 && !!endTime,
-    isWarning:  secondsLeft > 0 && secondsLeft <= 300, // last 5 minutes
+    isWarning:  secondsLeft > 0 && secondsLeft <= 300, // 300s = last 5 min
   };
 };

@@ -1,29 +1,29 @@
-/**
- * MODEL: geoModel.js
- * Geospatial utility functions for proximity-based spot discovery.
- *
- * Implements the Haversine formula to calculate great-circle distances
- * between two GPS coordinates on a spherical Earth model.
- *
- * This forms the spatial dimension of the spatio-temporal query architecture
- * described in the FYP design chapter (Section 3.9.2).
- *
- * Reference: Sinnott (1984) — "Virtues of the Haversine", Sky and Telescope.
- */
+// ============================================================================
+//  MODEL: geoModel.js - distance maths for "find me the nearest spot"
+// ============================================================================
+//  The Earth is roughly a sphere. If you want to measure the actual
+//  walking distance between two GPS coordinates you can't just do simple
+//  subtraction, because longitude lines squeeze together as you move
+//  towards the poles and latitude lines are already curved.
+//
+//  The classic solution is the Haversine formula, which gives the
+//  "great-circle distance" - the shortest distance over the surface of
+//  a sphere. It's accurate to about 0.3% for distances up to a few
+//  hundred kilometres, which is massively more precision than a parking
+//  app needs.
+//
+//  Reference: Sinnott (1984), "Virtues of the Haversine", Sky and Telescope.
+// ============================================================================
 
+// Earth's radius in km. (Could use the exact 6371.0088 but 6371 is
+// well within Haversine's accuracy anyway.)
 const EARTH_RADIUS_KM = 6371;
 
-/**
- * Haversine Formula
- * Calculates the great-circle distance between two lat/lng points.
- * Accurate to ~0.3% for distances up to several hundred kilometres.
- *
- * @param {number} lat1 - Driver latitude  (decimal degrees)
- * @param {number} lng1 - Driver longitude (decimal degrees)
- * @param {number} lat2 - Spot latitude    (decimal degrees)
- * @param {number} lng2 - Spot longitude   (decimal degrees)
- * @returns {number} Distance in kilometres
- */
+// ─── Haversine formula ──────────────────────────────────────────────────────
+// Inputs are decimal degrees (like -0.1276 for Westminster). Output is
+// kilometres. The maths is standard textbook stuff so I won't explain
+// each term, just know that it converts degrees to radians, plugs into
+// the spherical-trig identity, and returns the arc length.
 export const haversineDistance = (lat1, lng1, lat2, lng2) => {
   const toRad = (deg) => (deg * Math.PI) / 180;
   const dLat  = toRad(lat2 - lat1);
@@ -34,31 +34,20 @@ export const haversineDistance = (lat1, lng1, lat2, lng2) => {
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-/**
- * Formats a raw kilometre value into a human-readable distance string.
- *   < 1 km  →  "350 m away"
- *   >= 1 km →  "1.2 km away"
- *
- * @param {number} km
- * @returns {string}
- */
+// ─── Pretty-print a distance ────────────────────────────────────────────────
+// Turns a raw number of km into something humans actually read:
+//   0.35  km  ->  "350 m away"
+//   1.21  km  ->  "1.2 km away"
 export const formatDistance = (km) => {
   if (km < 1) return `${Math.round(km * 1000)} m away`;
   return `${km.toFixed(1)} km away`;
 };
 
-/**
- * Spatio-Temporal Proximity Sort
- * Enriches each spot with a real calculated distance from the driver's position,
- * then sorts them nearest-first.
- *
- * The `distance` string field is overwritten so the UI always shows live data.
- * A `distanceKm` number field is attached for internal sorting / filtering logic.
- *
- * @param {Array}  spots          - Spot objects with { lat, lng, ...rest }
- * @param {{ lat: number, lng: number }} driverLocation
- * @returns {Array} Sorted spots with `distance` and `distanceKm` populated
- */
+// ─── Sort a list of spots by distance from the driver ──────────────────────
+// For each spot: compute the real km distance, stash it in distanceKm
+// (number for sorting) and distance (formatted string for the UI).
+// Then sort nearest-first. The original distance field, if it existed,
+// gets overwritten so stale values can't sneak through.
 export const sortSpotsByProximity = (spots, driverLocation) => {
   const enriched = spots.map((spot) => {
     const km = haversineDistance(driverLocation.lat, driverLocation.lng, spot.lat, spot.lng);

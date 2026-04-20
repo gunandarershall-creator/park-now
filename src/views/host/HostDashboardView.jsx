@@ -1,18 +1,32 @@
-/**
- * VIEW: HostDashboardView.jsx
- * Host dashboard — earnings card, active guests, and driveway listings.
- */
+// ============================================================================
+//  VIEW: HostDashboardView.jsx - the host's home screen
+// ============================================================================
+//  The screen behind the Home tab in host mode. Big scrollable page with:
+//
+//    - Earnings card at the top, showing available balance (what they can
+//      cash out) and pending earnings (money locked in active/future bookings).
+//    - Active Guests section - drivers currently parked, with a live
+//      green indicator and a message/report action pair.
+//    - Upcoming Guests - drivers who've booked a future slot.
+//    - Past Bookings - completed stays (last 5 shown).
+//    - Reports - flags that support has raised about this host's listings
+//      (only shown if there are any).
+//    - Your Driveways - the host's listings with a toggle, edit pencil,
+//      and an inline preview of their latest reviews.
+// ============================================================================
 
 import React from 'react';
 import { Pencil, MessageCircle, Star, Flag, Users, CalendarX, CalendarClock, PlusCircle, AlertTriangle } from 'lucide-react';
 import HostNav from '../shared/HostNav';
 
+// Format a Firestore Timestamp or ISO date as "20 Apr 2026".
 const fmtDate = (ts) => {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+// Format an ISO string as "Sat, 20 Apr · 14:30" for upcoming booking rows.
 const fmtDateTime = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -45,14 +59,18 @@ const HostDashboardView = ({
       <h2 style={{margin: 0, fontSize: 24, fontWeight: 800}}>Host Dashboard</h2>
     </div>
 
+    {/* ── Earnings summary card ── */}
     <div className="earnings-card">
       <p className="earnings-title">Available Balance</p>
+      {/* Falls back to total earnings if availableBalance isn't passed in */}
       <p className="earnings-amount">£{(availableBalance ?? myHostEarnings).toFixed(2)}</p>
+      {/* Show the total lifetime earnings if there's been a payout */}
       {availableBalance !== undefined && myHostEarnings > availableBalance && (
         <p style={{margin: '4px 0 0', fontSize: 13, opacity: 0.8}}>
           Total earned: £{myHostEarnings.toFixed(2)}
         </p>
       )}
+      {/* Pending = money that'll become available once the session completes */}
       {pendingEarnings > 0 && (
         <p style={{margin: '4px 0 0', fontSize: 13, opacity: 0.85}}>
           ⏳ £{pendingEarnings.toFixed(2)} pending from active/upcoming sessions
@@ -66,8 +84,10 @@ const HostDashboardView = ({
       </button>
     </div>
 
+    {/* ── Active Guests ── */}
     <h3 style={{fontSize: 18, marginTop: 10, marginBottom: 15}}>Active Guests</h3>
     {activeHostBookings.length === 0 ? (
+      // Empty-state tile
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14,
         background: '#F9F9F9', borderRadius: 16, padding: '16px 18px', marginBottom: 8,
@@ -85,13 +105,16 @@ const HostDashboardView = ({
       </div>
     ) : (
       activeHostBookings.map(booking => {
+        // Work out how long is left on this session, rounded to whole minutes.
         const endsAt = new Date(booking.endTime);
         const minsLeft = Math.max(0, Math.round((endsAt - Date.now()) / 60000));
+        // Show "1h 20m" if more than an hour, otherwise just "20m".
         const timeLeft = minsLeft >= 60
           ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`
           : `${minsLeft}m`;
 
         return (
+          // Green left border + pulsing dot marks this as LIVE
           <div key={booking.id} className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #34C759'}}>
             <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center'}}>
               <div>
@@ -100,6 +123,7 @@ const HostDashboardView = ({
               </div>
               <div className="live-indicator" style={{position: 'static'}}></div>
             </div>
+            {/* Action row - message driver + report */}
             <div style={{display: 'flex', gap: 8}}>
               <button
                 className="secondary-btn"
@@ -143,6 +167,7 @@ const HostDashboardView = ({
       </div>
     ) : (
       upcomingHostBookings.map(booking => (
+        // Blue border for upcoming (not yet live) bookings
         <div key={booking.id} className="listing-item" style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, borderLeft: '4px solid #0056D2'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start'}}>
             <div style={{flex: 1}}>
@@ -150,6 +175,7 @@ const HostDashboardView = ({
               <div style={{color: '#8E8E93', fontSize: 13, marginTop: 4}}>
                 Arriving {fmtDateTime(booking.startTime)}
               </div>
+              {/* Little blue chip with duration + earning for this booking */}
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 background: '#E6F0FF', borderRadius: 8, padding: '4px 10px',
@@ -172,6 +198,7 @@ const HostDashboardView = ({
       ))
     )}
 
+    {/* ── Past bookings (last 5 only) ── */}
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Past Bookings</h3>
     {pastHostBookings.length === 0 ? (
       <div style={{
@@ -215,7 +242,7 @@ const HostDashboardView = ({
       ))
     )}
 
-    {/* Reports section — only shown if drivers have flagged this host's listings */}
+    {/* ── Reports against this host's listings (only if there are any) ── */}
     {hostReports.length > 0 && (
       <>
         <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8}}>
@@ -236,6 +263,7 @@ const HostDashboardView = ({
                   <div style={{fontSize: 13, color: '#3A3A3C', marginTop: 6, lineHeight: 1.4}}>{report.description}</div>
                 )}
               </div>
+              {/* Orange status pill - always "pending" in this demo */}
               <div style={{
                 background: '#FF9500', color: 'white', borderRadius: 8,
                 padding: '3px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
@@ -249,8 +277,10 @@ const HostDashboardView = ({
       </>
     )}
 
+    {/* ── Your driveways list ── */}
     <h3 style={{fontSize: 18, marginTop: 25, marginBottom: 15}}>Your Driveways</h3>
 
+    {/* Empty-state card with a call-to-action to list first driveway */}
     {hostListings.length === 0 && (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -277,7 +307,10 @@ const HostDashboardView = ({
       </div>
     )}
 
+    {/* Each driveway listing */}
     {hostListings.map(listing => {
+      // Calculate the real avg rating from reviews on this spot (falls
+      // back to null if the listing's never been reviewed).
       const listingReviews = (allBookings || []).filter(b => b.spotId === listing.id && b.review);
       const avgRating = listingReviews.length > 0
         ? (listingReviews.reduce((sum, b) => sum + b.review.rating, 0) / listingReviews.length).toFixed(1)
@@ -289,6 +322,7 @@ const HostDashboardView = ({
             <div>
               <div style={{fontWeight: 700, fontSize: 16}}>{listing.address}</div>
               <div style={{color: '#8E8E93', fontSize: 14, marginTop: 4}}>{listing.details}</div>
+              {/* Rating preview - yellow star + numeric + count */}
               {avgRating ? (
                 <div style={{display: 'flex', alignItems: 'center', gap: 4, marginTop: 6}}>
                   <Star size={13} fill="#FFCC00" color="#FFCC00" />
@@ -300,12 +334,14 @@ const HostDashboardView = ({
               )}
             </div>
             <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+              {/* Edit pencil button */}
               <button
                 onClick={() => onEditSpot(listing.id)}
                 style={{background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2', display: 'flex'}}
               >
                 <Pencil size={20} />
               </button>
+              {/* Active/inactive toggle switch */}
               <div
                 className="toggle-switch"
                 style={listing.isActive ? {} : {background: '#E5E5EA'}}
@@ -316,6 +352,7 @@ const HostDashboardView = ({
             </div>
           </div>
 
+          {/* Inline preview of the 2 most recent reviews */}
           {listingReviews.length > 0 && (
             <div style={{borderTop: '1px solid #F2F2F7', paddingTop: 10, marginTop: 4}}>
               {listingReviews.slice(0, 2).map((b, i) => (
@@ -331,6 +368,7 @@ const HostDashboardView = ({
                   {b.review.text && <p style={{margin: 0, fontSize: 13, color: '#3A3A3C'}}>{b.review.text}</p>}
                 </div>
               ))}
+              {/* "+X more reviews" link if there are more than 2 */}
               {listingReviews.length > 2 && (
                 <p style={{margin: 0, fontSize: 13, color: '#0056D2'}}>+{listingReviews.length - 2} more reviews</p>
               )}
@@ -341,6 +379,7 @@ const HostDashboardView = ({
     })}
 
     </div>
+    {/* Bottom nav bar */}
     <HostNav currentScreen={currentScreen} onNavigate={onNavigate} />
   </div>
 );

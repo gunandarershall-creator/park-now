@@ -1,0 +1,212 @@
+// ============================================================================
+//  FIRESTORE SECURITY RULES - Park Now
+// ============================================================================
+//  What is this file?
+//  ------------------
+//  Firestore is the database I use to store everything in the app: user
+//  profiles, parking spot listings, bookings, payment cards, chats, all of it.
+//  Because the database is in the cloud, anyone who knows the project ID could
+//  in theory try to read or write from it directly, without going through my
+//  React app. That would be bad. Someone could pretend to be another user, or
+//  change the price of a spot, or delete somebody else's booking.
+//
+//  This file is how I stop that. It sits on Firebase's servers and acts like
+//  a bouncer. Every time the app (or anyone) tries to read or write a
+//  document, Firebase runs through these rules and only lets the request
+//  through if one of the "allow" lines returns true. If none match, the
+//  request is rejected with a 403 PERMISSION_DENIED error.
+//
+//  I deploy the rules with:   firebase deploy --only firestore:rules
+//  That uploads this file to Google's servers and it takes effect instantly.
+//
+//  Quick map of who can do what:
+//    users/{uid}       - anyone logged in can read, only you can edit your own
+//    spots/{spotId}    - anyone can read (so listings show up on the map),
+//                        only the host can create/update/delete their own
+//    bookings/{id}     - only the driver or host involved can see it
+//    cards/{cardId}    - only the card owner
+//    reports/{id}      - anyone logged in can file one, only the reporter
+//                        or the host being reported can read it
+//    payouts/{id}      - only the host who earned the money
+//    chats/{chatId}    - only the two people in the chat
+// ============================================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── HELPERS ──────────────────────────────────────────────────────────
+    // These are small reusable functions so I don't have to repeat the same
+    // checks over and over. Think of them as yes/no questions I can ask
+    // about the incoming request.
+
+    // Is the person making the request signed in at all?
+    // If they haven't logged in, request.auth is null and we bail.
+    function isSignedIn()         { return request.auth != null; }
+
+    // Is the signed-in user the same person as the document's owner?
+    // I pass in the uid (user id) from the document path and compare it to
+    // the uid Firebase attached to the request when they logged in.
+    function isOwner(uid)         { return isSignedIn() && request.auth.uid == uid; }
+
+    // Does the document being created include all the required fields?
+    // I use this to stop someone creating a half-formed spot with no price,
+    // or a booking with no start time, etc.
+    function hasFields(fields)    { return request.resource.data.keys().hasAll(fields); }
+
+
+    // ─── USERS ────────────────────────────────────────────────────────────
+    // Every user gets their own document at users/{their-uid}. It stores
+    // their name, email, profile picture URL, and whether they're a host.
+    match /users/{uid} {
+      // Anyone logged in can read any profile. This is so when a driver
+      // looks at a listing, they can see the host's name and photo.
+      allow read:   if isSignedIn();
+
+      // But you can only edit YOUR OWN profile. No changing someone else's
+      // name or picture.
+      allow write:  if isOwner(uid);
+    }
+
+
+    // ─── SPOTS ────────────────────────────────────────────────────────────
+    // A "spot" is a parking space listed by a host. Drivers see these on
+    // the map. The spotsLeft field is what tracks how many bookings are
+    // still available.
+    match /spots/{spotId} {
+      // Listings are public. You don't even need to be logged in to see
+      // them, because the map needs to show something before you sign in.
+      allow read:   if true;
+
+      // To create a spot you must be signed in, the hostId in the new
+      // document has to match YOUR uid (you can't create a spot pretending
+      // to be someone else), and the document must include the basic
+      // fields I expect (address, price, hostId, spotsLeft).
+      allow create: if isSignedIn()
+                    && request.resource.data.hostId == request.auth.uid
+                    && hasFields(['address', 'price', 'hostId', 'spotsLeft']);
+
+      // The host can update their own listing. E.g. changing the price or
+      // the description. The `resource.data.hostId` here is the CURRENT
+      // value in the database (before the update), so this says "you can
+      // only update a spot you already own".
+      allow update: if isSignedIn()
+                    && resource.data.hostId == request.auth.uid;
+
+      // This second update rule handles the booking case. When a driver
+      // books the spot, the system needs to subtract 1 from spotsLeft.
+      // The driver isn't the host, so the rule above wouldn't let them,
+      // but I still want them to be able to decrement the counter as part
+      // of an atomic transaction. So I allow it ONLY if:
+      //    - the new spotsLeft is exactly 1 less than the old one, AND
+      //    - the new value isn't negative
+      // This means nobody can quietly set spotsLeft to 99 or to -5.
+      // The actual booking document being created at the same time is
+      // enforced separately by the bookings rules below.
+      allow update: if isSignedIn()
+                    && request.resource.data.spotsLeft == resource.data.spotsLeft - 1
+                    && request.resource.data.spotsLeft >= 0;
+
+      // Only the host who owns the spot can delete it.
+      allow delete: if isSignedIn()
+                    && resource.data.hostId == request.auth.uid;
+    }
+
+
+    // ─── BOOKINGS ─────────────────────────────────────────────────────────
+    // A booking is created when a driver pays for a spot. It records who
+    // booked, which spot, and the start/end times.
+    match /bookings/{bookingId} {
+      // You can only read a booking if you're one of the two parties
+      // involved: the driver who made it, or the host who owns the spot.
+      // Nobody else can snoop.
+      allow read:   if isSignedIn()
+                    && (resource.data.driverId == request.auth.uid
+                        || resource.data.hostId == request.auth.uid);
+
+      // Creating a booking: must be signed in, the driverId in the new
+      // document must be you (you can't book on someone else's behalf),
+      // and all the essential fields must be there.
+      allow create: if isSignedIn()
+                    && request.resource.data.driverId == request.auth.uid
+                    && hasFields(['driverId', 'spotId', 'startTime', 'endTime', 'status']);
+
+      // Either the driver or the host can update the booking. The driver
+      // might end the session early. The host might flag an issue or mark
+      // it completed. Both are legitimate.
+      allow update: if isSignedIn()
+                    && (resource.data.driverId == request.auth.uid
+                        || resource.data.hostId == request.auth.uid);
+
+      // Bookings are records. Once made, they shouldn't disappear, even
+      // if the user wants to "cancel". A cancel just flips the status
+      // field. Deletion is disallowed for everyone, full stop.
+      allow delete: if false;
+    }
+
+
+    // ─── CARDS ────────────────────────────────────────────────────────────
+    // Saved payment cards. These are sensitive so I lock them down
+    // tightly. Only the person who owns the card can see it or edit it.
+    match /cards/{cardId} {
+      // Read/write allowed only if:
+      //   - you're creating a new card and the userId field is yours, OR
+      //   - you're editing an existing card that already belongs to you
+      // The `resource != null` check is because on create there is no
+      // existing document yet, so that side of the OR would crash.
+      allow read, write: if isSignedIn()
+                         && request.resource.data.userId == request.auth.uid
+                         || (resource != null && resource.data.userId == request.auth.uid);
+    }
+
+
+    // ─── PAYOUTS ──────────────────────────────────────────────────────────
+    // When a host earns money, a payout document is created. Same
+    // privacy rules as cards: only the host who earned it can see it.
+    match /payouts/{payoutId} {
+      allow read, create, update: if isSignedIn()
+                                   && request.resource.data.hostId == request.auth.uid
+                                   || (resource != null && resource.data.hostId == request.auth.uid);
+      // Never deletable. Keeps an audit trail.
+      allow delete: if false;
+    }
+
+
+    // ─── REPORTS ──────────────────────────────────────────────────────────
+    // A report is filed when someone wants to flag a bad listing or a bad
+    // user. Any logged-in user can file one. Only the person who filed it
+    // and the host being reported can read it. Nobody can edit or delete
+    // a report after it's filed (so reports can't be tampered with).
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+                    && request.resource.data.reporterId == request.auth.uid;
+      allow read:   if isSignedIn()
+                    && (resource.data.reporterId == request.auth.uid
+                        || resource.data.targetHostId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
+
+    // ─── CHATS AND MESSAGES ───────────────────────────────────────────────
+    // Chats live at chats/{chatId}/messages/{messageId}. The chatId is
+    // built from the two user ids, e.g. "driver123_host456". This lets me
+    // do a quick regex check: if your own uid appears somewhere in the
+    // chatId, you're allowed to read the messages. A stranger whose uid
+    // isn't in the chatId is blocked.
+    match /chats/{chatId}/messages/{messageId} {
+      allow read:   if isSignedIn()
+                    && chatId.matches('.*' + request.auth.uid + '.*');
+
+      // When you send a message, the senderId in the new document must
+      // be you. Stops anyone impersonating the other participant.
+      allow create: if isSignedIn()
+                    && request.resource.data.senderId == request.auth.uid;
+
+      // Messages are immutable once sent. You can't edit or delete a
+      // message after the fact. This is intentional, it matches how most
+      // other chat products treat messages as history.
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,7 +1,21 @@
-/**
- * VIEW: CheckoutView.jsx
- * Booking confirmation screen with duration selector, add-ons, and payment.
- */
+// ============================================================================
+//  VIEW: CheckoutView.jsx - the "Confirm Booking" screen
+// ============================================================================
+//  Where the driver picks:
+//    - What date / time they want to start
+//    - How long they need (1h to 8h / Full Day)
+//    - Whether they want Premium Protection (+£1.50)
+//    - Which saved card to pay with
+//
+//  Guards:
+//    - Date picker won't let you pick yesterday (min=todayStr).
+//    - Time picker won't let you pick a past time if you've chosen today.
+//    - If somehow a past time gets in there anyway, we show a red warning
+//      and disable the "Pay & Confirm" button - belt-and-braces.
+//
+//  The end time is calculated live as start + duration, and handles the
+//  midnight rollover case (adds a "+1 day" suffix if it crosses over).
+// ============================================================================
 
 import React from 'react';
 import { ArrowLeft, ShieldCheck, CreditCard, ChevronRight, XCircle, AlertCircle } from 'lucide-react';
@@ -19,30 +33,31 @@ const CheckoutView = ({
   onChangePaymentMethod,
   isLoading,
 }) => {
+  // Turn a number into a two-digit string: 5 -> "05". Used for building time strings.
   const pad = n => String(n).padStart(2, '0');
-  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  // Today's date in YYYY-MM-DD format for the date picker.
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  // Date + time pickers — default to right now
+  // Default the pickers to right now so the normal case is one tap.
   const [bookingDate, setBookingDate] = React.useState(todayStr);
   const [bookingTime, setBookingTime] = React.useState(() => {
     const now = new Date();
     return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   });
 
-  // Combined ISO datetime string passed to onPayment
+  // Full ISO-ish string we hand back up when Pay & Confirm is pressed.
   const bookingStart = `${bookingDate}T${bookingTime}`;
 
-  // Minimum allowed time: if today is selected, can't pick a past time
+  // Only set a `min` on the time picker if the user is booking for today;
+  // any future date is fair game for any time.
   const nowForMin = new Date();
   const minTime = bookingDate === todayStr
     ? `${pad(nowForMin.getHours())}:${pad(nowForMin.getMinutes())}`
     : undefined;
 
-  // Guard: is the selected start in the past?
-  // Compare at MINUTE precision so the current minute is always allowed —
-  // users shouldn't be blocked from picking "right now" just because the
-  // wall-clock has ticked past :00 seconds (e.g. at 14:33:47, picking 14:33
-  // must be valid).
+  // Extra "is this time actually in the past?" check. Done at minute
+  // precision - not seconds - so the very first second of the current
+  // minute isn't wrongly blocked. e.g. at 14:33:47, picking 14:33 is OK.
   const isPastTime = (() => {
     const selected = new Date(bookingStart);
     const now      = new Date();
@@ -51,8 +66,8 @@ const CheckoutView = ({
     return selected.getTime() < now.getTime();
   })();
 
-  // When the date changes, if the user switches back to today and the
-  // current bookingTime is already in the past, snap it forward to now.
+  // When the user picks a date, if they jumped back to today and their
+  // current time is now in the past, bump the time forward to now.
   const handleDateChange = (e) => {
     const newDate = e.target.value;
     setBookingDate(newDate);
@@ -63,14 +78,14 @@ const CheckoutView = ({
     }
   };
 
-  // Human-readable date label
+  // Show "Today" instead of a date string if it is today.
   const dateLabel = bookingDate === todayStr
     ? 'Today'
     : new Date(`${bookingDate}T12:00`).toLocaleDateString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
       });
 
-  // Compute end time — handles midnight roll-overs
+  // Calculate the end time and detect if it rolled past midnight.
   const computeEndStr = (dateStr, timeStr, durationHrs) => {
     const start = new Date(`${dateStr}T${timeStr}`);
     const end   = new Date(start.getTime() + durationHrs * 3600000);
@@ -81,14 +96,17 @@ const CheckoutView = ({
 
   return (
   <div className="screen" style={{overflowY: 'auto'}}>
+    {/* Top bar */}
     <div className="checkout-header">
       <button className="close-btn" onClick={onBack}><ArrowLeft size={20} color="#000" /></button>
       <h2 className="checkout-title">Confirm Booking</h2>
     </div>
 
+    {/* The big receipt-style summary card */}
     <div className="receipt-box">
       <h3 style={{marginTop: 0, marginBottom: 15}}>{selectedSpot.address}</h3>
-      {/* Date picker */}
+
+      {/* Date picker row */}
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Date</span>
         <input
@@ -100,7 +118,7 @@ const CheckoutView = ({
         />
       </div>
 
-      {/* Start time picker */}
+      {/* Start time picker row */}
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Start Time</span>
         <input
@@ -112,18 +130,21 @@ const CheckoutView = ({
         />
       </div>
 
-      {/* Past-time warning */}
+      {/* Red warning if the picked time is actually in the past */}
       {isPastTime && (
         <div style={{display: 'flex', alignItems: 'center', gap: 6, color: '#FF3B30', fontSize: 13, fontWeight: 500, marginTop: 4, marginBottom: 2}}>
           <AlertCircle size={14} />
           Start time can't be in the past — please pick a future time.
         </div>
       )}
+
+      {/* Computed end time display */}
       <div className="receipt-row">
         <span style={{color: '#8E8E93'}}>End Time</span>
         <span style={{fontWeight: 600}}>{endStr} · {dateLabel}</span>
       </div>
 
+      {/* Duration picker */}
       <div className="receipt-row" style={{alignItems: 'center'}}>
         <span style={{color: '#8E8E93'}}>Duration</span>
         <select
@@ -142,16 +163,19 @@ const CheckoutView = ({
 
       <div className="receipt-row"><span style={{color: '#8E8E93'}}>Rate</span><span>£{selectedSpot.price.toFixed(2)} / hr</span></div>
 
+      {/* Insurance line only appears when they've toggled it on */}
       {hasInsurance && (
         <div className="receipt-row"><span style={{color: '#34C759', fontWeight: 600}}>Premium Insurance</span><span style={{color: '#34C759', fontWeight: 600}}>£1.50</span></div>
       )}
 
+      {/* Total due - price × duration + optional insurance */}
       <div className="receipt-row total">
         <span>Total Due</span>
         <span>£{((selectedSpot.price * bookingDuration) + (hasInsurance ? 1.50 : 0)).toFixed(2)}</span>
       </div>
     </div>
 
+    {/* Add-ons section: Premium Protection toggle */}
     <h4 style={{marginBottom: 10, color: '#666'}}>Add-ons</h4>
     <div className="payment-method-row" style={{marginBottom: 20}}>
       <ShieldCheck size={28} color={hasInsurance ? "#34C759" : "#8E8E93"} />
@@ -159,6 +183,7 @@ const CheckoutView = ({
         <div style={{fontWeight: 600}}>Premium Protection</div>
         <div style={{fontSize: 13, color: '#8E8E93'}}>Cover up to £1M for your vehicle.</div>
       </div>
+      {/* iOS-style toggle switch */}
       <div
         className="toggle-switch"
         style={hasInsurance ? {} : {background: '#E5E5EA'}}
@@ -168,6 +193,7 @@ const CheckoutView = ({
       </div>
     </div>
 
+    {/* Payment method row - tap to jump to the Payment Methods screen */}
     <h4 style={{marginBottom: 10, color: '#666'}}>Payment Method</h4>
     <div className="payment-method-row" style={{cursor: 'pointer'}} onClick={onChangePaymentMethod}>
       <CreditCard size={24} color="#0056D2" />
@@ -175,6 +201,7 @@ const CheckoutView = ({
       <ChevronRight size={20} color="#C7C7CC" />
     </div>
 
+    {/* Main action button. Disabled if loading OR if the time is in the past */}
     <button
       className="apple-pay-btn"
       onClick={() => { if (!isPastTime) onPayment(bookingStart); }}
@@ -184,6 +211,7 @@ const CheckoutView = ({
       {isLoading ? <><Spinner /> Processing…</> : 'Pay & Confirm'}
     </button>
 
+    {/* Grey cancel link at the bottom */}
     <button
       onClick={onBack}
       disabled={isLoading}

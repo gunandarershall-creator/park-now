@@ -1,21 +1,36 @@
-/**
- * PROJECT: Park Now - Application
- * ARCHITECTURE: MVC (Model-View-Controller)
- *
- * App.js is the thin orchestrator that:
- *  1. Composes all controller hooks
- *  2. Wires up navigation + shared state
- *  3. Renders the correct View based on currentScreen
- *
- * Models  → src/models/        (Firebase data operations)
- * Controllers → src/controllers/ (Custom React hooks with business logic)
- * Views   → src/views/          (Pure presentational React components)
- */
+// ============================================================================
+//  App.js - the top-level React component for the whole Park Now app
+// ============================================================================
+//  What this file is:
+//  ------------------
+//  Think of this file as the "reception desk" of the whole application. It
+//  doesn't do any of the heavy lifting itself, it just:
+//
+//    1. Gathers up every bit of business logic from the controllers
+//       (things like "log in", "book a spot", "extend a session")
+//    2. Keeps track of WHICH screen is currently showing
+//    3. Renders the right screen component for that screen name
+//
+//  If someone asked "where does X happen in this app?", the answer is
+//  almost never "in App.js". App.js just decides WHEN things happen and
+//  WHICH screen to show next. The actual code for each feature lives
+//  in either a controller (src/controllers/) or a view (src/views/).
+//
+//  Project structure (Model - View - Controller pattern):
+//    - Models      : src/models/       talk to Firebase directly
+//    - Controllers : src/controllers/  React hooks that hold business logic
+//    - Views       : src/views/        dumb UI components that just render
+//
+//  This file is the glue that ties all three together.
+// ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import './styles/app.css';
 
 // --- CONTROLLERS ---
+// Each of these is a custom React hook that owns one piece of the app's
+// state and logic. Pulling them in here gives App.js access to every
+// action the user can take.
 import { useToast }        from './controllers/useToast';
 import { useAuth }         from './controllers/useAuth';
 import { useProfile }      from './controllers/useProfile';
@@ -27,19 +42,26 @@ import { useChat }          from './controllers/useChat';
 import { useNotifications } from './controllers/useNotifications';
 import { usePayout }        from './controllers/usePayout';
 import { useCards }         from './controllers/useCards';
+
+// A couple of model imports used for chat id composition and the report
+// subscription. Models directly talk to Firebase.
 import { getChatId }        from './models/chatModel';
 import { subscribeToReportsForHost } from './models/reportModel';
 
+
 // --- VIEWS: Shared ---
+// The in-app toast banner that replaces browser alert() popups.
 import Toast from './views/shared/Toast';
 
 // --- VIEWS: Auth ---
+// Login, signup, forgot-password, and the first-launch onboarding carousel.
 import LoginView         from './views/auth/LoginView';
 import RegisterView      from './views/auth/RegisterView';
 import ForgotPasswordView from './views/auth/ForgotPasswordView';
 import OnboardingView    from './views/auth/OnboardingView';
 
 // --- VIEWS: Driver ---
+// Every screen a driver (person paying to park) sees.
 import DriverDashboardView  from './views/driver/DriverDashboardView';
 import MapView              from './views/driver/MapView';
 import CheckoutView              from './views/driver/CheckoutView';
@@ -49,12 +71,14 @@ import ReviewView           from './views/driver/ReviewView';
 import PastBookingDetailView from './views/driver/PastBookingDetailView';
 
 // --- VIEWS: Host ---
+// Every screen a host (person renting out a spot) sees.
 import HostDashboardView from './views/host/HostDashboardView';
 import AddSpotView       from './views/host/AddSpotView';
 import EditSpotView      from './views/host/EditSpotView';
 import PayoutView        from './views/host/PayoutView';
 
 // --- VIEWS: Profile ---
+// Settings, personal info, vehicle, saved cards, notifications.
 import ProfileView        from './views/profile/ProfileView';
 import PersonalInfoView   from './views/profile/PersonalInfoView';
 import ManageVehiclesView from './views/profile/ManageVehiclesView';
@@ -63,53 +87,109 @@ import AddCardView        from './views/profile/AddCardView';
 import NotificationsView  from './views/profile/NotificationsView';
 
 // --- VIEWS: Common ---
+// Screens that both drivers and hosts can reach (chat, help centre, report).
 import ChatView           from './views/common/ChatView';
 import HelpCenterView     from './views/common/HelpCenterView';
 import TermsPrivacyView   from './views/common/TermsPrivacyView';
 import FullScreenImageView from './views/common/FullScreenImageView';
 import ReportView         from './views/common/ReportView';
 
+
 function App() {
-  // --- NAVIGATION STATE ---
+  // ─── NAVIGATION STATE ──────────────────────────────────────────────────
+  // Everything about "which screen is the user looking at".
+
+  // Has the user completed the onboarding carousel already? If not, I
+  // show it on first launch. The flag is saved to localStorage so it
+  // survives a page refresh.
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('parkNowOnboarded'));
+
+  // The name of the currently visible screen, e.g. "login", "map",
+  // "checkout", "activeBooking". Switching this value rerenders App.js
+  // which shows the matching <View /> at the bottom of this file.
   const [currentScreen, setCurrentScreen] = useState('login');
+
+  // A history stack so the back button knows where to go. useRef instead
+  // of useState because updating the history shouldn't cause a rerender.
   const navHistoryRef = useRef([]);
+
+  // The URL of an image the user tapped to view fullscreen. Null = no
+  // fullscreen showing. Acts as an overlay on top of any screen.
   const [fullScreenImage, setFullScreenImage] = useState(null);
+
+  // Context passed to the chat screen: who am I talking to and where
+  // should I go back to when I close the chat.
   const [chatContext, setChatContext] = useState({ name: '', returnScreen: '', chatId: null });
+
+  // Context passed to the report screen. Same idea as chat.
   const [reportContext, setReportContext] = useState({ userType: 'driver', relatedId: null, relatedAddress: null, returnScreen: 'map', hostId: null });
+
+  // Reports filed against listings belonging to the currently signed-in
+  // host. Shown on the host dashboard so the host can see complaints.
   const [hostReports, setHostReports] = useState([]);
+
+  // Star rating and freeform review text while the driver is writing
+  // a review at the end of a booking.
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+
+  // Loading flags for various async actions. Used to disable buttons and
+  // show spinners while Firebase is thinking.
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [isPublishLoading, setIsPublishLoading] = useState(false);
   const [isExtendLoading, setIsExtendLoading] = useState(false);
   const [isSaveProfileLoading, setIsSaveProfileLoading] = useState(false);
 
-  // --- TOAST (must come first — passed into all controllers) ---
+
+  // ─── TOAST ──────────────────────────────────────────────────────────────
+  // This has to be set up FIRST because other controllers take showToast
+  // as an argument so they can trigger banners themselves.
   const { toast, showToast } = useToast();
 
-  // --- CONTROLLERS ---
+
+  // ─── CONTROLLERS ────────────────────────────────────────────────────────
+  // Each of these returns an object packed with state + action functions.
+  // I hand each one whatever bits of the app it needs to do its job.
   const auth     = useAuth(showToast);
   const profile  = useProfile(auth.user, showToast);
   const spots    = useSpots(auth.user, currentScreen, showToast);
   const bookings = useBookings(auth.user, showToast);
   const host     = useHost(auth.user, spots.spots, spots.setSpots, showToast, spots.panTo);
+
+  // Session timer watches the activeBooking's endTime and counts down.
   const session       = useSessionTimer(bookings.activeBooking?.endTime ?? null);
+
+  // Chat subscribes to messages for the currently open chatId.
   const chat          = useChat(chatContext.chatId, auth.user?.uid, profile.userMode, showToast);
+
+  // Push notifications and notification history.
   const notifications = useNotifications(auth.user);
+
+  // Host's earnings balance and payout history.
   const payout        = usePayout(auth.user, bookings.myHostEarnings);
+
+  // Saved payment cards.
   const cards         = useCards(auth.user, showToast);
 
-  // --- NAVIGATION HELPERS ---
+
+  // ─── NAVIGATION HELPERS ─────────────────────────────────────────────────
+  // Thin wrappers around setCurrentScreen that also maintain the history
+  // stack so the back button works.
+
+  // Go to a new screen, remembering where we came from.
   const navigate = (screen) => {
     navHistoryRef.current = [...navHistoryRef.current, currentScreen];
+    // Cap history at 30 entries so memory doesn't grow forever if the
+    // user taps around for ages.
     if (navHistoryRef.current.length > 30) {
       navHistoryRef.current = navHistoryRef.current.slice(-30);
     }
     setCurrentScreen(screen);
   };
 
+  // Go back to the previous screen. If there isn't one, fall back to
+  // whatever the caller specified (default: the map).
   const goBack = (fallback = 'map') => {
     const hist = navHistoryRef.current;
     if (!hist.length) { setCurrentScreen(fallback); return; }
@@ -119,18 +199,28 @@ function App() {
     setCurrentScreen(prev);
   };
 
+  // Open the chat screen against a specific person + chat id.
   const openChat = (recipientName, returnScreen, chatId = null) => {
     setChatContext({ name: recipientName, returnScreen, chatId });
     navigate('chat');
   };
 
+  // Open the report screen pre-populated with who/what is being reported.
   const openReport = (userType, returnScreen, relatedId = null, relatedAddress = null, hostId = null) => {
     setReportContext({ userType, returnScreen, relatedId, relatedAddress, hostId });
     navigate('report');
   };
 
+
+  // ─── ACTION HANDLERS ────────────────────────────────────────────────────
+  // These are the functions triggered by user actions. Most of them call
+  // a controller, check the result, and then either navigate or toast.
+
+  // Submit a new report (bad listing, bad host, etc).
   const handleSubmitReport = async ({ category, description }) => {
     try {
+      // Lazy-import the model only when needed so it doesn't bloat the
+      // main bundle. User hits Submit, then the import happens.
       const { submitReport } = await import('./models/reportModel');
       await submitReport({
         userId: auth.user?.uid,
@@ -149,6 +239,8 @@ function App() {
     navigate(reportContext.returnScreen);
   };
 
+  // Handle the user pressing "Log in". Delegate to the auth controller,
+  // flip a loading flag while it runs, and on success go to the map.
   const handleLoginSuccess = async (e) => {
     setIsAuthLoading(true);
     const success = await auth.handleLogin(e);
@@ -156,6 +248,8 @@ function App() {
     if (success) navigate('map');
   };
 
+  // Same pattern for Register. Takes extra args because registration
+  // asks for name and licence plate upfront.
   const handleRegisterSuccess = async (e, regName, regPlate) => {
     setIsAuthLoading(true);
     const success = await auth.handleRegister(e, regName, regPlate);
@@ -163,37 +257,48 @@ function App() {
     if (success) navigate('map');
   };
 
-
+  // Password-reset submit. On success go back to the login screen.
   const handleResetSuccess = async (e) => {
     const success = await auth.handleResetPassword(e);
     if (success) navigate('login');
   };
 
+  // Log out and send the user back to the login screen.
   const handleLogout = async () => {
     await auth.handleLogout();
     navigate('login');
   };
 
+  // Switch between driver mode and host mode. Takes the user to whatever
+  // home screen is appropriate for the new mode.
   const handleSwitchMode = async (newMode) => {
     const mode = await profile.handleSwitchMode(newMode);
     navigate(mode === 'host' ? 'hostDashboard' : 'map');
   };
 
+  // ── Payment handler ────────────────────────────────────────────────────
+  // Kicks off the booking transaction. If it succeeds, decides whether to
+  // go straight into active-session mode (booking starts now) or show a
+  // confirmation screen with a countdown (booking starts later).
   const handlePayment = async (bookingStartTime) => {
     setIsPaymentLoading(true);
     try {
       const success = await bookings.handlePayment(spots.selectedSpot, spots.setSpots, bookingStartTime);
       if (success) {
+        // Fire a push notification for the host and a confirmation
+        // notification for the driver.
         notifications.notifyBookingConfirmed(spots.selectedSpot?.address);
-        // Check whether the booking starts now or in the future
-        // bookingStartTime is now "YYYY-MM-DDTHH:MM" so new Date() parses it directly
+
+        // Decide: is this booking starting right now, or in the future?
+        // "Now-ish" means no startTime provided, OR startTime is within
+        // a 2-minute grace window of now (allows slight clock drift).
         const isImmediate = !bookingStartTime ||
-          Date.now() >= new Date(bookingStartTime).getTime() - 120000; // 2-min grace
+          Date.now() >= new Date(bookingStartTime).getTime() - 120000;
         if (isImmediate) {
-          // Start right away — skip confirmation entirely
+          // Skip confirmation, go straight to the active session UI.
           navigate('activeBooking');
         } else {
-          // Future booking — show confirmation screen with countdown
+          // Future booking. Show a confirmation screen with a countdown.
           navigate('confirmation');
         }
       }
@@ -205,6 +310,8 @@ function App() {
     }
   };
 
+  // Cancel the active booking. Mark it cancelled in Firestore, clear
+  // in-memory state, toast the refund message, go back to map.
   const handleCancelBooking = async () => {
     try {
       if (bookings.activeBooking?.id) {
@@ -217,15 +324,19 @@ function App() {
     bookings.setActiveBooking(null);
     bookings.setIsSessionActive(false);
     spots.setSelectedSpot(null);
-    showToast('Booking cancelled. Refund will be processed within 3–5 business days.', 'success');
+    showToast('Booking cancelled. Refund will be processed within 3-5 business days.', 'success');
     navigate('map');
   };
 
+  // End the session early (driver leaves before their time runs out).
+  // Takes them to the review screen.
   const handleEndSession = () => {
     bookings.handleEndSession();
     navigate('review');
   };
 
+  // Driver submits their star rating + review text. Save to Firestore,
+  // clear state, back to map.
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (bookings.activeBooking?.id) {
@@ -253,6 +364,8 @@ function App() {
     navigate('map');
   };
 
+  // Profile edit handlers. Delegate to the profile controller and
+  // navigate back to the main profile screen on success.
   const handleUpdateProfile = async (e) => {
     const success = await profile.handleUpdateProfile(e, auth.email);
     if (success) navigate('profile');
@@ -263,6 +376,7 @@ function App() {
     if (success) navigate('profile');
   };
 
+  // Host-side: open the edit form for a listing they already own.
   const handleOpenEditSpot = (id) => {
     const ok = host.openEditSpot(id);
     if (ok) navigate('editSpot');
@@ -273,13 +387,23 @@ function App() {
     if (ok) navigate('hostDashboard');
   };
 
+  // Publish a brand new listing. Uses a loading flag because image
+  // upload + Firestore write can take a few seconds.
   const handlePublishSpot = async (e) => {
     setIsPublishLoading(true);
     await host.handlePublishSpot(e, navigate, spots.setSearchQuery);
     setIsPublishLoading(false);
   };
 
-  // Restore selectedSpot when activeBooking changes (e.g. after page refresh)
+
+  // ─── EFFECTS ────────────────────────────────────────────────────────────
+  // These useEffect blocks run at specific moments to keep state in sync
+  // across different parts of the app.
+
+  // When the user comes back to the app and their active booking is
+  // restored from Firestore but selectedSpot isn't populated yet, this
+  // finds the matching spot (or synthesises a minimal one) so the active-
+  // booking screen has data to render.
   useEffect(() => {
     if (!bookings.activeBooking || spots.selectedSpot) return;
     const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
@@ -294,7 +418,8 @@ function App() {
     spots.setSelectedSpot(spot);
   }, [bookings.activeBooking?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-navigate to active session when session is restored on app load
+  // Auto-route to the active-booking screen when a saved session is
+  // restored and the user currently has nowhere important to be.
   useEffect(() => {
     if (!bookings.isSessionActive || !bookings.activeBooking) return;
     if (!['map', 'driverDashboard'].includes(currentScreen)) return;
@@ -303,27 +428,32 @@ function App() {
     if (hasStarted) navigate('activeBooking');
   }, [bookings.isSessionActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Timer: auto-navigate to active session when a future booking's start time arrives
+  // Timer that fires once when a future booking's start time arrives.
+  // Flips the session to active and jumps to the active-booking screen.
   useEffect(() => {
     const startTime = bookings.activeBooking?.startTime;
     if (!startTime) return;
     const delay = new Date(startTime).getTime() - Date.now();
-    if (delay <= 0) return; // already started — handled by handlePayment
+    if (delay <= 0) return;
     const timer = setTimeout(() => {
       bookings.setIsSessionActive(true);
       navigate('activeBooking');
     }, delay);
+    // Cleanup: cancel the timer if the dependencies change or the
+    // component unmounts, so we don't fire a stale callback.
     return () => clearTimeout(timer);
   }, [bookings.activeBooking?.startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Notify driver when session is about to expire (fires once when warning trips)
+  // When the session timer enters "last 5 minutes" warning state, push
+  // a notification reminding the driver to extend or leave.
   useEffect(() => {
     if (session.isWarning && bookings.activeBooking) {
       notifications.notifyExpiryWarning(spots.selectedSpot?.address, 15);
     }
   }, [session.isWarning]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Notify host when a new booking comes in for their spot — only fires in host mode
+  // When in host mode, notify on each new incoming booking. Count-based
+  // trigger: increment of the count means a new booking just landed.
   const myHostBookings = bookings.bookings.filter(b => b.hostId === auth.user?.uid && b.status === 'confirmed');
   const hostBookingCount = myHostBookings.length;
   useEffect(() => {
@@ -332,21 +462,29 @@ function App() {
     notifications.notifyNewBooking(latest?.address);
   }, [hostBookingCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Subscribe to reports filed against this host's listings
+  // Subscribe to reports filed against THIS host's listings. Auto-
+  // unsubscribes when the user logs out or switches to driver mode.
   useEffect(() => {
     if (!auth.user || profile.userMode !== 'host') return;
     const unsub = subscribeToReportsForHost(auth.user.uid, setHostReports, (err) => console.warn('Reports sync error:', err));
     return () => unsub();
   }, [auth.user, profile.userMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-navigate when Firebase restores a saved session
+  // When Firebase finishes checking for a stored auth session and finds
+  // one, jump the user straight to their home screen instead of making
+  // them sit on the login page.
   useEffect(() => {
     if (!auth.authLoading && auth.user && currentScreen === 'login') {
       navigate(profile.userMode === 'host' ? 'hostDashboard' : 'map');
     }
   }, [auth.authLoading, auth.user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Show splash while Firebase checks for a saved session
+
+  // ─── EARLY RETURNS (SPLASH / ONBOARDING) ────────────────────────────────
+
+  // While Firebase is checking whether the user is already signed in,
+  // show a simple branded splash with a spinner. Prevents a flash of
+  // the login screen for returning users.
   if (auth.authLoading) {
     return (
       <div className="app-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
@@ -356,7 +494,8 @@ function App() {
     );
   }
 
-  // Show onboarding slides on first ever launch
+  // On the user's very first ever launch, show the onboarding carousel.
+  // When they finish, set the flag so they never see it again.
   if (showOnboarding) {
     return (
       <div className="app-frame">
@@ -365,13 +504,19 @@ function App() {
     );
   }
 
+
+  // ─── MAIN RENDER ────────────────────────────────────────────────────────
+  // Below is one giant conditional block. Each `{currentScreen === 'x' &&`
+  // line says: "if the current screen is x, show view X". Only one
+  // matches at a time, so only one screen renders. The long prop lists
+  // are where App.js hands down state + action functions to each view.
   return (
     <div className="app-frame">
 
-      {/* GLOBAL IN-APP TOAST — replaces all browser alert() popups */}
+      {/* Toast banner overlay, visible on every screen if a toast is set */}
       <Toast toast={toast} />
 
-      {/* AUTH SCREENS */}
+      {/* ── AUTH SCREENS ─────────────────────────────────────────────── */}
       {currentScreen === 'login' && (
         <LoginView
           email={auth.email} setEmail={auth.setEmail}
@@ -403,7 +548,7 @@ function App() {
         />
       )}
 
-      {/* DRIVER SCREENS */}
+      {/* ── DRIVER SCREENS ───────────────────────────────────────────── */}
       {currentScreen === 'driverDashboard' && (
         <DriverDashboardView
           isSessionActive={bookings.isSessionActive}
@@ -411,6 +556,7 @@ function App() {
           currentScreen={currentScreen}
           onNavigate={navigate}
           onViewReceipt={(b) => { bookings.setViewingReceipt(b); navigate('pastBookingDetail'); }}
+          // Upcoming = confirmed future bookings for this driver. Sorted soonest first.
           upcomingBookings={bookings.bookings.filter(b =>
             b.driverId === auth.user?.uid &&
             b.status === 'confirmed' &&
@@ -418,7 +564,7 @@ function App() {
             new Date(b.startTime).getTime() > Date.now()
           ).sort((a, b) => new Date(a.startTime) - new Date(b.startTime))}
           onViewUpcoming={(b) => {
-            // Restore selectedSpot so the confirmation screen can render
+            // Restore selectedSpot so the confirmation screen can render.
             if (!spots.selectedSpot || spots.selectedSpot.id !== b.spotId) {
               const spot = spots.spots.find(s => s.id === b.spotId) || {
                 id: b.spotId, address: b.address,
@@ -428,7 +574,7 @@ function App() {
               };
               spots.setSelectedSpot(spot);
             }
-            // Make sure activeBooking reflects this upcoming booking
+            // Also restore activeBooking so the countdown can render.
             if (!bookings.activeBooking || bookings.activeBooking.id !== b.id) {
               bookings.setActiveBooking({
                 id: b.id, startTime: b.startTime,
@@ -461,7 +607,8 @@ function App() {
           isLocating={spots.isLocating}
           onBookSpot={() => navigate('checkout')}
           onViewActiveBooking={() => {
-            // Restore selectedSpot if missing so activeBooking screen can render
+            // Restore selectedSpot on the way to the active booking, same
+            // pattern as the upcoming-booking handler above.
             if (!spots.selectedSpot && bookings.activeBooking) {
               const booking = bookings.bookings.find(b => b.id === bookings.activeBooking.id);
               if (booking) {
@@ -510,6 +657,8 @@ function App() {
           selectedSpot={spots.selectedSpot}
           hasInsurance={bookings.hasInsurance}
           extensionDuration={bookings.extensionDuration} setExtensionDuration={bookings.setExtensionDuration}
+          // Extend handler wraps the controller call with its own loading flag
+          // so the Extend button can show a spinner.
           onExtend={async () => { setIsExtendLoading(true); try { await bookings.handleExtendSession(spots.selectedSpot); } finally { setIsExtendLoading(false); } }}
           isExtendLoading={isExtendLoading}
           onEndSession={handleEndSession}
@@ -520,6 +669,7 @@ function App() {
           bookingId={bookings.activeBooking?.id ?? null}
           endTime={bookings.activeBooking?.endTime ?? null}
           onReturnToMap={() => navigate('map')}
+          // Message the host: open chat with a composed chatId.
           onMessageHost={() => openChat(
             `Host (${spots.selectedSpot.address})`,
             'activeBooking',
@@ -553,7 +703,7 @@ function App() {
         />
       )}
 
-      {/* HOST SCREENS */}
+      {/* ── HOST SCREENS ─────────────────────────────────────────────── */}
       {currentScreen === 'hostDashboard' && (
         <HostDashboardView
           myHostEarnings={bookings.myHostEarnings}
@@ -561,18 +711,21 @@ function App() {
           hostListings={host.hostListings}
           allBookings={bookings.bookings}
           hostReports={hostReports}
+          // Active host bookings = confirmed, started, not yet ended.
           activeHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             b.status === 'confirmed' &&
             b.startTime && new Date(b.startTime) <= new Date() &&
             new Date(b.endTime) > new Date()
           )}
+          // Upcoming host bookings = confirmed, not yet started.
           upcomingHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             b.status === 'confirmed' &&
             b.startTime && new Date(b.startTime) > new Date()
           ).sort((a, b) => new Date(a.startTime) - new Date(b.startTime))}
           pendingEarnings={bookings.myPendingEarnings}
+          // Past host bookings = reviewed, completed, or ended (for history).
           pastHostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             (b.status === 'reviewed' || b.status === 'completed' ||
@@ -624,6 +777,7 @@ function App() {
         <PayoutView
           availableBalance={payout.availableBalance}
           totalEarnings={bookings.myHostEarnings}
+          // Host bookings that have actually finished, for the payout history.
           hostBookings={bookings.bookings.filter(b =>
             b.hostId === auth.user?.uid &&
             b.status !== 'cancelled' &&
@@ -637,7 +791,7 @@ function App() {
         />
       )}
 
-      {/* PROFILE SCREENS */}
+      {/* ── PROFILE SCREENS ──────────────────────────────────────────── */}
       {currentScreen === 'profile' && (
         <ProfileView
           regName={profile.regName}
@@ -701,7 +855,7 @@ function App() {
         />
       )}
 
-      {/* COMMON SCREENS */}
+      {/* ── COMMON SCREENS ───────────────────────────────────────────── */}
       {currentScreen === 'chat' && (
         <ChatView
           chatContext={chatContext}
@@ -727,7 +881,7 @@ function App() {
         <TermsPrivacyView onBack={() => goBack('profile')} />
       )}
 
-      {/* REPORT SCREEN */}
+      {/* ── REPORT SCREEN ────────────────────────────────────────────── */}
       {currentScreen === 'report' && (
         <ReportView
           reportContext={reportContext}
@@ -737,7 +891,8 @@ function App() {
         />
       )}
 
-      {/* FULLSCREEN IMAGE OVERLAY */}
+      {/* ── FULLSCREEN IMAGE OVERLAY ─────────────────────────────────── */}
+      {/* Rendered on top of any screen when the user taps a thumbnail. */}
       {fullScreenImage && (
         <FullScreenImageView
           imageUrl={fullScreenImage}
